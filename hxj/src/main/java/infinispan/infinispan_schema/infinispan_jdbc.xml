@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<string-keyed-jdbc-store>
+    <key-to-string-mapper>
+        <string-keyed-table>
+            <prefix>ispn_entry</prefix>
+            <fetch-size>100</fetch-size>
+            <batch-size>100</batch-size>
+            <create-on-start>true</create-on-start>
+            <drop-on-exit value="false">
+                <id-column>
+                    <name>id</name>
+                    <type>VARCHAR</type>
+                </id-column>
+                <data-column>
+                    <name>datum</name>
+                    <type>BINARY</type>
+                </data-column>
+                <timestamp-column>
+                    <name>version</name>
+                    <type>BIGINT</type>
+                </timestamp-column>
+            </drop-on-exit>
+        </string-keyed-table>
+    </key-to-string-mapper>
+    <dialect></dialect>
+    <db-major-version></db-major-version>
+    <db-minor-version>
+        <connection-pool>
+            <properties-file></properties-file>
+            <connection-url></connection-url>
+            <driver></driver>
+            <password></password>
+            <username></username>
+        </connection-pool>
+        <data-source>
+            <jndi-url></jndi-url>
+        </data-source>
+        <simple-connection>
+            <connection-url></connection-url>
+            <driver></driver>
+            <password></password>
+            <username></username>
+        </simple-connection>
+    </db-minor-version>
+
+
+    <shared>false</shared>
+    <transactional>false</transactional>
+    <preload>false</preload>
+    <fetch-state>false</fetch-state>
+    <purge>false</purge>
+    <singleton>false</singleton>
+    <read-only>false</read-only>
+    <max-batch-size value="100">
+        <write-behind>
+            <modification-queue-size>1024</modification-queue-size>
+            <thread-pool-size>1</thread-pool-size>
+            <fail-silently>false</fail-silently>
+        </write-behind>
+        <property>
+            <name></name>
+            <value></value>
+        </property>
+    </max-batch-size>
+
+</string-keyed-jdbc-store>

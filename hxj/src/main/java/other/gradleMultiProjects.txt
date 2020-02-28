@@ -1,0 +1,49 @@
+学习Gradle多项目构建：
+    官网地址：https://docs.gradle.org/4.7/userguide/multi_project_builds.html
+    项目结构：一个根项目+多个子项目，子项目中可能也有子项目。
+    交叉项目配置：子项目之间有共享配置。比如share子项目
+    配置和执行：配置意味着执行build.gradle文件，下载所有的声明插件。所有项目的配置都发生在执行任务前。
+              意味着当执行单个任务前，都需要将整体项目进行配置。
+    按需配置模式：配置超大量的子项目。
+    定义公共行为：setting.gradle中include '子项目名'。
+                gradle允许任何构建脚本访问任何项目
+    命令：使用gradle -q 执行任务时，全部子项目的相同任务都会执行。
+         根项目和子项目的同名任务不会覆盖，先执行根项目，再执行子项目
+    多项目构建中的API：project(':子项目')
+                     allprojects()
+    子项目配置：subprojects {  }
+              举例：project(':bluewhale').hello {
+                     doLast {
+                         println "- I'm the largest animal that has ever lived on this planet."
+                     }
+                   }
+    过滤函数：比如再某个项目初始化前不执行某些操作等
+        configure(){}:
+        子项目中声明属性：ext.属性
+    多项目构建的执行规则：gradle -q 任务名
+        如果在根目录下执行：全部对应任务执行
+        如果在子项目下执行：只执行子项目任务
+        同名任务的执行顺序，按照子项目的字典顺序执行。
+        任务依赖：task action(dependsOn: ":producer:action") {
+                    doLast {
+                         println("Consuming message: ${rootProject.producerMessage}")
+                    }
+                }
+                或者： evaluationDependsOn(':producer')
+           或者：project(':services:personService') {
+                    dependencies {
+                        compile project(':shared'), project(':api')
+                    }
+                }
+    按照绝对路径运行任务：gradle -q :子项目：任务名
+    并行项目的执行： Test.setMaxParallelForks(int)
+                   --parallel 命令行参数
+    项目构建：gradle :子项目：阶段
+    任务的强制重新执行，刷新缓存：在任务中增加outputs.upToDateWhen { false }
+
+学习总结：5个重要元素：allprojects,
+                    subprojects,
+                    evaluationDependsOn,
+                    evaluationDependsOnChildren
+                    project lib dependencies
+                    gradle的独特配置和执行阶段

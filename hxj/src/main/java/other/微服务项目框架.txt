@@ -1,0 +1,27 @@
+微服务项目框架搭建：
+    1.后端微服务架构：
+         基础组织：
+             ：Gradle Multi-Project 进行组织。下面是常用的gradle的编译任务
+                ：jar--【编译并生成Jar包】
+                : build--【编译，测试并生成Jar包】
+                : clean--【删除build目录】
+                : test--【运行单元测试】
+                    ：--info 【显示测试中的详细信息】
+                    ：--tests <full qualified name> 【只测试指定的包/类/方法】
+                : jacocoTestReport--【生成单元测试的覆盖报告，应在单元测试后运行】
+                : javadoc--【生成Java API文档】
+                : asciidoctor--【生成项目文档，包括配置文件说明等】
+             ：OpenJDK 8 开发语言
+             ：IntelliJ IDEA 开发软件
+             ：docker 服务镜像安装器
+         代码框架：
+             ：Vert.x 异步式编程语言
+             ：PostgreSQL 数据库
+                ：Citus 是postgre的扩展，可用于集群
+             ：Kafka Broker 消息中间件，postgre存储数据后，其他数据通过kafka发送到keycloak进行数据存储。
+             ：Keycloak 单点登录，用于授权和验证身份
+             ：Schema Registry：注册openAPI，验证json文件是否正确
+             ：Zookeeper 微服务注册，将各种微服务注册起来，方便其他模块调用
+         第三方服务：
+             ：腾讯云服务--【包括验证码服务和对象存储服务,还有短信服务】
+             ：Landoop Admin 【kafka的控制台】

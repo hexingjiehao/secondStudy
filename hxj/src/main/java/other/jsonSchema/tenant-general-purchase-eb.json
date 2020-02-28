@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "classpath:/schema/tenant-general-purchase-eb.json",
+  "type": "object",
+  "properties": {
+    "eventbus": {
+      "type": "object",
+      "properties": {
+        "pg": {
+          "$ref": "common.json#/definitions/pg"
+        }
+      },
+      "required": [ "pg" ],
+      "additionalProperties": false
+    }
+  },
+  "required": [ "eventbus" ],
+  "additionalProperties": false
+}

@@ -1,0 +1,307 @@
+1.学习《The ABC of PDF with iText》电子文档:
+    第1章：旋转木马(Carousel)对象系统
+        起源：Carousel是后来的Acrobat(杂技演员)的最初的名字。Acrobat有20多年历史了
+        1.1 PDF对象
+            1.基础PDF对象
+                PDF有8个基本的对象。在iText实现为PdfObject类的子类.对应关系如下：[key-value]=[pdf对象-itext对象]
+                Boolean               PdfBoolean
+                Numberic object       PdfNumber           有Integer和real Numbers类型
+                String                PdfString           两种书写方式：(字符...)和<16进制数>
+                Name                  PdfName             是由一系列字符唯一定义的原子符号。前缀/  类似与变量名
+                Array                 PdfArray            格式[0 0 595 842]
+                Dictionary            PdfDictionary       类似与map
+                Stream                PdfStream           字节序列，增量读取，用于处理大量数据
+                Null object           PdfNull
+                封装的对象：PdfDate继承PdfString
+                          PdfRectangle继承PdfArray
+                          PdfAction,PdfFormField,PdfOutline继承PdfDictionary
+                          PRStream继承PdfStream
+
+            2.iText的PdfObject实现
+                PdfBoolean代码使用：静态值true,false
+                    PdfBoolean obj=PdfBoolean.TRUE;
+                    System.out.println(obj.isBoolean());
+                PdfNumber代码使用：
+                    PdfNumber obj=new PdfNumber(100);
+                    System.out.println(obj.intValue());
+                    System.out.println(obj.longValue());
+                    System.out.println(obj.doubleValue());
+                    System.out.println(obj.floatValue());
+                PdfString代码使用：
+                    PdfString obj=new PdfString("Test");
+                    System.out.println(obj.isHexWriting());
+                    System.out.println(obj.getEncoding());
+                    System.out.println(obj.toUnicodeString());
+                PdfName代码使用：
+                    PdfName obj=new PdfName("CustomName")
+                    System.out.println(obj.isName());
+                PdfArray代码使用：元素类型可以不同
+                    PdfArray obj = new PdfArray();
+                    obj.add(PdfName.First);
+                    obj.add(new PdfString("Second"));
+                    obj.add(new PdfNumber(3));
+                    obj.add(PdfBoolean.FALSE);
+                    System.out.println(obj.isArray());
+                    System.out.println(obj.size());
+                PdfDictionary代码使用：元素类型可以不同
+                    PdfDictionary obj = new PdfDictionary();
+                    obj.put(new PdfName("Entry1"), PdfName.First);
+                    obj.put(new PdfName("Entry2"), new PdfString("Second"));
+                    obj.put(new PdfName("3rd"), new PdfNumber(3));
+                    obj.put(new PdfName("Fourth"), PdfBoolean.FALSE);
+                    System.out.println(obj.isDictionary());
+                    for (PdfName key : obj.keySet()) {
+                        System.out.print(key+":");
+                        System.out.println(obj.get(key));
+                    }
+                PdfStream代码使用：原则上有1个length的键值对
+                    PdfStream obj = new PdfStream("Long stream of data stored in a FlateDecode compressed stream object".getBytes());
+                    System.out.println(obj.isStream());
+                    System.out.println(obj.getLength());
+                PdfNull代码使用：
+                    PdfNull obj=PdfNull.PDF_NULL;
+                    System.out.println(obj.isNull());
+                PdfLiteral代码使用：
+                    PdfLiteral obj=new PdfLiteral("<</Type/Custom/Contents [1 2 3]>>");
+                    System.out.println(obj.isLiteral());
+
+            3.直接对象和间接对象的区别
+                直接对象类似与基础类型，间接对象类似与引用对象。引用对象的type值是5。基础对象中只有PdfStream是间接对象，其他的是直接对象
+
+            4.总结
+                学习pdf的8个基础对象。类似于java的8个基础数据类型。
+
+        1.2 PDF文件(File)结构
+            1.PDF文件的内部结构
+                一般有4个部分：（使用文本编辑器打开而不是adobe）
+                    Header：1-2行【格式：%PDF- ...】
+                    Body：【格式：2 0 obj .... endobj】
+                    Cross-reference Table: 【格式：xref ...】
+                    Trailer:【格式：trailer ... %%EOF】
+            2.文件结构的变化
+                1.版本变化,web访问，文档压缩
+                    多个交叉引用表：增量修改，比如多个签名
+                    线性化的pdf文档：便于web访问
+                    具有压缩对象和交叉引用流的pdf文件
+            3.总结
+                研究pdf的4个部分。pdf有增量更新，交叉引用表可以压缩到对象中。对象可以存储到对象流中。
+        1.3 PDF文档(Document)结构
+            1.使用iText RUPS将文档看作树结构
+                RUPS是一个java面板程序，能够查看pdf文档的树形结构
+            2.使用PdfReader从PDF中获取对象
+                代码举例：与版本有关
+                    PdfReader reader =new PdfReader("hello.pdf");
+                    PdfDictionary trailer = reader.getTrailer();
+            3.检查页面树
+                /page开头
+                页面标签：/PageLabels
+                遍历页面树：
+                    PdfReader reader = new PdfReader("src/main/resources/primes.pdf");
+                    PdfDictionary dict = reader.getCatalog();
+                    PdfDictionary pageroot = dict.getAsDict(PdfName.PAGES);
+                     if (dict == null)
+                        return;
+                     PdfIndirectReference ref = dict.getAsIndirectObject(PdfName.PARENT);
+                     if (dict.isPage()) {
+                            System.out.println("Child of " + ref + ": PAGE " + (page++));
+                     }else if (dict.isPages()) {
+                        if (ref == null)
+                            System.out.println("PAGES ROOT");
+                        else
+                            System.out.println("Child of " + ref + ": PAGES");
+                        PdfArray kids = dict.getAsArray(PdfName.KIDS);
+                        System.out.println(kids);
+                        if (kids != null) {
+                            for (int i = 0; i < kids.size(); i++) {
+                                expand(kids.getAsDict(i));
+                            }
+                        }
+                    }
+            4.查看页面字典：
+                内容流及其资源：
+                    PdfDictionarypage=reader.getPageN(1);
+                    PRStreamcontents=(PRStream)page.getAsStream(PdfName.CONTENTS);
+                    byte[]bytes=PdfReader.getStreamBytes(contents);
+                    System.out.println(newString(bytes));
+                资源字典：
+                    page=reader.getPageN(2);
+                    PdfDictionaryresources=page.getAsDict(PdfName.RESOURCES);
+                    for(PdfNamekey:resources.getKeys()){
+                        System.out.print(key);
+                        System.out.print(": ");
+                        System.out.println(resources.getDirectObject(key));
+                    }
+
+                    PdfDictionaryxObjects=resources.getAsDict(PdfName.XOBJECT);
+                    PRStreamxObject=(PRStream)xObjects.getAsStream(newPdfName("Xf1"));
+                    for(PdfNamekey:xObject.getKeys()){
+                        System.out.println(key + ": " + font.getDirectObject(key));
+                    }
+                    bytes=PdfReader.getStreamBytes(xObject);
+                    System.out.println(newString(bytes));
+                    PdfDictionaryfonts=resources.getAsDict(PdfName.FONT);
+                    PdfDictionaryfont=fonts.getAsDict(newPdfName("F1"));
+                    for(PdfNamekey:font.getKeys()){
+                        System.out.println(key + ": " + font.getDirectObject(key));
+                    }
+                页面边界和大小：
+                    PdfReader reader=new PdfReader("src/main/resources/pages.pdf");
+                    show(reader.getPageSize(1));
+                    show(reader.getPageSize(3));
+                    show(reader.getPageSizeWithRotation(3));
+                    show(reader.getPageSize(4));
+                    show(reader.getPageSizeWithRotation(4));
+                注释：一般在页面不可见
+                    PdfArrayannots=page.getAsArray(PdfName.ANNOTS);
+                    for(inti=0;i<annots.size();i++){
+                        System.out.println("Annotation " + (i + 1));
+                        showEntries(annots.getAsDict(i));
+                    }
+            5.文档目录字典的可选条目
+               必选条目：/Type和/Pages
+               名字字典：
+                    有一个树结构组成。key-value格式。key是有序字符串
+               文档导航和操作：
+                    PdfReaderreader=newPdfReader("src/main/resources/primes.pdf");
+                    PdfDictionarycatalog=reader.getCatalog();
+                    PdfDictionarynames=catalog.getAsDict(PdfName.NAMES);
+                    PdfDictionarydests=names.getAsDict(PdfName.DESTS);
+                    PdfArrayarray=dests.getAsArray(PdfName.NAMES);
+                    System.out.println(array.getAsString(0));
+                    System.out.println(array.getAsArray(1));
+               交互式表单：
+                    /acroForm。可用作服务器的提交表单和签名需要的表单
+                    publicstaticvoidinspectForm(Filefile)throwsIOException{
+                        System.out.print(file.getName());
+                        System.out.print(": ");
+                        PdfReader reader = new PdfReader(file.getAbsolutePath());
+                        AcroFields form = reader.getAcroFields();
+                        XfaForm xfa = form.getXfa();
+                        System.out.println(xfa.isXfaPresent() ? form.getFields().size() == 0 ? "XFA form" : "Hybrid form": form.getFields().size() == 0 ? "not a form" : "AcroForm");
+                        reader.close();
+                    }
+               标记的内容：
+                    有标记之后，就类似一个变量，可以进行各种操作
+               嵌入式文件：
+                    可以添加附件。类似于一个zip文件
+               元数据metadata:
+                    xml streams
+               额外信息存储在目录中：
+            6.总结
+                主要是文档的各种组成部分
+                
+    第2章：Adobe成像模型
+        2.1 图形状态
+            1.理解语法
+                pdf的语法符号：继承PostScript语言。类似于给定一串运算符号，计算出该值。很熟悉的感觉
+                    prefix + 10 6   【先序遍历】
+                    infix 10 + 6    【中序遍历】
+                    postfix 10 6 +  【后序遍历】
+                创建pdf的5个步骤：
+                    1.创建Document对象
+                    2.获取一个Pdfwriter实例
+                    3.打开一个Document
+                    4.增加内容
+                    5.关闭一个Document
+                5个图形对象：
+                    1.path
+                    2.text
+                    3.external(外部对象)
+                    4.内联图像
+                    5.shading(阴影对象)
+            2.图形状态操作
+                构建path对象：从画线开始
+                绘制和剪切路径对象：数据上的三角形组合，canvas对象，奇偶规则
+                颜色，颜色空间和阴影：作用于描边和填充路径
+                    颜色的集中组成，比如RGB
+                    设备的颜色，点的颜色
+                    瓷砖模式
+                    阴影模式：PdfShadin
+                    颜色操作符的概述
+                通用图形状态算子：m,l,s,w
+                    线宽：w
+                    线帽：线的两端 line cap, l
+                    线连接样式：setLineJoin(), s
+                    斜接限制:canvas.setMiterLimit(),  m
+                    dash模式： 直线不同位置的破折号，形成各种虚线
+                特殊图形状态算子：cm,q,Q
+                    坐标系变换：坐标原点在左下角。canvas.concatCTM(1,0,0,1,100,40); 线性代数 cm
+                    保存和恢复图形状态堆栈：所有图形状态操作都是在上一个操作的基础上进行的
+                XObjects:
+                    表格XObject：
+                    PDF和图像：PdfContentBytecanvas=writer.getDirectContent();
+                              Imageimg=Image.getInstance(IMG);
+                              canvas.addImage(img,20,0,0,20,36,786);
+                图形状态字典：PdfContentBytecanvas=writer.getDirectContent();
+                            PdfGStategs=newPdfGState();
+                            gs.put(newPdfName("LW"),newPdfNumber(3));
+                            gs.put(newPdfName("LJ"),newPdfNumber(1));
+                            PdfArraydashArray=newPdfArray(newint[]{12,1});
+                            PdfArraydashPattern=newPdfArray();
+                            dashPattern.add(dashArray);
+                            dashPattern.add(newPdfNumber(0));
+                            gs.put(newPdfName("D"),dashPattern);
+                            canvas.setGState(gs);
+                图形状态和透明度：
+                    透明度：PdfGStateg s1=newPdfGState();
+                           gs1.setFillOpacity(0.5f);
+                           cb.setGState(gs1);
+                    透明组：
+                        PdfTemplate tp=cb.createTemplate(200,200);
+                        PdfTransparencyGroup group=new PdfTransparencyGroup();
+                        tp.setGroup(group);
+                    隔离和淘汰：
+                        图形的合集和差集等操作
+                        PdfTemplate tp=cb.createTemplate(200,200);
+                        pictureCircles(0,0,tp);
+                        PdfTransparencyGroup group=new PdfTransparencyGroup();
+                        group.setIsolated(true);
+                        group.setKnockout(true);
+                        tp.setGroup(group);
+                        cb.addTemplate(tp,50+gap,500);
+                掩蔽和剪切图像：擦除操作
+                    硬蒙版和软蒙版Image mask = Image.getInstance(8, 8, 1, 1, circledata);
+                                mask.makeMask();
+                                mask.setInverted(true);
+                    剪切图片：Image clipped=Image.getInstance(t);
+                            clipped.scalePercent(50);
+                            canvas.clip();
+            3.总结
+                图像的内部代码原理和效果对比
+
+        2.2 文本状态
+            1.文本对象：
+                文本状态操作：
+                文本定位符号：
+                文本显示操作：
+                正在运行的文本操作符：canvas.beginText();
+                                   canvas.moveText(36,788);
+                                   canvas.setFontAndSize(BaseFont.createFont(),12);
+                                   canvas.showText("HelloWorld");
+                                   canvas.endText();
+            2.介绍字体：
+                默认有14中标准字体
+                字体后缀：
+                pdf中的字体：
+            3.在PDF中使用字体
+                简单字体：默认内嵌
+                没有内嵌的字体：
+                嵌入的字体：
+                编码：
+                字体子集：
+                合适的编码：
+                复合字体：
+            4.在iText中使用字体
+                BaseFont实现的概述：
+                一个Type3字体的例子：Font font=new Font(t3,20);
+                                   Paragraphp=new Paragraph("ITEXT",font);
+                                   document.add(p);
+                                   p=new Paragraph(20,"I\nT\nE\nX\nT",font);
+                                   document.add(p);
+                一个CJKFont例子：
+            5.总结
+                讨论文本和字体
+        2.3 标记的内容【🈚️】
+    第3章：注释和表单字段【🈚️】
+        -注释【🈚️】
+        -交互式表单【🈚️】

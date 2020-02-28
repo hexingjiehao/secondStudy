@@ -1,0 +1,27 @@
+1.Session和Cookie的学习：----相互配合保持B/S端状态
+
+    Session: (时域--服务期端保持状态)
+        定义：指一个终端用户与交互系统进行通信的时间间隔，通常指从注册进入系统到注销退出系统之间所经过的时间。
+             特定的客户端、特定的服务器端、不中断的操作时间
+        目的：
+            解决http协议无状态的尴尬。保证多次请求时，能够知道状态的变化。
+            web服务器上持久化用户状态信息。高并发时内存可能泄露
+        需要的配合：(客户端 存储服务器端的sessionid,方便回传给服务器)
+            cookie: 直接存储sessionid
+            url重写： url路径后附加/参数后附件，传递sessionid
+            表单隐藏字段：form标签下的<input type="hidden" name="jsessionid" value="服务器端sessionid...">
+            对action应用的重写url:
+        无奈之举：
+            因为不知道客户端存储的sessionid什么时候会结束。所以给服务器端的session设置1个过期时间，时间到了删除过期session释放空间
+            人为注销登陆时，通知服务器删除session。
+        常见问题：
+            创建时间: 编译jsp文件，自动生成HttpServletRequest.getSession(true)。调用时创建session
+            删除时间：HttpSession.invalidate()调用、session过期、服务器停止
+            监听器HttpSessionListener：可以在创建/销毁session时做一些操作
+            序列化对象问题：最好序列化保持健壮性，但不必强求
+
+    Cookie: (客户端保持状态----浏览器缓存)
+        定义：网站为了辨别用户身份、进行session跟踪而储存在用户本地终端上的数据(通常经过加密)
+             服务器端和客户端脚本javascript等都可以指示浏览器生成特定的Cookie
+        内容：名字、值、过期时间、路径和域。
+        生存时间：可以设置，不设置则关闭浏览器销毁

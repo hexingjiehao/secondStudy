@@ -1,0 +1,21 @@
+0.shiro的权限认证过程：
+    用户-->角色-->角色权限
+
+1.springboot+shiro项目搭建：
+    原理：
+        将shiro的检查放入到Filter链中.shiroFilterFactoryBean.setSecurityManager(securityManager);
+    操作步骤：
+        1.在pom文件中添加<dependency>shiro-spring
+        2.在application.properties文件中添加mysql,jpa,thymeleaf配置
+        3.创建shiro配置类：
+            Filter过滤url的规则访问权限
+                一个URL可以配置多个Filter，使用逗号分隔
+                当设置多个过滤器时，全部验证通过，才视为通过
+                部分过滤器可指定参数，如perms，roles
+                anon:所有url都可以匿名访问
+                authc: 需要认证才能进行访问
+                user:配置记住我或认证通过可以访问
+            自定义Realm,实现方式是SimpleAuthenticationInfo+数据库查询
+
+
+整合未完待续。。。。

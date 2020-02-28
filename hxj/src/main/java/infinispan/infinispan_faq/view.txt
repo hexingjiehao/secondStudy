@@ -1,0 +1,197 @@
+1.infinispan的常见问题
+    项目问题：
+        1.infinispan是什么？
+            答：开源数据网格平台，扩展了缓存接口, 继承java.util.Map, 可以存储对象。
+                可以在本地模式运行，核心是分布式模式存储数据。缓存集群集中并且公布大量的内存堆。
+                infinispan提供大内存堆和高可用性--每个节点有2G内存时，最终能够得到2G的总数据。每个服务器是拷贝。
+                infinispan可以提供一个100G的虚拟堆内存，集群内任意节点可访问，解决数据瓶颈问题。⚠️⚠️⚠️
+                infinispan提供伸缩性，集群中每个节点的数据是均匀的。添加或删除节点自动伸缩每个节点的存储数据⚠️⚠️⚠️
+                infinispan使用一致哈希算法进行数据在节点的分发⚠️⚠️⚠️
+                infinispan有一种优化的特定协议Hot Rod，可以做到数据的快速传输⚠️⚠️⚠️
+        2.我为了什么使用infinispan?
+            答：作为分布式缓存，放在数据库等效率瓶颈之前，能够提升性能。
+                作为NoSql数据存储，可将数据放到内存和其他持久化存储中，作为缓存存储。
+                向框架添加集群性和高可用性。
+        3.infinispan和JBoss缓存有什么关系？
+            答：infinispan借鉴了JBoss，但不是必须依赖JBoss
+        4.infinispan需要什么版本的java来运行？infinispan需要一个应用程序服务器来运行吗？
+            答：java8。不需要应用服务器。
+        5.Infinispan中会有POJO缓存替换吗?
+            答：是的。这被叫做Hibernate OGM,它解决了hibernate的noSQL的存储问题
+        6.为什么Infinispan的第一个版本是4.0.0?这听起来很奇怪!
+            答：它不是原始代码库，借鉴了JBoss，通过了压力测试。他应该被当作成熟稳定的平台，而不是新的实验性平台。
+        7.infinispan与JSR 107(JCACHE规范)有什么关系?
+            答：infinispan核心工程师属于JSR 107专家组，从7.0.0版本开始,它提供了该规范的认证兼容实现
+        8.我可以在Hibernate中使用infinispan吗？
+            答：可以。可以作为实体数据库替换；可以作为缓存数据库访问；存储Lucene索引(Luence是一个Java写的全文检索引擎工具包)；可以用作全文查询
+
+    技术问题：
+        1.一般问题：
+            1.infinispan提供什么API?
+                答：org.infinispan.Cache.继承于java.util.concurrentMap。
+                    org.infinispan.tree.TreeCache
+            2.infinispan和那种jdk合作？
+                答：java8
+            3.Infinispan是按值存储数据还是按引用存储数据?
+                答：主要通过引用。按值存储很少；原因是效率更快。
+                   人为客户端可做本地修改，但有风险。但是复本模式必须要使用put/repalce操作
+            4.我可以在Groovy中使用Infinispan吗?那么Jython、Clojure、JRuby或Scala等呢?
+                答：官方没测试，不清楚是否可行。
+        2.缓存加载和缓存存储问题：
+            1.缓存加载器和缓存存储有什么区别?
+                答：在持久化层面会有不同。具体不清楚。
+            2.异步缓存存储的修改是合并的还是聚合的?
+                答：都可以。同时对一个键多次修改,只应用最后一次。
+            3.钝化标志的作用是什么?
+                答：钝化是仅当条目从内存中删除时才在缓存存储中存储条目的一种模式。
+                   他的好处是可以阻止昂贵写操作--将数据从内存写入缓存存储。
+                   相反的是：当访问一个不在内存而在缓存中的条目时，称为激活。缓存中的条目称为钝化条目
+                            激活将该条目加载到内存中，删除在缓存中的值
+                   禁用钝化导致缓存存储始终是内存的超集。
+            4.如果我使用JdbcStringBasedCacheStore获得IOException“不受支持的协议版本48”会怎么样?
+                答：设置的数据类型不对BLOB被设置为CLOB这种情况。
+            5.有没有什么方法可以提高缓存存储的性能?
+                答：不需要缓存中的值的写操作优化：
+                        cache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_LOAD).put(key, value);
+        3.怎们加速infinispan?
+            答：看性能文档
+        4.锁和事务问题：⚠️⚠️⚠️
+            1.Infinispan支持分布式紧急锁定吗?
+                答：支持。默认是乐观事务，锁在准备阶段获得。infinispan可以配置为悲观锁模式，隐式获取锁。
+                       ConfigurationBuilder builder = new ConfigurationBuilder();
+                       builder.transaction().lockingMode(LockingMode.PESSIMISTIC);
+
+                       tm.begin()
+                         cache.put(K,V)    // acquire cluster-wide lock on K
+                         cache.put(K2,V2)  // acquire cluster-wide lock on K2
+                         cache.put(K,V5)   // no-op, we already own cluster wide lock for K
+                       tm.commit()       // releases locks
+            2.Infinispan如何支持显式的紧急锁定?
+                答：使用悲观锁模式，使用lock(K...)方法获取
+                    tm.begin()
+                      cache.getAdvancedCache().lock(K)  // acquire cluster-wide lock on K
+                      cache.put(K,V5)                   // guaranteed to succeed
+                    tm.commit()                       // releases locks
+            3.Infinispan支持什么隔离级别?
+                答：可提交读和可重复读。和传统不太一样。默认是可提交读。
+            4.当使用Atomikos事务管理器时，分布式缓存不分布数据，这是什么问题?
+                答：4.2.1.CR1版本之前，事务管理器在一个单独线程中将事务提交给执行缓存。infinispan存在无法分布式的问题。主要本地，赋值，失效都可以工作
+                   解决办法：升级到4.2.1+;  或者设置com.atomikos.icatch.threaded_2pc=false
+        5.驱逐和过期问题：
+            1.过期配置失效，这是什么问题?
+                答：你没有配置清除操作。虽然失效，但是持久化存储中依然存在条目。删除过期条目的方式：
+                        get()或者containsKey();启用回收线程
+        6.缓存管理问题：
+            1.我可以使用相同的缓存管理器使用不同的缓存模式创建缓存吗?
+                答：可以。
+            2.事务可以从同一个缓存管理器跨越不同的缓存实例吗?
+                答：可以。每个缓存都表现为一个独立的JTA资源。
+            3.多租户如何工作?
+                答：通过命名空间实现。一个infinispan集群可以有多个命名缓存，附加到同一个缓存管理器。
+            4.Infinispan允许我从一个缓存管理器创建多个缓存。是否有理由创建单独的缓存管理器?
+                答：缓存中间的内部组件是共享的，RPC和网络组件是共享的。如果需要不同网络特性的缓存。比如一个TCP，另一个UDP，建议使用不同缓存管理器创建缓存
+        7.缓存模式问题：
+            1.复制缓存和分布式缓存的区别是什么?
+                答：复制，每个节点都有同样的一个key;分布式，也提供copy来提供冗余，但是节点数比复制模式少，也就是说一个节点有的数据，另一个节点可能没有
+                    分布式缓存透明跨集群定位键,是一个整体.
+            2.分布式模式支持同步和异步通信吗？
+                答：官方说不，民间说可以。一般是同步操作
+            3.我注意到，当使用分布式模式时，缓存在写命令之前执行远程get。这是为什么呢?
+                答：某些方法需要获取前一个值。所以需要。远程get（）是同步的，但只等待第一个有效响应。性能于集群大小无关
+            4.我使用集群缓存。我想要同步复制的保证与异步复制的并行性。我能做什么?
+                答：最新的异步API可以完成。它会阻塞线程，返回Future
+            5.L1缓存是什么?
+                答：它默认禁止。只存在于分布式模式中，第一次访问缓存起来，后期的远程访问从L1缓存获取
+            6.对于不同的异步处理设置，我有什么一致性保证?
+                答：1.Asynchronous API,比如putAsync(key, val)
+                    2.Replication, <clustering>
+                                     <async></async>
+                                   </clustering>
+            7.分组API与键关联服务？
+                答：分组保证节点迁移是同一个组数据不丢失
+        8.监听器问题：
+            1.在缓存条目修改侦听器中，当isPre=false时，可以通过cache .get()检索修改后的值吗?
+                答：不能。应该使用CacheEntryModifiedEvent.getValue()
+            2.在用创建的CacheEntryCreated注释方法时，如何检索添加的缓存条目的值?
+                答：CacheEntryCreatedEvent.getValue()
+            3.org.infinispan.notifications.cachelistener.filter和org.infinispan.filter有什么不同？
+                答：都是数据的转换和过滤。org.infinispan.filter包中被用于缓存加载器，实体迭代器等领域；
+                   org.infinispan.notifications.cachelistener.filter包中被用于监听事件
+        9.IaaS /云基础设施的问题：
+            1.当您不知道IP地址时，如何让Infinispan通过特定的网络发送复制流量?
+                答：JGroup是连接infinispan的底层组通信库，它使用户绑定到一种类型地址，而不是ID地址。
+                    GLOBAL：选一个公共IP地址，但你不希望复制通信
+                    SITE_LOCAL：选私有IP，192.168.x.x,避免收费
+                    LINK_LOCAL：使用169.x.x.x,254.0.0.0,不推荐，只使适用1个框内流量
+                    NON_LOOPBACK：使用在接口上找到的第一个地址，不是127.x.x.x
+        10.Demo问题：
+            1.在使用GUI Demo时，我只是在缓存中放入了一个生命周期为-1的条目。为什么我看见它的寿命是1分钟?
+                答：这可能是L1缓存事件，A被映射到B，C
+        11.日志问题：
+            1.如何启用日志?
+                答：默认使用JBoss Logging 3.0框架。是否启用JBoss服务器，或者Log4j在类路径上，最后是JDK logging
+            2.Slf4j多绑定警告？
+                答：jar包冲突。解决方法：<dependency>
+                                          <groupId>org.infinispan</groupId>
+                                          <artifactId>infinispan-cachestore-jdbc</artifactId>
+                                          <version>9.0.0.Final</version>
+                                          <exclusions>
+                                              <exclusion>
+                                                  <groupId>org.jboss.slf4j</groupId>
+                                                  <artifactId>slf4j-jboss-logging</artifactId>
+                                              </exclusion>
+                                          </exclusions>
+                                      </dependency>
+        12.第三方容器问题：
+            1.我可以在Java的谷歌应用引擎上使用Infinispan吗?
+                答：不行。
+            2.当在Glassfish或Apache上运行时，创建缓存会抛出一个异常，说“无法构建GlobalComponentRegistry”，这是什么问题?
+                答：类加载问题。创建缓存之前，可以Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+        13.编组和解组问题：
+            1.实现java.io.Externalizable的最佳实践？
+                答：确保readExternal()的实现是线程安全的
+            2.Infinispan支持存储不可序列化的对象吗?
+                答：看用户章节
+            3.Externalizer实现需要访问内部Externalizer实现吗?
+                答：不必。
+            4.在状态传输期间，状态接收方在应用状态时记录一个EOFException，说“读取文件的过去端”。我应该担心这个吗?
+                答：看情况，状态提供方是否遇到问题，可延迟几秒后重试
+            5.如何获得关于编组和反编组异常的更多信息?
+                答：看用户章节编组问题
+            6.为什么我获得传递到readExternal的无效数据？
+                答：使用Cache.putAsync()，对象在序列化启动后被修改，从而破坏Stream.
+        14.调优问题：
+            1.当运行Infinispan在负载下，我看到RejectedExecutionException，我如何修复它?
+                答：找到出问题的执行器。增加最大线程属性；定义自己的大队列执行工厂；禁用异步编组
+        15.JDNI问题(java命名和目录接口)：
+            1.我可以将缓存或缓存管理器绑定到JNDI吗?
+                答：能够。
+        16.Hibernate二级缓存问题:
+            1.我可以使用Infinispan作为远程JPA或Hibernate二级缓存吗?
+                答：看hibernate文档
+            2.是否可以在J2EE服务器之外使用Infinispan 2级缓存，如果可以，如何设置事务管理器查找?
+                答：可以。具体参考用户文档
+            3.当Infinispan被用作二级缓存提供程序时，不使用非jta事务工厂(如Hibernate中的JDBCTransactionFactory)的陷阱是什么?
+                答：infinispan和hibernate都会创建事务管理器，可能冲突。数据库更新时2级缓存可能还是旧数据。
+        17.缓存服务器的问题:
+            1.在运行热棒服务器一段时间后，我在hotrodencode.gettopologyresponse()中得到一个NullPointerException，我如何才能绕过它?
+                答：不该设置缓存的地方设置了缓存导致。解决办法：
+                        避免在默认缓存中设置过期和回收策略；或者自定义缓存，同步复本，状态传输，无过期和回收策略；
+            2.是否有办法在远程缓存上进行批量访问?
+                答：热棒中没有。解决办法：多次调用RemoteCache.getAsync()；然后Future.get();
+            3.startServer.sh脚本的目的是什么？startServer.bat脚本的目的是什么？
+                答：早期启动infinispan服务器
+        18.调试的问题:
+            1.如何让Infinispan显示完整的字节数组?日志只显示了字节数组的部分内容…？
+                答：防止大数据。解决办法：-Dinfinispan.arrays.debug=true
+        19.集群传输问题：
+            1.如何检索集群物理地址?
+                答：AdvancedCache.getRpcManager().getTransport().getPhysicalAddresses()
+        20.安全问题：
+            1.在IBM JDK中使用Kerberos？
+                答：LoginContext lc = ...;
+                   lc.login();
+                   lc.logout();
+                   lc = ...;
+                   lc.login();
+                   lc.getSubject();

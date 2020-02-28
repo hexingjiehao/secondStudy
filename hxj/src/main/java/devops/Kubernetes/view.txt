@@ -1,0 +1,2322 @@
+1.学习文档《Kubernetes in action》
+    插画版Kubernetes指南：https://www.cnblogs.com/kouryoushine/articles/8007648.html
+    github地址：https://github.com/kubernetes/kubernetes
+    基本概念：应用app：软件服务
+            容器：给应用的专属环境
+            Kubernetes：平台，编排应用
+            标签：区分每一个应用app
+            pods: 运行线程
+            副本控制器：副本扩展和负载均衡
+            services：服务发现和发布
+            volumn: 数据存储
+            namespace: 命名空间，隔离操作
+
+    定义：Kubernetes 是一个开源的 Docker 容器编排系统，它可以调度计算集群的节点，动态管理上面的作业，保证它们按用户期望的状态运行。
+         通过使用「labels」和「pods」的概念，Kubernetes 将应用按逻辑单元进行分组，方便管理和服务发现。
+
+    第1章：概述
+        1.介绍Kubernetes
+            1.1 理解像Kubernetes这样的系统的需求
+                1.1.1 从单一应用程序到微服务
+                    单个应用越来越大，不便维护，所以进行拆分，使用http和amqp协议进行通信
+                1.1.2 为应用程序提供一致的环境
+                    开发环境和生产环境可能不同，需要保持一致
+                1.1.3 转向持续交付:DevOps和NoOps
+                    开发和维护人员同时负责程序的维护和编写
+            1.2 介绍容器技术
+                1.2.1 了解容器是什么
+                    使用linux容器技术隔离组件，比虚拟机来的更方便一点。容器的开销比虚拟机低
+                    隔离机制的实现是：linux的名称空间，linux控制组
+                1.2.2 介绍Docker容器平台
+                    linux容器隔离技术很早就出现了。随着docker的兴起而繁荣。
+                    Docker是一个用于打包、分发和运行应用程序的平台。
+                    docker中有3个主要的概念：镜像，注册表，容器
+                    所有运行在主机上的容器都使用主机的Linux内核
+                1.2.3 引入rkt—Docker的替代方案
+                    Docker本身并不提供进程隔离。容器的实际隔离是在Linux内核级别使用内核特性(如Linux名称空间和cgroups)完成的
+                    rkt也是一个运行容器的平台
+            1.3 介绍Kubernetes
+                1.3.1 了解它的起源
+                    google为了解决大量服务器的部署问题，开发了了Kubernetes
+                1.3.2 站在山顶上看Kubernetes
+                    Kubernetes是一个软件系统，允许您轻松地部署和管理基于它的容器化应用程序。
+                    Kubernetes可以看作是集群的操作系统
+                1.3.3 理解Kubernetes集群的体系结构
+                    master节点承载着控制整个Kubernetes系统
+                    worker节点运行实际部署的应用程序
+                1.3.4 在Kubernetes中运行应用程序
+                    首先需要将应用程序打包成容器镜像，然后进行注册，最后发不到Kubernetes API服务器
+                1.3.5 了解使用Kubernetes的好处
+                    简化应用的部署，更好的利用硬件，更好的健康检查和自我修复，自动缩放
+            1.4 总结
+                    应用程序从单个到使用docker和容器平台进行部署
+        2.Docker和Kubernetes的第一步
+            2.1 创建，运行和共享容器镜像
+                2.1.1 安装Docker并运行Hello World容器
+                    首先安装一个linux虚拟机，并在其中运行Docker守护进程
+                    docker run busybox echo "Hello world"
+                2.1.3 为映像创建Dockerfile
+                    dockerfile文件内部是一个命令行指令集合。包含了运行该程序需要的环境配置等
+                2.1.4 构建容器映像
+                    docker build -t kubia . //注意dockerfile文件的为位置和自定义的镜像名字
+                2.1.5 运行容器映像
+                    docker run --name kubia-container -p 8080:8080 -d kubia
+                    查看容器信息docker ps 容器名
+                              docker inspect 容器名
+                    docker inspect kubia-container
+                2.1.6 探索正在运行的容器的内部
+                    在容器内部执行shell命令
+                    docker exec -it kubia-container bash
+                2.1.7 停止并移除容器
+                    docker stop kubia-container
+                    docker rm kubia-container
+                2.1.8 将镜像推送到镜像注册表
+                    //标记自己的镜像
+                    docker tag kubia luksa/kubia
+                    //将镜像推送到中央仓库
+                     docker push luksa/kubia
+            2.2 设置Kubernetes集群
+                2.2.1 使用Minikube运行一个本地单节点Kubernetes集群
+                    Minikube是一个设置单节点集群的工具。github地址：https://github.com/kubernetes/minikube
+                    安装命令：
+                        OSX系统：
+                            curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.23.0/minikube-darwin-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+                        linux系统：
+                            curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.23.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+                    命令：minikube start  启动集群比较花费时间，请耐心等待
+                    要与Kubernetes交互，还需要kubectl CLI客户机
+                    安装命令：
+                        OSX系统：
+                            curl -LO https://storage.googleapis.com/kubernetes-release/release
+                            /$(curl -s https://storage.googleapis.com/kubernetes-release/release
+                            /stable.txt)/bin/darwin/amd64/kubectl
+                            && chmod +x kubectl
+                            && sudo mv kubectl /usr/local/bin/
+                        linux系统：
+                            curl -LO https://storage.googleapis.com/kubernetes-release/release
+                            /$(curl -s https://storage.googleapis.com/kubernetes-release/release
+                            /stable.txt)/bin/linux/amd64/kubectl
+                            && chmod +x kubectl
+                            && sudo mv kubectl /usr/local/bin/
+                    查看集群信息：kubectl cluster-info
+                2.2.2 使用带有谷歌Kubernetes引擎的托管Kubernetes集群
+                    在google的云平台上启用Kubernete引擎，下载kubectl命令行工具
+                    gcloud container clusters create kubia --num-nodes 3 --machine-type f1-micro
+                    查看集群信息：kubectl get nodes
+                                kubectl describe node gke-kubia-85f6-node-0rrx
+                2.2.3 为kubectl设置别名和命令行完成
+                    在文件～/.bashrc中添加alias k=kubectl
+            2.3 在Kubernetes上运行你的第一个app
+                2.3.1 部署Node.js应用程序
+                    kubectl run kubia --image=luksa/kubia --port=8080 --generator=run/v1
+                    pod是一组由一个或多个紧密相关的容器组成的容器，它们总是在同一个工作节点上，在同一个Linux名称空间中一起运行。
+                    列出pods：kubectl get pods
+                2.3.2 访问web应用程序
+                    发布服务：kubectl expose rc kubia --type=LoadBalancer --name kubia-http
+                    查看服务：kubectl get services
+                    将程序发布成服务时，kubernetes会自动给该服务分布1个外部ip地址
+                2.3.3 系统的逻辑部分
+                    外部请求-->kubernetes服务-->访问容器中的具体服务
+                2.3.4 水平扩展应用程序
+                    扩大副本的数量：kubectl scale rc kubia --replicas=3
+                2.3.5 检查应用程序运行在哪些节点上
+                    因为没有pod中的节点环境是一致的，所以无论运行到那个节点，结果都是一致的。
+                    kubectl get pods -o wide
+                    kubectl describe pod kubia-hczji
+                2.3.6 介绍Kubernetes仪表板
+                    能够监控集群运行时的各种信息
+                    kubectl cluster-info | grep dashboard
+                    gcloud container clusters describe kubia | grep -E "(username|password):"
+
+                    minikube dashboard
+            2.4 总结
+                    展示kubernetes的初步使用
+    第2章：核心概念
+        3.Pods:在Kubernetes上运行的容器
+            3.1 介绍pods
+                3.1.1 理解为什么我们需要pods
+                    多个容器比一个运行多个进程的容器更好。方便更好的区分程序的日志信息
+                3.1.2 理解pods
+                    相同pods的容器之间的部分隔离。pod内部的不同容器之间的通信就像局域网通信类似
+                    容器共享相同的IP和端口空间。扁平的pods间的网络
+                3.1.3 通过pods管理容器
+                    pod是缩放的基本单位，对于一个完整的前后端程序，最好将其拆分为多个pod
+                    当多个程序是紧密耦合时，可以将程序放入到同一个pod中
+            3.2 根据简单yaml文件或者json文件创建pods
+                3.2.1 检查现有pod的YAML描述符
+                    kubectl get po kubia-zxzij -o yaml
+                    yaml文件的内容组成：
+                        版本信息
+                        对象资源类型
+                        pod元数据
+                        pod特定的内容
+                        pod的细节状态和容器
+                3.2.2 为pod创建一个简单的YAML描述符
+                    查看pod详情：kubectl explain pods
+                    举例：apiVersion:v1
+                         kind:Pod
+                         metadata:
+                            name:kubia-manual
+                         spec:
+                            containers:
+                            - image: luksa/kubia
+                              name: kubia
+                              ports:
+                              - containerPort:8080
+                                protocol:TCP
+                3.2.3 使用kubectl创建pod
+                    kubectl create -f kubia-manual.yaml
+                    kubectl get po kubia-manual -o yaml
+                    kubectl get po kubia-manual -o json
+                    kubectl get pods
+                3.2.4 查看应用程序日志
+                    kubectl logs kubia-manual
+                    kubectl logs kubia-manual -c kubia
+                    当删除pod时，存储在pod中的日志也会被删除
+                3.2.5 向pod发送请求
+                    通过端口转发：kubectl port-forward kubia-manual 8888:8080
+            3.3 使用标签管理pods
+                3.3.1 引入标签
+                    方便每个程序的分类和管理
+                3.3.2 在创建pod时指定标签
+                    在yaml中添加标签内容：labels：
+                                            creation_method:manual
+                                            env:prod
+                    kubectl create -f kubia-manual-with-labels.yaml
+                    查看标签：kubectl get po --show-labels
+                             kubectl get po -L creation_method,env
+                3.3.3 修改现有pods的标签
+                    kubectl label po kubia-manual creation_method=manual
+                    kubectl label po kubia-manual-v2 env=debug --overwrite
+                    kubectl get po -L creation_method,env
+            3.4 通过标签选择器列出pods的子集
+                3.4.1 使用标签选择器列出pod
+                    使用标签选择器可以方便的查找想要的资源
+                    kubectl get po -l creation_method=manual
+                    kubectl get po -l env
+                    kubectl get po -l '!env'
+                3.4.2 在标签选择器中使用多个条件
+                    用逗号分割条件，需要全部匹配才能查到资源
+            3.5 使用标签和选择器约束pod调度
+                3.5.1 使用标签对工作节点进行分类
+                    使用标签也能将代码和硬件解耦
+                    kubectl label node gke-kubia-85f6-node-0rrx gpu=true
+                3.5.2 将pod调度到指定节点
+                    创建pod时，指定到特定的标签的节点
+                3.5.3 调度到一个特定节点
+                    通过标签进行选择
+            3.6 注释pods
+                3.6.1 查找对象的注释
+                    注释也是键值对，本质类似于标签，不存在注释选择器
+                    注释分为自动注释和手动注释。
+                    在yaml中会增加注释信息：kubectl get po kubia-zxzij -o yaml
+                3.6.2 添加和修改注释
+                    kubectl annotate pod kubia-manual mycompany.com/someannotation="foo bar"
+                    kubectl describe pod kubia-manual
+            3.7 使用命名空间对资源进行分组
+                3.7.1 理解名称空间的需要
+                    标签和命名空间都可以对资源进行分组
+                    使用多个名称空间可以将具有多个组件的复杂系统分割成更小的不同组
+                3.7.2 发现其他名称空间及其pod
+                    列出命名空间：kubectl get ns
+                                kubectl get po --namespace kube-system
+                3.7.3 创建一个命名空间
+                    使用yaml文件创建：metadata：
+                                        name:custom-namespace
+                    kubectl create -f custom-namespace.yaml
+                    kubectl create namespace custom-namespace
+                3.7.4 管理其他名称空间中的对象
+                    kubectl create -f kubia-manual.yaml -n custom-namespace
+                3.7.5 理解名称空间提供的隔离
+                    空间隔离是逻辑上的，网络上的隔离是由kubernetes的策略决定的
+            3.8 停止和移除pods
+                3.8.1 按名称删除pod
+                    kubectl delete po kubia-gpu
+                    一次关闭多个的时候，使用逗号连接
+                3.8.2 使用标签选择器删除pod
+                    kubectl delete po -l creation_method=manual
+                    kubectl delete po -l rel=canary
+                3.8.3 通过删除整个名称空间来删除pods
+                    kubectl delete ns custom-namespace
+                3.8.4 删除名称空间中的所有pods，同时保留该名称空间
+                    kubectl delete po --all
+                3.8.5 删除(几乎)名称空间中的所有资源
+                    删除副本控制器和pods
+                    kubectl delete all --all
+            3.9 总结
+                    kubernetes的核心构建块pod的命令行操作
+        4.复制和其他控制器:部署托管pods
+            4.1 保持pods健康
+                4.1.1 引入活性探针
+                    Kubernetes可以通过活性探针检查容器是否仍然活着，为每个容器指定一个活动探针。Kubernetes将周期性地执行探测并在探测失败时重新启动容器。
+                    三种机制探测容器：1. http get请求
+                                    2.tcp socket连接
+                                    3.执行探测指令
+                4.1.2 创建基于http的活性探测
+                    在yaml文件中进行配置：containers:
+                                            livenessProbe:
+                                                httpGet:
+                                                    path:/
+                                                    port:8080
+                    当检测到失败时，将重启容器
+                4.1.3 看到一个活跃的探针在行动
+                    查看容器之前的出错日志：kubectl logs mypod --previous
+                    当一个容器被杀死时，将创建一个全新的容器——它不是重新启动的同一个容器
+                4.1.4 配置活性探测的其他属性
+                    可以设置初始延迟：livenessProbe:
+                                        httpGet:
+                                            path:/
+                                            port:8080
+                                        initialDelaySeconds: 15
+                    如果不设置延迟探测，可能会造成探测失败，并多次探测后重启容器，导致死循环！！！错误码可能是137或者143
+                4.1.5 创建有效的活性探针
+                    可以给指定的url路径设置探针，判断请求是否没有响应。而且http端点不需要身份验证，否则始终探测失败
+                    在探测中实现自己的重试循环是浪费精力
+            4.2 介绍ReplicationControllers
+                4.2.1 复制控制器的操作
+                    ReplicationController是一个Kubernetes资源，它确保它的pods始终保持运行。pod丢失则会重新创建1个pod
+                    当pod被复制控制器托管时，可以在pod失败时自动重新创建
+                    副本控制器的组成：标签选择器
+                                    副本计数
+                                    pod模版
+                    当pod副本的数量太多，则自动删除多余的，数量太少，则增加
+                4.2.2 创建一个ReplicationController
+                    通过yaml创建：kind : ReplicationController
+                                 metadata:
+                                    name:kubia
+                                 spec:
+                                    replicas:3
+                                    selector:
+                                        app:kubia
+                                 template:
+                                    metadata:
+                                        labels:
+                                            app:kubia
+                                    spec:
+                                        containers:
+                                        - name:kubia
+                                          image: luksa/kubia
+                                          ports:
+                                          - containerPort:8080
+                    kubectl create -f kubia-rc.yaml
+                4.2.3 看到ReplicationController在运行
+                    kubectl get pods
+                    kubectl delete pod kubia-53thy
+                    kubectl get rc
+
+                    副本控制器对状态进行响应，而不是对动作进行响应
+                4.2.4 将pods移进或移出复制控制器的范围
+                    当复制控制器管理的一个pod的标签改变了，它会重新创建该pod
+                    如果副本控制器的标签选择器被修改，则所有pod都失去控制，将重新创建新的pod
+                4.2.5 更改pod模板
+                    修改的pod模版只对后面的pod有影响，当前pod不影响
+                    kubectl edit rc kubia
+                4.2.6 水平扩展pods
+                     kubectl scale rc kubia --replicas=10
+                     kubectl edit rc kubia
+                4.2.7 删除一个ReplicationController
+                    当删除副本控制器时，该控制器下的pod并不会被删除
+                    kubectl delete rc kubia --cascade=false
+            4.3 使用副本集而不是副本控制器
+                4.3.1 复制集与复制控制器的比较
+                    副本集最终将替换副本控制器
+                    副本集有更好的pod选择器，能匹配更多的标签
+                4.3.2 定义一个ReplicaSet
+                    使用yaml文件配置：kind：Replicaset
+                                    metadata：
+                                        name:kubia
+                                    spec:
+                                        replicas:3
+                                        selectors:
+                                            matchLabels:
+                                                app:kubia
+                                        template:
+                                            metadata:
+                                                labels:
+                                                    app:kubia
+                                            spec:
+                                                containers:
+                                                - name:kubia
+                                                  image: luksa/kubia
+                4.3.3 创建并检查一个副本集
+                    使用yaml创建一个副本
+                    kubectl get rs
+                    kubectl describe rs
+                4.3.4 使用ReplicaSet更富表现力的标签选择器
+                    有多个操作符号：In,NotIn,Exists,DoesNotExist
+                4.3.5 封装复制集
+                     kubectl delete rs kubia
+            4.4 在每一个守护集合的的节点上运行一个pod
+                4.4.1 使用DaemonSet在每个节点上运行pod
+                    DaemonSet确保创建与节点一样多的pod，并将每个pod部署到自己的节点上
+                4.4.2 使用DaemonSet仅在某些节点上运行pod
+                    在yaml文件进行配置：apiVersion: apps/v1beta2
+                                      kind: DaemonSet
+                                      metadata:
+                                        name: ssd-monitor
+                                      spec:
+                                        selector:
+                                          matchLabels:
+                                            app: ssd-monitor
+                                        template:
+                                          metadata:
+                                            labels:
+                                              app: ssd-monitor
+                                          spec:
+                                            nodeSelector:
+                                              disk: ssd
+                                            containers:
+                                            - name: main
+                                              image: luksa/ssd-monitor
+                    kubectl create -f ssd-monitor-daemonset.yaml
+                    kubectl get ds
+                    kubectl label node minikube disk=ssd
+                    终止守护进程：kubectl label node minikube disk=hdd --overwrite
+            4.5 运行执行单个可完成任务的pod
+                4.5.1 介绍job资源
+                    一般做数据迁移或者初始化操作，只执行一遍就停止
+                4.5.2 定义job资源
+                    使用yaml文件配置:apiVersion: batch/v1
+                                   kind: Job
+                                   metadata:
+                                     name: batch-job
+                                   spec:
+                                     template:
+                                       metadata:
+                                         labels:
+                                           app: batch-job
+                                       spec:
+                                         restartPolicy: OnFailure
+                                         containers:
+                                         - name: main
+                                           image: luksa/batch-job
+                    可以设置pod的策略进行只执行1遍的操作：restartPolicy=OnFailure或Never
+                4.5.3 查看运行在pod上的job
+                    kubectl get jobs
+                    kubectl logs batch-job-28qf4
+                4.5.4 在一个作业中运行多个pod实例
+                    可以在yaml文件中配置一个job执行多次： apiVersion: batch/v1
+                                                      kind: Job
+                                                      metadata:
+                                                        name: multi-completion-batch-job
+                                                      spec:
+                                                        completions: 5
+                                                        template:
+                    也可以进行并行运行：parallelism: 2
+                    自动缩放job：kubectl scale job multi-completion-batch-job --replicas 3
+                4.5.5 限制job pod完成的时间
+                    设置属性activeDeadlineSeconds。如果超时则job失败。可以设置失败重试的次数spec.backoffLimit，默认为6
+            4.6 定期或者将来运行一次的计划作业
+                4.6.1 创建一个定时job
+                    需要创建cronjob，格式是cron格式。还是修改yaml文件
+                    apiVersion: batch/v1beta1
+                    kind: CronJob
+                    metadata：
+                        name: batch-job-every-fifteen-minutes
+                    spec:
+                      schedule: "0,15,30,45 * * * *"
+                      jobTemplate:
+                        spec:
+                          template:
+                            metadata:
+                              labels:
+                                app: periodic-batch-job
+                            spec:
+                              restartPolicy: OnFailure
+                              containers:
+                              - name: main
+                                image: luksa/batch-job
+                4.6.2 了解计划作业的运行方式
+                    在定时任务指定的时间创建pod运行job
+                    可以设置开始时间：startingDeadlineSeconds: 15
+            4.7 总结
+                    检查pod的活性，自动伸缩节点，副本集代替副本控制器。使用Cronjob进行定时任务
+        5.服务：使客户能够发现pod并与之交谈
+            5.1 介绍service
+                5.1.1 创建服务
+                    一个服务可以由多个pod支持，标签选择器决定了那个pods属于服务
+                    可以通过kubectl expose和yaml文件发布一个服务
+                        apiVersion: v1
+                        kind: Service    //核心
+                        metadata:
+                          name: kubia
+                        spec:
+                          ports:
+                          - port: 80
+                            targetPort: 8080
+                          selector:
+                        app: kubia
+                    目前的服务只能被集群内部的pod给访问
+                    服务访问测试：kubectl exec kubia-7nog1 -- curl -s http://10.111.249.153
+                        这里的双破折号表示后续命令在pod中执行
+                    可以通过设置sessionAffinity：clientIp,每次将请求引入同一个pod进行处理
+                    在创建具有多个端口的服务时，必须为每个端口指定一个名称。
+                        apiVersion: v1
+                        kind: Service
+                        metadata:
+                        name: kubia
+                        spec:
+                          ports:
+                          - name: http
+                            port: 80
+                            targetPort: 8080
+                          - name: https
+                            port: 443
+                            targetPort: 8443
+                          selector:
+                            app: kubia
+                5.1.2 发现服务
+                    通过环境变量发现服务：
+                        kubectl delete po --all
+                        kubectl exec kubia-3inly env  //查看在pod中的环境变量
+                    通过DNS发现服务：
+                        Kubernetes有一个内部DNS服务器。pod可以通过修改etc/resolv.conf指定该dns服务器
+                    通过FQDN连接到服务：
+                        backend-database.default.svc.cluster.local
+                        kubectl exec -it kubia-3inly bash
+                            url http://kubia.default.svc.cluster.local
+                    判断一个服务是否挂掉时，使用ping方法时行不通的。因为ip时虚拟的
+            5.2 连接到集群外部的服务
+                5.2.1 介绍服务节点
+                    服务不是直接谅解到pods上的。资源位于端点资源之间
+                    kubectl describe svc kubia
+                    kubectl get endpoints kubia
+                5.2.2 手动配置服务节点
+                    为没有选择器的服务创建端点资源
+                        apiVersion: v1
+                        kind: Endpoints
+                        metadata:
+                          name: external-service
+                        subsets:
+                          - addresses:
+                            - ip: 11.11.11.11
+                            - ip: 22.22.22.22
+                            ports:
+                            - port: 80
+                5.2.3 为外部服务创建别名
+                    通过完全限定域名(FQDN)引用外部服务
+                        apiVersion: v1
+                        kind: Service
+                        metadata:
+                          name: external-service
+                        spec:
+                          type: ExternalName
+                          externalName: someapi.somecompany.com
+                          ports:
+                          - port: 80
+            5.3 向外部客户端公开服务
+                5.3.1 使用NodePort服务
+                    让Kubernetes在所有节点上保留一个相同的端口号，并将传入的连接转发到作为服务一部分的pods
+                    核心的yaml配置：
+                        apiVersion: v1
+                        kind: Service
+                        metadata:
+                           name: kubia-nodeport
+                        spec:
+                          type: NodePort
+                          ports:
+                          - port: 80
+                            targetPort: 8080
+                            nodePort: 30123     //被其他pod访问的端口
+                          selector:
+                            app: kubia
+                    查看信息：kubectl get svc kubia-nodeport
+                    设置防火墙：gcloud compute firewall-rules create kubia-svc-rule --allow=tcp:30123
+                    打印节点IP信息：kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}'
+                5.3.2 通过外部负载平衡器公开服务
+                    它是带有附加基础设施提供的负载均衡器的NodePort服务
+                    创建一个负载均衡的服务：apiVersion: v1
+                                        kind: Service
+                                        metadata:
+                                          name: kubia-loadbalancer
+                                        spec:
+                                          type: LoadBalancer
+                                          ports:
+                                          - port: 80
+                                            targetPort: 8080
+                                          selector:
+                                            app: kubia
+                    查看信息：kubectl get svc kubia-loadbalancer
+                5.3.3 理解外部连接的特性
+                    防止不必要的网络跳转： spec:
+                                         externalTrafficPolicy: Local
+                    客户端IP的不保存：当通过节点端口访问服务时，IP地址将会改变
+            5.4 通过入口资源对外公开服务
+                5.4.1 创建一个入口资源
+                    需要一个入口控制器，或者增加入口插件。
+                    通过yaml文件创建：apiVersion: extensions/v1beta1
+                                    kind: Ingress
+                                    metadata:
+                                      name: kubia
+                                    spec:
+                                      rules:
+                                      - host: kubia.example.com
+                                    http: paths:
+                                         - path: /
+                                           backend:
+                                             serviceName: kubia-nodeport
+                                             servicePort: 80
+                5.4.2 通过入口访问服务
+                    kubectl get ingresses  //获取入口的IP地址
+                    配置dns服务器将域名和地址进行绑定
+                5.4.3 通过同一个入口公开多个服务
+                    配置yaml文件：  - host: kubia.example.com
+                                     http:
+                                        paths:
+                                           - path: /kubia
+                                             backend:
+                                               serviceName: kubia
+                                               servicePort: 80
+                                           - path: /foo
+                                             backend:
+                                               serviceName: bar
+                                               servicePort: 80
+                    将不同的服务映射到不同的主机：
+                        spec: rules:
+                          - host: foo.example.com
+                            http:
+                              paths:
+                              - path: /
+                                backend:
+                                  serviceName: foo
+                                  servicePort: 80
+                          - host: bar.example.com
+                            http:
+                              paths:
+                              - path: /
+                                backend:
+                                  serviceName: bar
+                                  servicePort: 80
+                5.4.4 配置Ingress来处理TLS流量
+                    为入口创建TLS证书：需要私钥和证书
+                        penssl genrsa -out tls.key 2048
+                        openssl req -new -x509 -key tls.key -out tls.cert -days 360 -subj /CN=kubia.example.com
+                        kubectl create secret tls tls-secret --cert=tls.cert --key=tls.key
+                    获取已经签名证书：kubectl certificate approve <name of the CSR>
+                    具体配置：apiVersion: extensions/v1beta1
+                         kind: Ingress
+                         metadata:
+                           name: kubia
+                         spec:
+                             tls:
+                             - hosts:
+                                 - kubia.example.com
+                                 secretName: tls-secret
+                             rules:
+                             - host: kubia.example.com
+                                 http:
+                                   paths:
+                                   - path: /
+                                 backend:
+                                   serviceName: kubia-nodeport
+                                   servicePort: 80
+                    更新入口：kubectl apply -f kubia-ingress-tls.yaml
+            5.5 当pod准备好接受连接时发出信号
+                5.5.1 引入就绪探测
+                    要确保服务彻底准备好后再通知可以接收服务了
+                    判断一个容器就绪的原理是发送一个get请求判断返回值
+                    探针的类型有3种：执行一个进程的Exec探测
+                                   HTTP GET探针
+                                   TCP套接字探测
+                5.5.2 向pod添加准备就绪探测器
+                    kubectl edit rc kubia
+                    举例：  apiVersion: v1
+                           kind: ReplicationController
+                           ...
+                           spec:
+                             ...
+                             template:
+                                ...
+                                spec:
+                                 containers:
+                                 - name: kubia
+                                   image: luksa/kubia
+                                   readinessProbe:
+                                     exec:
+                                       command:
+                                       - ls
+                                       - /var/ready
+                    默认每10秒钟探测一次
+                5.5.3 了解真实世界的准备就绪探测应该做什么
+                    在pod种最好多添加准备探测的探针，不设置的话，服务还没好就会被请求
+                    不要在准备探测中包含pod关闭逻辑
+            5.6 使用无穷的服务来发现单个pods
+                5.6.1 创建headless服务
+                        设置clusterIP=None
+                        apiVersion: v1
+                        kind: Service
+                        metadata:
+                          name: kubia-headless
+                        spec:
+                          clusterIP: None   //核心，不自动分配ip地址
+                          ports:
+                          - port: 80
+                            targetPort: 8080
+                          selector:
+                            app: kubia
+                5.6.2 通过DNS发现pod
+                    通过命令行创建pod：kubectl run dnsutils --image=tutum/dnsutils --generator=run-pod/v1 --command -- sleep infinity
+                    查找headless的pod：kubectl exec dnsutils nslookup kubia-headless
+                5.6.3 发现所有的pods——甚至那些还没有准备好的pods
+                    使用dns机制查找。在yaml添加内容
+                        kind: Service
+                        metadata:
+                          annotations:
+                            service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+            5.7 故障诊断服务
+                1.确保从集群内部连接到服务的集群IP，而不是从外部
+                2.不要费心ping服务IP来确定服务是否可访问(请记住，服务的集群IP是一个虚拟IP, ping它永远不会起作用)。
+                3.如果已经定义了就绪探测，请确保它正在成功;否则pod将不会成为服务的一部分。
+                4.要确认pod是服务的一部分，请使用kubectl get端点检查相应的端点对象。
+                5.如果您试图通过服务的FQDN或部分FQDN访问服务(例如，myservice.mynamespace. svg .cluster)。它不能工作，看看是否可以使用它的集群IP而不是FQDN访问它。
+                6.检查您是否连接到服务公开的端口，而不是目标端口。
+                7.尝试直接连接到pod IP，以确认您的pod正在接受正确端口上的连接。
+                8.如果你甚至不能通过pod的IP访问你的应用，确保你的应用不只是绑定到localhost。
+            5.8 总结
+                kubernetes服务资源的公开和发现
+        6.卷：将磁盘存储附加到容器
+            6.1 介绍volumes
+                6.1.1 在一个例子中解释卷
+                    Kubernetes卷是pod的一个组件。容器之间的文件系统是隔离的
+                    在1个pod中，有3个容器，共享一个卷进行数据存储
+                6.1.2 介绍可用的卷类型
+                    emptyDir: 用于存储瞬态数据的简单空目录
+                    hostPath: 用于从工作节点的文件系统挂载目录到pods
+                    gitRepo: 通过检出Git存储库的内容来初始化的卷
+                    nfs: 安装到pod中的NFS共享
+                    gcePersistentDisk: google的云存储硬盘
+                    cinder：各种类型的网络存储
+                    configMap：用于向pod公开某些特定类型的Kubernetes资源和集群信息的卷
+                    persistentVolumeClaim：动态分配分区存储的方法
+
+                    容器可以安装，也可以不安装卷
+            6.2 使用卷在容器之间共享数据
+                6.2.1 使用emptyDir卷
+                    在yaml文件中配置卷：
+                        apiVersion: v1
+                        kind: Pod
+                        metadata:
+                          name: fortune
+                        spec:
+                            containers:
+                            - image: luksa/fortune
+                              name: html-generator
+                              volumeMounts:
+                              - name: html
+                                mountPath: /var/htdocs
+                            - image: nginx:alpine
+                              name: web-server
+                              volumeMounts:
+                              - name: html
+                                mountPath: /usr/share/nginx/html
+                                readOnly: true
+                              ports:
+                              - containerPort: 80
+                                protocol: TCP
+                            volumes:
+                            - name: html
+                            emptyDir: {}
+                    可以设置卷的介质：volumes:
+                                    - name: html
+                                        emptyDir:
+                                            medium: Memory
+                6.2.2 使用Git存储库作为卷的起点
+                    使用git初始化的空目录
+                    举例：volumes:
+                          - name: html
+                            gitRepo:
+                                repository: https://github.com/luksa/kubia-website-example.git
+                                revision: master
+                                directory: .
+                    默认是不会自动同步内容的。
+            6.3 访问工作节点文件系统上的文件
+                6.3.1 介绍主机路径卷
+                    这是持久性存储类型，而空目录和gitRepo都是删除pod后删除放在上面的文件
+                6.3.2 检查使用主机路径卷的系统pods
+                    kubectl describe po fluentd-kubia-4ebc2f1e-9a3e --namespace kube-system
+                    使用举例：
+                        Volumes:
+                          varlog:
+                            Type: HostPath
+                            Path: /var/log
+                          varlibdockercontainers:
+                            Type:       HostPath
+                            Path:       /var/lib/docker/containers
+            6.4 使用持久存储
+                6.4.1 在pod卷中使用GCE持久磁盘
+                    在kubernetes集群相同的区域创建持久存储
+                    gcloud container clusters list
+                    gcloud compute disks create --size=1GiB --zone=europe-west1-b mongodb
+                    举例：apiVersion: v1
+                        kind: Pod
+                        metadata:
+                         name: mongodb
+                        spec:
+                         volumes:
+                         - name: mongodb-data
+                           gcePersistentDisk:
+                             pdName: mongodb
+                             fsType: ext4
+                         containers:
+                         - image: mongo
+                           name: mongodb
+                           volumeMounts:
+                           - name: mongodb-data
+                             mountPath: /data/db
+                           ports:
+                           - containerPort: 27017
+                             protocol: TCP
+                6.4.2 使用具有底层持久存储的其他类型的卷
+                    也可以是aws的持久存储，总之是要有数据库建立起来
+                         volumes:
+                          - name: mongodb-data
+                            awsElasticBlockStore:
+                            volumeId: my-volume
+                            fsType: ext4
+                    使用NFS卷：
+                        volumes:
+                          - name: mongodb-data
+                            nfs:
+                              server: 1.2.3.4
+                              path: /some/path
+            6.5 将pod与底层存储技术解耦
+                6.5.1 介绍持久性卷和持久性卷目标
+                    通过Kubernetes请求各种持久性存储，通过代码，而不是专门去学习基础设施相关技术。
+                    管理员创建NFC和PV，用户创建一个PVC，Kubernetes将PV和PVC绑定
+                    用户使用一个PVC创建pod
+                    在删除绑定PersistentVolumeClaim之前，其他用户不能使用相同的PersistentVolume。
+                6.5.2 创建一个持久性卷
+                    apiVersion: v1
+                    kind: PersistentVolume
+                    metadata:
+                      name: mongodb-pv
+                    spec:
+                      capacity:
+                        storage: 1Gi
+                      accessModes:
+                      - ReadWriteOnce
+                      - ReadOnlyMany
+                      persistentVolumeReclaimPolicy: Retain
+                      gcePersistentDisk:
+                         pdName: mongodb
+                         fsType: ext4
+
+                    查看信息：kubectl get pv
+                6.5.3 通过创建PersistentVolumeClaim声明一个PersistentVolume
+                    创建一个PersistentVolumeClaim
+                        apiVersion: v1
+                        kind: PersistentVolumeClaim
+                        metadata:
+                          name: mongodb-pvc
+                        spec:
+                          resources:
+                            requests:
+                              storage: 1Gi
+                          accessModes:
+                          - ReadWriteOnce
+                          storageClassName: ""
+                    监听PersistentVolumeClaim
+                        kubectl get pvc
+                        注意模式：RWO--读写一次。只有一个节点可以挂载卷进行读写
+                                ROX--多节点可以挂载卷进行读取
+                                RWX--多个节点可以挂载卷，以便同时进行读取和写作。
+                    监听PersistentVolume
+                         kubectl get pv
+                6.5.4 在pod中使用持久性volumeclaim
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: mongodb
+                    spec:
+                      containers:
+                      - image: mongo
+                        name: mongodb
+                        volumeMounts:
+                        - name: mongodb-data
+                          mountPath: /data/db
+                        ports:
+                        - containerPort: 27017
+                          protocol: TCP
+                      volumes:
+                      - name: mongodb-data
+                        persistentVolumeClaim:
+                          claimName: mongodb-pvc
+                6.5.5 理解使用持久卷和声明的好处
+                    pod可以使用PersistentVolume和claim两种方式创建持久化存储。
+                    一种是直接将数据库挂载到pod，另一种是使用引用，持久化存储通过PVC引用。数据要传输
+                    方便应用的管理迁移
+                6.5.6 回收PersistentVolumes
+                    kubectl delete pod mongodb
+                    kubectl delete pvc mongodb-pvc   //pv和pvc并没有删除，仅仅是挂起和释放了
+                    可以设置回收策略：Delete 或者 Retain
+            6.6 持久性卷的动态供应
+                6.6.1 通过StorageClass资源定义可用的存储类型
+                    与persistentvolume类似，StorageClass资源没有名称空间。
+                    apiVersion: storage.k8s.io/v1
+                    kind: StorageClass
+                    metadata:
+                      name: fast
+                    provisioner: kubernetes.io/gce-pd
+                    parameters:
+                        type: pd-ssd
+                        zone: europe-west1-b
+                6.6.2 在PersistentVolumeClaim中请求存储类
+                    创建了StorageClass资源之后，用户可以在其PersistentVolumeClaims中通过名称引用存储类。
+                    apiVersion: v1
+                            kind: PersistentVolumeClaim
+                            metadata:
+                              name: mongodb-pvc
+                    spec:
+                      storageClassName: fast
+                      resources:
+                        requests:
+                          storage: 100Mi
+                      accessModes:
+                        - ReadWriteOnce
+                6.6.3没有指定存储类的动态供应
+                    列出存储类：kubectl get sc
+                    默认情况下，有一个默认的标准存储类
+                    检查标准存储类信息：kubectl get sc standard -o yaml
+            6.7 总结
+                使用卷为pod的容器提供存储
+        7.ConfigMaps和Secret:配置应用程序
+            7.1 配置容器化的应用程序
+                第一种：命令行参数
+                第二种：配置文件【通过特殊类型的卷将配置文件装入容器】
+                第三种：环境变量【推荐方式】
+            7.2 将命令行参数传递给容器
+                7.2.1 在Docker中定义命令和参数
+                    理解入口点和CMD：ENTRYPOINT定义在容器启动时调用的可执行文件。
+                                   CMD指定传递到入口点的参数。
+                        docker run <image> <arguments>
+
+                        入口是一个shell，cmd是传入的参数：
+                            ENTRYPOINT ["/bin/fortuneloop.sh"]
+                            CMD ["10"]
+                    理解shell和exec表单之间的区别：
+                        shell：ENTRYPOINT node app.js
+                        exec：ENTRYPOINT ["node"， "app.js"]
+                        在使用的shell文件中，使用占位符$数字来表示变量
+                7.2.2 覆盖Kubernetes中的命令和参数
+                    kind: Pod
+                    spec:
+                      containers:
+                      - image: some/image
+                        command: ["/bin/command"]
+                        args: ["arg1", "arg2", "arg3"]
+            7.3 为容器设置环境变量
+                7.3.1 在容器定义中指定环境变量
+                    在pod的创建的时候创建环境变量
+                    kind: Pod
+                    spec:
+                     containers:
+                     - image: luksa/fortune:env
+                       env:
+                       - name: INTERVAL
+                            value: "30"
+                       name: html-generator
+                7.3.2 引用变量值中的其他环境变量
+                    env:
+                    - name: FIRST_VAR
+                      value: "foo"
+                    - name: SECOND_VAR
+                      value: "$(FIRST_VAR)bar"
+            7.4 使用ConfigMap解耦配置
+                7.4.1 介绍ConfigMaps
+                    它是一个单独对象，是键值对映射。其值范围从简短的文字到完整的配置文件。
+                7.4.2 创建一个ConfigMap
+                    kubectl create configmap fortune-config --from-literal= sleep-interval=25
+                    kubectl create configmap myconfigmap --from-literal=foo=bar
+                                                          --from-literal=bar=baz
+                                                          --from-literal=one=two
+                    kubectl create -f fortune-config.yaml
+                    查看信息：kubectl get configmap fortune-config -o yaml
+
+                    //将文件作为value，默认的键为文件名
+                     kubectl create configmap my-config --from-file=config-file.conf
+                     kubectl create configmap my-config --from-file=customkey=config-file.conf
+
+                    //将文件目录下的所有文件作为value
+                    kubectl create configmap my-config --from-file=/path/to/dir
+
+                    //组合使用
+                    kubectl create configmap my-config
+                        --from-file=foo.json
+                        --from-file=bar=foobar.conf
+                        --from-file=config-opts/
+                        --from-literal=some=thing
+                7.4.3 将ConfigMap条目作为环境变量传递给容器
+                    apiVersion: v1
+                            kind: Pod
+                    metadata:
+                      name: fortune-env-from-configmap
+                    spec:
+                      containers:
+                      - image: luksa/fortune:env
+                      env:
+                    - name: INTERVAL
+                    valueFrom:
+                      configMapKeyRef:
+                        name: fortune-config
+                        key: sleep-interval
+
+                    当configMapKeyRef.optional: true时，即使configMap不存在，容器也能正常启动
+                7.4.4 将ConfigMap的所有条目作为环境变量一次传递
+                    spec:
+                      containers:
+                      - image: some-image
+                    envFrom:
+                        - prefix: CONFIG_
+                          configMapRef:
+                            name: my-config-map
+                    如果键值的名字不正确，包含破折号等，无法进行解析该条目
+                7.4.5 将ConfigMap条目作为命令行参数传递
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: fortune-args-from-configmap
+                    spec:
+                      containers:
+                      - image: luksa/fortune:args
+                    env:
+                    - name: INTERVAL
+                      valueFrom:
+                        configMapKeyRef:
+                          name: fortune-config
+                          key: sleep-interval
+                    args: ["$(INTERVAL)"]
+                7.4.7 更新应用程序的配置，而无需重新启动应用程序
+                    使用ConfigMap作为程序配置可以做到这点。更新文件需要一段时间，请耐心等待
+                    修改ConfigMap而不需要重新启动程序kubectl edit configmap fortune-config
+                    kubernetes自动推送消息给应用程序，configMap配置对象更新了。原理是创建新目录再重新链接
+            7.5 使用密钥将敏感数据传递到容器
+                7.5.1 介绍Secrets
+                    Kubernetes中的一个对象，类似ConfigMap
+                7.5.2 引入默认令牌秘钥
+                    每个pod都有一个自动附加的Secret卷
+                    查看信息：kubectl get secrets
+                    Secret有3个属性：crt,命名空间和令牌。查看这3个文件的方法
+                        kubectl exec mypod ls /var/run/secrets/kubernetes.io/serviceaccount/
+                7.5.3 创建一个Secret
+                    kubectl create secret generic fortune-https --from-file=https.key --from-file=https.cert --from-file=foo
+                7.5.4 比较ConfigMaps和secret
+                    在查看二者的信息时,Secret显示64位编码，而configmap时清晰的文本
+                    Secret的最大大小限制为1MB
+                    给Secret添加字符串信息：kind: Secret
+                                   apiVersion: v1
+                                   stringData:
+                                     foo: plain text
+                        但是只能进行写操作，而不会在查看时显示出来
+                7.5.5 在pod中使用Secret
+                    volumns：
+                    - name: certs
+                        secret:
+                            secretName: fortune-https
+
+                    env:
+                    - name: FOO_SECRET
+                      valueFrom:
+                        secretKeyRef:
+                          name: fortune-https
+                          key: foo
+                7.5.6 理解镜像拉取Secret
+                    在dockerhub使用私有镜像仓库
+                    创建一个Secret来在docker注册中心进行认证
+                        kubectl create secret docker-registry mydockerhubsecret
+                          --docker-username=myusername --docker-password=mypassword
+                          --docker-email=my.email@provider.com
+                    在pod定义中使用docker-registry的Secret
+                7.6 总结
+                    学习如何将配置数据传递到容器
+        8.从应用程序访问pod元数据和其他资源
+            8.1 通过向下API传递元数据
+                8.1.1 理解可用的元数据
+                    元数据包括pods的名字和IP，命名空间，节点名字，服务账户的名字，每个容器的CPU和内存，pods的标签和注释
+                8.1.2 通过环境变量公开元数据
+                    查看信息：kubectl exec downward env
+                8.1.3 通过下行api卷中的文件传递元数据
+                    可以定义一个downwardAPI卷并将其挂载到容器中。
+            8.2 与Kubernetes API服务器对话
+                8.2.1 探索Kubernetes REST API
+                     kubectl cluster-info
+                     通过kubectl代理访问api服务器：kubectl proxy
+                     通过curl查看具体的API信息：curl http://localhost:8001/apis/batch/v1/jobs
+                     获得完整的作业定义： kubectl get job my-job -o json
+                8.2.2 在一个pod中与API服务器通信
+                    查找API服务器的位置
+                    确保您正在与API服务器对话，而不是模拟它的东西
+                    使用服务器进行身份验证;否则它不会让你看到或做任何事情。
+                    通过设置环境变量简化证书验证：
+                        export CURL_CA_BUNDLE=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                    使用令牌访问服务器，将令牌加载到环境变量中
+                        TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+
+                        curl -H "Authorization: Bearer $TOKEN" https://kubernetes
+                8.2.3 简化与大使容器的API服务器通信
+                    有一个专门的容器，名字叫做ambassador，负责让main容器和API服务器进行连接
+                    kubectl exec -it curl-with-ambassador -c main bash   //进行大使容器
+                    curl localhost:8001  //访问API服务器
+                    curl将普通HTTP请求(没有任何身份验证头)发送到运行在大使容器中的代理，然后代理将HTTPS请求发送到API服务器，通过发送令牌来处理客户机身份验证，并通过验证证书来检查服务器的身份
+                8.2.4 使用客户端库与API服务器通信
+                    目前有两个库： Golang client  https://github.com/kubernetes/client-go
+                                 Python  https://github.com/kubernetes-incubator/client-python
+                    代码举例：import java.util.Arrays;
+                             import io.fabric8.kubernetes.api.model.Pod;
+                             import io.fabric8.kubernetes.api.model.PodList;
+                             import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+                             import io.fabric8.kubernetes.client.KubernetesClient;
+                         public class Test {
+                           public static void main(String[] args) throws Exception {
+                             KubernetesClient client = new DefaultKubernetesClient();
+                             PodList pods = client.pods().inNamespace("default").list();
+                             pods.getItems().stream()
+                               .forEach(s -> System.out.println("Found pod: " +
+                                        s.getMetadata().getName()));
+                             System.out.println("Creating a pod");
+
+                             Pod pod = client.pods().inNamespace("default")
+                               .createNew()
+                               .withNewMetadata()
+                                 .withName("programmatically-created-pod")
+                               .endMetadata()
+                               .withNewSpec()
+                                 .addNewContainer()
+                                   .withName("main")
+                                   .withImage("busybox")
+                                   .withCommand(Arrays.asList("sleep", "99999"))
+                                 .endContainer()
+                               .endSpec()
+                               .done();
+
+                             System.out.println("Created pod: " + pod);
+                             client.pods().inNamespace("default").withName("programmatically-created-pod")
+                               .edit().editMetadata().addToLabels("foo", "bar").endMetadata().done();
+                             System.out.println("Added label foo=bar to pod");
+                             System.out.println("Waiting 1 minute before deleting pod...");
+                             Thread.sleep(60000);
+                             client.pods().inNamespace("default").withName("programmatically-created-pod").delete();
+                             System.out.println("Deleted the pod");
+                           }
+                         }
+            8.3 总结
+                在pod中运行的程序获取各种数据，元数据，组件数据等
+        9.部署:以声明的方式更新应用程序
+            9.1 更新在pods中运行的应用程序
+                9.1.1 删除旧的pods并用新pods替换它们
+                    修改模版，检测模版，删除旧的模版，创建新的pod
+                9.1.2 旋转新的pods，然后删除旧的pods
+                    创建新的pod，然后删除旧的pod，切换服务的指向，将服务从指向旧的pod切换到新的pod。中间2倍的pod在运行
+                    也可以逐个创建pod2，将service集群连接的pod逐个替换为pod2
+            9.2 使用ReplicationController执行自动滚动更新
+                9.2.2 使用kubectl执行滚动更新
+                    kubectl rolling-update kubia-v1 kubia-v2 --image=luksa/kubia:v2
+                    初始副本计数被设置为0
+                9.2.3 理解为什么kubectl滚动更新现在已经过时???
+                    因为会修改副本控制器，这影响到团队合作
+            9.3 使用部署以声明方式更新应用程序
+                9.3.1 创建一个部署
+                    Deployment在ReplicaSet上进一步封装
+                    组成：标签选择器
+                         所需的副本计数
+                         pod模板
+                         部署策略
+                    代码举例：
+                        apiVersion: apps/v1beta1
+                        kind: Deployment
+                        metadata:
+                          name: kubia
+                        spec:
+                          replicas: 3
+                          template:
+                            metadata:
+                              name: kubia
+                              labels:
+                                app: kubia
+                            spec:
+                              containers:
+                              - image: luksa/kubia:v1
+                        name: nodejs
+                    删除所有的副本控制器：kubectl delete rc --all
+                    创建deployment: kubectl create -f kubia-deployment-v1.yaml --record
+                    专门检查部署状态：kubectl rollout status deployment kubia
+                9.3.2 更新一个部署
+                    默认策略是RollingUpdate。替换的是Recreate
+                    刷新现有对象的方法：kubectledit
+                                     kubectlpatch
+                                     kubectlapply
+                                     kubectlreplace
+                                     kubectlsetimage
+                    通过更新一个字段而不是模版也更新了一个应用程序
+                    更新原理是：逐渐创建副本集，然后pod。部署重新选择副本集的路由
+                9.3.3 回滚部署----类似与git的操作
+                    查看部署的状态：kubectl rollout status deployment kubia
+                    回滚到前一个部署：kubectl rollout undo deployment kubia
+                    查看回滚历史：kubectl rollout history deployment kubia     //创建时使用了record
+                    回滚到特定版本：kubectl rollout undo deployment kubia --to-revision=1
+                    模版只保存两个版本，更旧的版本将自动删除
+                9.3.4 控制推出的速度
+                    通过滚动更新策略的两个附加属性进行配置：表示在更新期间一次替换多少个pod
+                         spec:
+                           strategy:
+                             rollingUpdate:
+                               maxSurge: 1
+                               maxUnavailable: 0
+                             type: RollingUpdate
+                    maxUnavailable是相对于所需的副本计数的。如果副本计数被设置为3,maxUnavailable被设置为1，
+                    这意味着更新过程必须始终保持至少两个(3 - 1)可用的pod，而不可用的pod的数量可以超过一个。
+                9.3.5 暂停执行过程
+                    //暂停
+                    kubectl rollout pause deployment kubia
+                    //恢复
+                    kubectl rollout resume deployment kubia
+                9.3.6 阻止坏版本的推出
+                    minReadySeconds的主要功能是防止部署出现故障的版本
+                    apiVersion: apps/v1beta1
+                    kind: Deployment
+                    metadata:
+                      name: kubia
+                    spec:
+                      replicas: 3
+                      minReadySeconds: 10
+                      strategy:
+                        rollingUpdate:
+                          maxSurge: 1
+                          maxUnavailable: 0
+                        type: RollingUpdate
+                      template:
+                        metadata:
+                          name: kubia
+                          labels:
+                            app: kubia
+                        spec:
+                          containers:
+                          - image: luksa/kubia:v3
+                    name: nodejs
+                        readinessProbe:
+                          periodSeconds: 1
+                          httpGet:
+                            path: /
+                            port: 8080
+                    更新部署kubectl apply -f kubia-deployment-v3-with-readinesscheck.yaml
+                    通过命令行查看API的状态：while true; do curl http://130.211.109.222; done
+                    如果版本不正常，这个操作将使客户访问不到该版本，原来部署的也不会收到影响
+            9.4 总结
+                介绍如何使用声明性方法在Kubernetes中部署和更新应用程序
+        10.状态集:部署复制的有状态应用程序
+            10.1 复制状态pods
+                10.1.1 运行多个副本，每个副本有单独的存储
+                    让所有的pod使用相同的PersistentVolume，但是在该卷中为每个pod提供一个单独的文件目录
+                10.1.2 为每个pod提供一个稳定的标识
+                    为每个实例使用专用服务
+                    通过为每个单独的成员创建一个专用的Kubernetes服务，为集群成员提供一个稳定的网络地址
+            10.2 理解状态集合
+                10.2.1 比较状态集和副本集
+                    副本集可以随意替换，然而状态集需要需要新的东西与原来的东西有一样的状态。不可随意替换
+                10.2.2 提供稳定的网络标识
+                    由StatefulSet创建的每个pod都被分配一个序号索引(从零开始)，然后该索引用于派生pod的名称和主机名，并将稳定的存储附加到pod
+                    状态集新创建的pod将会和原来的pod有一样的名称和主机名
+                    状态集缩放总是从最高的开始，副本集缩放是随机的
+                10.2.3 为每个有状态实例提供稳定的专用存储
+                    根据pvc模版，当不同的pod使用该模版创建不同的pvc+pv
+                    当按比例缩小集群时，只删除pod，管来呢的PVC不删除。当再次扩容，创建pod将会和原来的pvc绑定
+                10.2.4 理解StatefulSet担保
+                    一个状态集必须绝对确定一个pod在创建一个替换pod之前不再运行
+            10.3 使用状态集合
+                10.3.2 通过状态集部署应用程序
+                    创建持久化卷
+                        gcloud compute disks create --size=1GiB --zone=europe-west1-b pv-a
+                    创建管理服务
+                    创建状态集manifest
+                    创建状态集
+                        kubectl create -f kubia-statefulset.yaml
+                        状态集是逐个创建好的，防止争用
+                    检查生成的有状态pod
+                        kubectl get po kubia-0 -o yaml
+                    检查生成的持久卷目标
+                        kubectl get pvc
+                10.3.3 执行你的pods
+                    通过API服务器与PODS通信
+                    删除有状态POD，以查看重新调度的POD是否重新连接到相同的存储
+                    扩展状态集
+                    通过常规的、非headless服务公开有状态的pod
+                    通过API服务器连接到集群内部服务
+            10.4 在状态集中发现对等点
+                10.4.1 通过DNS实现对等点发现
+                    SRV记录： kubectl run -it srvlookup --image=tutum/dnsutils --rm --restart=Never -- dig SRV kubia.default.svc.cluster.local
+                    发送一个get请求，节点在DNS查询，然后有发送数据请求，多个节点响应数据返回给客户端
+                10.4.2 更新一个状态集合
+                     kubectl edit statefulset kubia
+            10.5 了解状态集如何处理节点失败
+                10.5.1 模拟节点与网络的断开
+                    sudo ifconfig eth0 down
+                10.5.2 手动删除pod
+                    kubectl delete po kubia-0 --force --grace-period 0
+            10.6 总结
+                使用状态集部署有状态应用程序
+    第3章：除了基础知识
+        11.理解Kubernetes内部
+            11.1 理解体系结构
+                11.1.1 Kubernetes组件的分布式特性
+                    Kubernetes由控制面板和工作节点组成。
+                    控制面板组成：etcd分布式持久化存储
+                                API服务器
+                                定时调度器
+                                控制管理器
+                    工作节点的组成：Kubelet
+                                  Kubernetes服务代理
+                                  容器运行时环境
+                    附加组件：Kubernetes DNS服务器
+                             DashBoard
+                             入口控制器
+                             Heapster
+                             容器网络接口插件
+                    查看信息：kubectl get componentstatuses
+                    Kubernetes组件都是通过API Server进行相互间通信
+                11.1.2 Kubernetes如何使用etcd
+                    etcd是一个快速，分布式和一致的键值存储。能够存储各种系统信息
+                    etcd是Kubernetes存储集群状态和元数据的惟一地方
+                    Kubernetes将其所有数据存储在etcd/registry下: etcdctl ls /registry
+                    API服务器将资源的完整JSON表示形式存储在etcd中
+                    由于etcd的分层键空间，您可以将所有存储的资源看作文件系统中的JSON文件
+                    etcd需要分布高可用，使用RAFT consensus算法来实现，它确保在任何给定时刻，每个节点的状态要么是大多数节点一致同意的当前状态，要么是预先商定的状态之一。
+                    etcd通常部署奇数个实例
+                11.1.3 API服务器做什么
+                    它是所有其他组件和客户端(如kubectl)使用的中心组件。它提供了一个CRUD(创建、读取、更新、删除)接口，用于通过RESTful API查询和修改集群状态。它将该状态存储在etcd中
+                    使用客户端进行请求时，需要经历身份认证，权限认证，管理员控制插件，资源验证插件。最后到达etcd
+                11.1.4 了解API服务器如何通知客户端资源更改
+                    发送http请求来查看了资源修改情况
+                    kubectl get pods -o yaml --watch
+                11.1.5 了解调度器
+                    调度程序分配pod到哪个节点上。调度器所做的就是通过API服务器更新pod定义
+                    默认调度算法：过滤所有节点，选择留下来的节点，然后从这些节点中选择优先级高的。都一样高时进行循环操作
+                11.1.6 介绍控制器管理器中运行的控制器
+                    Replication Manager：监视和创建删除API服务器中副本控制器资源和Pod资源
+                    ReplicaSet,DaemonSet,Job controllers：从各自资源中定义的Pod模板创建Pod资源
+                    Deployment controller：部署控制器负责保持部署的实际状态与在相应的部署API对象中指定的所需状态同步。
+                    StatefulSet controller：除了基本功能，管理PersistentVolumeClaims
+                    Node controller：使节点对象列表与集群中运行的实际机器列表保持同步，监视节点的健康状态
+                    Service controller：当创建或删除loadbalker类型的服务时，服务控制器从基础设施请求并释放负载平衡器。
+                    Endpoints controller：使用匹配标签选择器的pod的ip和端口不断更新端点列表。
+                    Namespace controller：当删除名称空间资源时，也必须删除该名称空间中的所有资源
+                    PersistentVolume controller：将PV和PVC进行绑定
+                    都会监视API服务器对资源的修改。
+                11.1.7 Kubelet做了什么
+                    Kubelet是负责在工作节点上运行的所有内容的组件。
+                    Kubelet也是运行容器活性探测的组件，当探测失败时重新启动容器
+                11.1.8 Kubernetes服务代理的角色
+                    目的是确保客户端可以通过Kubernetes API连接到您定义的服务
+                    用户空间代理模式 和 iptable代理模式
+                11.1.9 介绍Kubernetes插件
+                    可以通过向API服务器提交YAML清单来作为pod部署
+            11.2 控制器如何合作
+                11.2.1 了解所涉及的组件
+                    各个控制器组件监视API服务器看它们对应的资源是否修改
+                11.2.2 事件链----总共10个步骤
+                    在master节点：kubectl创建部署资源,通过watch机制，将消息通知部署控制器
+                                 部署控制器创建副本集，通知副本控制器，副本控制器创建pods
+                                 通过调度器，分配pods到节点上
+                    在工作节点：通过watch机制，Kubelet告诉Docker运行容器。
+                              Docker运行容器，容器开始运行，引用执行。
+                11.2.3 观察集群事件
+                     kubectl get events --watch
+            11.3 理解运行时pod是什么？
+                有一个暂停容器：将一个pod的所有容器放在一起的容器。保存所有这些名称空间
+            11.4 Inter-pod网络
+                11.4.1 网络一定是什么样的?
+                    网络的设置由硬件决定的，不是Kubernetes决定的
+                    就像局域网中的网络地址。
+                11.4.2 深入了解网络是如何工作的
+                    启用同一节点上的pod之间的通信
+                        创建虚拟以太网接口对，类似于地址适配器
+                    支持不同节点上的pod之间的通信
+                        pod IP地址在整个集群中必须是惟一的，所以跨节点的桥必须使用非重叠的地址范围，以防止不同节点上的pod获得相同的IP
+                        核心就是虚拟以太网接口
+                11.4.3 介绍容器网络接口
+                    目的是方便容器连接到网络。插件有Calico，Flannel，Romana，Weave Net
+            11.5 服务如何实现
+                11.5.1 介绍了kube-proxy
+                    与服务相关的所有内容都由运行在每个节点上的kube-proxy进程处理
+                11.5.2 kube-proxy如何使用iptables
+                    当在API服务器中创建服务时，将立即为其分配虚拟IP地址。不久之后，API服务器通知运行在工作节点上的所有kube-proxy代理已经创建了一个新服务
+                    通过设置iptables规则让服务能够被寻址
+            11.6 运行高可用集群
+                11.6.1 让你的应用程序高度可用
+                    运行多个实例以减少停机的可能性
+                    为非水平可伸缩的应用程序使用领导人选举
+                11.6.2 使Kubernetes控制面板组件高度可用
+                    运行etcd集群
+                    运行API服务器的多个实例
+                    确保控制器和调度程序的高可用性
+            11.7 总结
+                对Kubernetes内部工作原理的了解
+        12.保护Kubernetes API服务器
+            12.1 了解认证
+                12.1.1 用户和组
+                    获取客户身份信息方式：客户端证书
+                                       从HTTP头中传递的身份验证令牌
+                                       基本HTTP身份验证
+                    Kubernetes不存储这些信息
+                    人工用户和ServiceAccounts都可以属于一个或多个组。
+                    身份验证插件返回组以及用户名和用户ID。组用于同时向多个用户授予权限，而不是必须向单个用户授予权限。
+                12.1.2 引入ServiceAccounts
+                    每个pod都与一个Service-Account相关联，Service-Account表示在pod中运行的应用程序的标识
+                    服务-账户用户名格式：system:serviceaccount:<namespace>:<service account name>
+                    ServiceAccounts是资源，作用域仅限于单个名称空间。pod只能使用来自相同名称空间的ServiceAccount
+                    查看信息： kubectl get sa
+                12.1.3 创建ServiceAccounts
+                    为了集群安全性
+                    kubectl create serviceaccount foo
+                    kubectl describe sa foo
+                12.1.4 将ServiceAccount分配给pod
+                    在pod定义中配置spec.serviceAccountName的取值
+            12.2 使用基于角色的访问控制保护集群
+                12.2.1 引入RBAC授权插件
+                    其中有Action: Get Pods
+                                 Create Services
+                                 Update Secrets
+                    除了对整个资源类型应用安全权限之外，RBAC规则还可以应用于资源的特定实例
+                12.2.2 引入RBAC资源
+                    4个资源配置，分为两组：角色和集群角色，它们指定可以在哪些资源上执行哪些谓词。
+                                        角色绑定和集群角色绑定，将上述角色绑定到特定的用户、组或服务帐户。
+                    启动RBAC：kubectl delete clusterrolebinding permissive-binding
+                12.2.3 使用角色和角色绑定
+                    角色资源定义可以对哪些资源执行哪些操作
+                    apiVersion: rbac.authorization.k8s.io/v1
+                    kind: Role
+                    metadata:
+                      namespace: foo
+                      name: service-reader
+                    rules:
+                    - apiGroups: [""]
+                      verbs: ["get", "list"]
+                      resources: ["services"]
+
+                    创建角色：kubectl create -f service-reader.yaml -n foo
+                    kubectl create clusterrolebinding cluster-admin-binding
+                    kubectl create role service-reader --verb=get --verb=list --resource=services -n bar
+
+                    //绑定角色到serviceAccount
+                    kubectl create rolebinding test --role=service-reader --serviceaccount=foo:default -n foo
+                    kubectl get rolebinding test -n foo -o yaml
+
+                    角色绑定时，可以绑定不同命名空间下的serviceAccount
+                12.2.4 使用集群角色和集群角色绑定
+                    ClusterRole是一个集群级别的资源，它允许访问非名称空间资源或非资源url，
+                    或者将其用作公共角色，并将其绑定到individ- ual名称空间中，
+                    这样您就不必在每个名称空间中重新定义相同的角色。
+
+                    kubectl create clusterrole pv-reader --verb=get,list --resource=persistentvolumes
+                    kubectl get clusterrole pv-reader -o yaml
+                    kubectl create clusterrolebinding pv-test --clusterrole=pv-reader --serviceaccount=foo:default
+
+                    kubectl get clusterrole system:discovery -o yaml
+                    使用集群角色授予对特定命名空间资源的访问权限
+                12.2.5 理解默认集群角色和集群角色绑定
+                    Kubernetes附带一组默认的ClusterRoles和ClusterRoleBindings，它们在API服务器每次启动时都会更新
+
+                    kubectl get clusterrolebindings
+                    kubectl get clusterroles
+
+                    admin集群角色授予对名称空间中的资源的完全控制
+                    默认的集群角色：以前缀system：开头
+                12.2.6 明智地授权权限
+                    默认情况下，serviceAccount没有权限
+            12.3 总结
+                    如何保护Kubernetes API服务器的基础
+        13.保护集群节点和网络
+            13.1 在pod中使用主机节点的名称空间
+                13.1.1 在pod中使用节点的网络名称空间
+                    pod中的容器通常运行在单独的Linux名称空间中。也就是容器命名空间。容器位于节点中。
+                    设置hostNetwork=true。pod就可以使用节点级别的资源
+                        apiVersion: v1
+                        kind: Pod
+                        metadata:
+                          name: pod-with-host-network
+                        spec:
+                          hostNetwork: true
+                          containers:
+                          - name: main
+                            image: alpine
+                            command: ["/bin/sleep", "999999"]
+                13.1.2 绑定到主机端口而不使用主机的网络名称空间
+                    一个节点内部的端口号被所有pod公用，一次只能使用一个端口号。因此有相同端口号的pod只能部署一个
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: kubia-hostport
+                    spec:
+                      containers:
+                      - image: luksa/kubia
+                        name: kubia
+                        ports:
+                        - containerPort: 8080
+                          hostPort: 9000
+                          protocol: TCP
+                13.1.3 使用节点的PID和IPC名称空间
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: pod-with-host-pid-and-ipc
+                    spec:
+                      hostPID: true
+                      hostIPC: true
+                      containers:
+                      - name: main
+                        image: alpine
+                        command: ["/bin/sleep", "999999"]
+            13.2 配置容器的安全上下文
+                13.2.1 以特定用户的身份运行容器
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: pod-as-user-guest
+                    spec:
+                      containers:
+                      - name: main
+                        image: alpine
+                        command: ["/bin/sleep", "999999"]
+                        securityContext:
+                          runAsUser: 405        //以客人的身份访问
+                13.2.2 防止容器作为根用户运行
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: pod-run-as-non-root
+                    spec:
+                      containers:
+                      - name: main
+                        image: alpine
+                        command: ["/bin/sleep", "999999"]
+                        securityContext:
+                          runAsNonRoot: true
+                13.2.3 以特权模式运行pods
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: pod-privileged
+                    spec:
+                      containers:
+                      - name: main
+                        image: alpine
+                        command: ["/bin/sleep", "999999"]
+                        securityContext:
+                          privileged: true
+                13.2.4 向容器添加单独的内核功能
+                    更加安全的方法：只让容器访问它真正的内核特性
+                    比如更改容器系统时间：
+                        securityContext:
+                            capabilities:
+                                add:
+                                - SYS_TIME
+
+                        kubectl exec -it pod-add-settime-capability -- date +%T -s "12:00:00"
+                13.2.5 从容器中删除功能
+                    比如删除文件权限授权的功能：
+                        securityContext:
+                        capabilities:
+                          drop:
+                          - CHOWN
+                13.2.6 防止进程写入容器的文件系统
+                    securityContext:
+                          readOnlyRootFilesystem: true
+                13.2.7 当容器作为不同的用户运行时共享卷
+                    securityContext:
+                        fsGroup: 555
+                        supplementalGroups: [666, 777]
+            13.3 限制在pods中使用与安全性相关的特性
+                13.3.1 介绍PodSecurityPolicy资源
+                    PodSecurityPolicy的功能有pod的各种属性设置，容器的各种用户ID，权限设置等
+                13.3.2 理解runAsUser、fsGroup和supplementalGroups策略
+                    修改yaml配置文件：
+                        runAsUser:
+                          rule: MustRunAs
+                          ranges:
+                          - min: 2
+                            max: 2
+                        fsGroup:
+                          rule: MustRunAs
+                          ranges:
+                          - min: 2
+                            max: 10
+                          - min: 20
+                            max: 30
+                        supplementalGroups:
+                          rule: MustRunAs
+                          ranges:
+                          - min: 2
+                            max: 10
+                          - min: 20
+                            max: 30
+                13.3.3 配置允许、默认和不允许的功能
+                    核心的3个字段：
+                        allowedCapabilities
+                        defaultAddCapabilities
+                        requiredDropCapabilities
+                    使用方法：apiVersion: extensions/v1beta1
+                             kind: PodSecurityPolicy
+                             spec:
+                               allowedCapabilities:
+                               - SYS_TIME
+                               defaultAddCapabilities:
+                               - CHOWN
+                               requiredDropCapabilities:
+                                - SYS_ADMIN
+                                - SYS_MODULE
+                13.3.4 限制pod可以使用的卷类型
+                    kind: PodSecurityPolicy
+                            spec:
+                              volumes:
+                              - emptyDir
+                              - configMap
+                              - secret
+                              - downwardAPI
+                              - persistentVolumeClaim
+                13.3.5 为不同的用户分配不同的podsecuritypolicy和组
+                    PodSecurityPolicy是集群级别的资源
+                    apiVersion: extensions/v1beta1
+                    kind: PodSecurityPolicy
+                    metadata:
+                      name: privileged
+                    spec:
+                      privileged: true
+                      runAsUser:
+                        rule: RunAsAny
+                      fsGroup:
+                        rule: RunAsAny
+                      supplementalGroups:
+                        rule: RunAsAny
+                      seLinux:
+                        rule: RunAsAny
+                      volumes:
+                    - '*'
+
+                    创建集群用户：kubectl config set-credentials alice --username=alice --password=password
+                13.4.1 在名称空间中启用网络隔离
+                    设置网络策略：default-deny
+                13.4.2 只允许名称空间中的一些pod连接到服务器pod
+                    apiVersion: networking.k8s.io/v1
+                    kind: NetworkPolicy
+                    metadata:
+                      name: postgres-netpolicy
+                    spec:
+                      podSelector:
+                        matchLabels:
+                          app: database
+                      ingress:
+                      - from:
+                        - podSelector:
+                            matchLabels:
+                              app: webserver
+                    ports:
+                    - port: 5432
+                13.4.3 隔离Kubernetes名称空间之间的网络
+                    设置网络策略的入口：
+                        apiVersion: networking.k8s.io/v1
+                        kind: NetworkPolicy
+                        metadata:
+                          name: shoppingcart-netpolicy
+                        spec:
+                          podSelector:
+                            matchLabels:
+                              app: shopping-cart
+                          ingress:
+                          - from:
+                            - namespaceSelector:
+                                matchLabels:
+                                  tenant: manning
+                        ports:
+                        - port: 80
+                13.4.4 使用CIDR符号进行隔离
+                        使用IP地址块进行隔离
+                        ingress:
+                        - from:
+                            cidr: 192.168.1.0/24
+                13.4.5 限制一组pods的出站流量
+                    设置出口：
+                         spec:
+                           podSelector:
+                             matchLabels:
+                               app: webserver
+                         egress:
+                         - to:
+                             - podSelector:
+                                 matchLabels:
+                                   app: database
+            13.5 总结
+                从pod中保护集群节点，pod的安全性
+        14.管理pods的计算资源
+            14.1 请求pod容器的资源
+                14.1.1 使用资源请求创建pod
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 10Mi
+                14.1.2 了解资源请求如何影响调度
+                    只有当资源足够多的时候，程序才会调度
+                    查看节点资源：kubectl describe nodes
+                    当资源不够，需要释放其中的资源。比如删除一个pod
+                14.1.4 定义和请求自定义资源
+                    需要让Kubernetes知道您的自定义资源，方法是将其添加到节点对象的capacity字段
+            14.2 限制容器可用的资源
+                14.2.1 为容器可以使用的资源数量设置硬限制
+                    如果一个节点失败，则可能耗尽内存，所以需要为容器设置资源限制
+                    设置容器资源限制：resources:
+                                     limits:
+                                     cpu: 1
+                                     memory: 20Mi
+                14.2.2 超过了限制
+                    内存超过限制，会杀死进程
+                    CPU是可压缩资源
+                    查看pod失败原因：kubectl describe pod
+                14.2.3 理解容器中的应用程序如何看到限制
+                    进行部署的pod中查看信息：
+                        kubectl exec -it limited-pod top
+                    使用命令行看到的内存，一般是节点的内存，而不是容器的内存
+            14.3 了解pod QoS类
+                14.3.1 为pod定义QoS类
+                    当资源不足时，强行分配。程序的操作：释放上一个资源，还是不执行后一个资源？Kubernetes无法自动判断
+                    Kubernetes有3个Qos类：区分优先级
+                        BestEffort (the lowest priority)：什么限制都没有做
+                        Burstable：请求低于限制
+                        Guaranteed (the highest)：请求等于限制
+                14.3.2 理解内存不足时哪个进程被终止
+                    首先被杀死的是BestEffort类中的pods，其次是Burstable pods，最后是有保证的pods，只有在系统进程需要内存时才会被杀死
+                    每个正在运行的进程都有一个OutOfMemory (OOM)评分。系统通过比较所有运行进程的OOM得分来选择要终止的进程。当需要释放内存时，得分最高的进程将被终止。
+            14.4 为每个名称空间设置默认请求和pod限制
+                14.4.1 引入LimitRange资源
+                    防止用户创建比集群中的任何节点都大的pod
+                14.4.2 创建一个LimitRange对象
+                    配置yaml文件：
+                        apiVersion: v1
+                        kind: LimitRange
+                        metadata:
+                          name: example
+                        spec:
+                          limits:
+                          - type: Pod
+                            min:
+                              cpu: 50m
+                              memory: 5Mi
+                        max: cpu: 1
+                              memory: 1Gi
+                        - type: Container
+                            defaultRequest:
+                        cpu: 100m
+                              memory: 10Mi
+                            default:
+                        cpu: 200m
+                              memory: 100Mi
+                            min:
+                        cpu: 50m
+                              memory: 5Mi
+                            max:
+                        cpu: 1
+                              memory: 1Gi
+                            maxLimitRequestRatio:
+                              cpu: 4
+                              memory: 10
+                        - type: PersistentVolumeClaim
+                          min:
+                            storage: 1Gi
+                          max:
+                            storage: 10Gi
+                14.4.3 实施限制
+                     resources:
+                        requests:
+                        cpu: 2
+                     当超过了pod的限制强行创建pod时，会报错
+                14.4.4 应用默认资源请求和限制
+                    在LimitRange中配置的限制只适用于每个单独的pod/容器
+                    创建一个yaml文件配置容器的资源限制即可
+                        Containers:
+                          kubia:
+                            Limits:
+                        cpu: 200m
+                              memory:   100Mi
+                            Requests:
+                        cpu: 100m
+                        memory: 10Mi
+            14.5 限制名称空间中可用的总资源
+                14.5.1 引入ResourceQuota对象
+                    集群管理员还需要ResourceQuota对象限制名称空间中可用的资源总量
+                    配置yaml文件：
+                        apiVersion: v1
+                        kind: ResourceQuota
+                        metadata:
+                          name: cpu-and-mem
+                        spec:
+                          hard:
+                            requests.cpu: 400m
+                            requests.memory: 200Mi
+                            limits.cpu: 600m
+                            limits.memory: 500Mi
+                    检查配额使用情况：kubectl describe quota
+                14.5.2 为持久存储指定配额
+                    apiVersion: v1
+                    kind: ResourceQuota
+                    metadata:
+                      name: storage
+                    spec:
+                      hard:
+                      requests.storage: 500Gi
+                      ssd.storageclass.storage.k8s.io/requests.storage: 300Gi
+                      standard.storageclass.storage.k8s.io/requests.storage: 1Ti
+                14.5.3 限制可以创建的对象的数量
+                    下述对象皆可以被限制：
+                        Pods
+                        ReplicationControllers
+                        Secrets
+                        ConfigMaps
+                        PersistentVolumeClaims
+                        Services
+
+                    yaml文件举例：
+                        apiVersion: v1
+                        kind: ResourceQuota
+                        metadata:
+                          name: objects
+                        spec:
+                          hard:
+                            pods: 10
+                            replicationcontrollers: 5
+                            secrets: 10
+                            configmaps: 10
+                            persistentvolumeclaims: 4
+                            services: 5
+                            services.loadbalancers: 1
+                            services.nodeports: 2
+                            ssd.storageclass.storage.k8s.io/persistentvolumeclaims: 2
+                14.5.4 指定特定pod状态和/或QoS类的配额
+                    可以设置范围：取值有4个。分别是：BestEffort, NotBestEffort, Terminating, and NotTerminating
+                    apiVersion: v1
+                        kind: ResourceQuota
+                        metadata:
+                          name: besteffort-notterminating-pods
+                        spec:
+                    scopes:
+                    - BestEffort
+                    - NotTerminating
+                    hard:
+                       pods: 4
+            14.6 监控pod资源使用情况
+                14.6.1 收集和检索实际的资源使用情况
+                    使用cAdvisor的代理监控K8s上的应用程序。需要运行附加组件Heapster
+                14.6.2 存储和分析历史资源消耗统计数据
+                    在本地运行是需要使用插件InfluxDB进行数据分析。
+                    打开浏览器分析界面：
+                        https://192.168.99.100:8443/api/v1/proxy/namespaces/kube- system/services/monitoring-grafana
+                        minikube service monitoring-grafana -n kube-system
+            14.7 总结
+                    pods资源的使用，以及配置资源请求和限制pod的CPU个内存使用
+        15.pods和集群节点的自动缩放
+            15.1 pod的水平自动伸缩
+                15.1.1 理解自动缩放过程
+                    1.获取由缩放资源对象管理的所有pod的指标
+                    2.计算pods的数量，并判断是否和目标值匹配
+                    3.更新副本值
+                15.1.2 基于CPU利用率的扩展
+                    一般80%为上限。超过了进行添加pod数量的操作--水平扩容
+                15.1.3 基于内存消耗的扩展
+                    目前该方式还是有问题：
+                        旧的pod将以某种方式被迫释放内存。这需要由应用程序自己来完成，而不是由系统来完成。
+                        系统所能做的就是关闭并重启应用程序，希望它能比以前使用更少的内存。
+                15.1.4 基于其他和自定义指标的伸缩
+                    HPA对象中可用的度量：Resource
+                                       Pods
+                                       Object
+                15.1.5 确定哪些指标适合自动缩放
+                    要保证度量的平均值要线性下降才行
+                15.1.6 缩小到零副本
+                    未来会解决这种情况：当很久才有一次请求时的情况
+            15.2 pod的垂直自动伸缩
+                15.2.1 自动配置资源请求
+                    垂直伸缩：给更多的CPU和内存，而不是更多的pod
+                    使用initialResources控件。每次创建pod时，自动设置CPU和内存请求
+            15.3 集群节点的水平伸缩
+                15.3.1 介绍集群自动伸缩器
+                    Kubernetes包含一项功能，可以在检测到需要额外节点时，自动向云提供商请求额外的节点
+                    需要指定节点的类型，将节点注册到集群
+                    关闭节点时，都需要驱逐其上的pod，并将该节点标记为不可调度
+                    手动标记节点不可调用：kubectl cordon <node>
+                                       kubectl drain <node>
+                15.3.2 启用集群自动分配器
+                    在GKE上执行命令：gcloud container clusters update kubia --enable-autoscaling --min-nodes=3 --max-nodes=5
+                15.3.3 限制集群缩减期间的服务中断
+                    spec:
+                      minAvailable: 3
+                      selector:
+                        matchLabels:
+                          app: kubia
+                    逐个替换pod，而不是一次性驱逐pod
+            15.4 总结
+                Kubernetes扩展pod和节点
+        16.高级调度
+            16.1 使用taints和tolerations从某个节点上复制pods
+                16.1.1 引入taints和tolerations
+                    kubectl describe node master.k8s
+                    调度pod到指定节点。如果某个pod有tolerations，则该pod可以被调度到有taints的节点
+                                     如果某个pod没有tolerations，则该pod可以被调度到没有taints的节点
+                16.1.2 向节点添加自定义taints
+                    比如：防止测试环境的节点在生产环境的节点进行运行
+                    kubectl taint node node1.k8s node-type=production:NoSchedule
+                16.1.3 向pods添加tolerations
+                    apiVersion: extensions/v1beta1
+                    kind: Deployment
+                    metadata:
+                      name: prod
+                    spec:
+                      replicas: 5
+                      template:
+                    spec: ...
+                          tolerations:
+                          - key: node-type
+                            Operator: Equal
+                            value: production
+                            effect: NoSchedule
+                16.1.4 了解taints和tolerations用处？
+                    在调度pod方面有用处。taints可以用来阻止pod的调度(NoSchedule效果)，定义非首选节点(PreferNoSchedule效果)，甚至从节点中驱逐现有pods(NoExecute)。
+                    节点失败后，经过多长时间重新调度： tolerations:
+                                       - effect: NoExecute
+                                         key: node.alpha.kubernetes.io/notReady
+                                         operator: Exists
+                                         tolerationSeconds: 300
+                                       - effect: NoExecute
+                                         key: node.alpha.kubernetes.io/unreachable
+                                         operator: Exists
+                                         tolerationSeconds: 300
+            16.2 使用节点关联将pod吸引到某些节点
+                16.2.1 指定节点硬关联规则
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: kubia-gpu
+                    spec:
+                      affinity:
+                        nodeAffinity:
+                          requiredDuringSchedulingIgnoredDuringExecution:
+                            nodeSelectorTerms:
+                            - matchExpressions:
+                              - key: gpu
+                                operator: In
+                                values:
+                                - "true"
+                16.2.2 在调度pod时对节点进行优先级排序
+                    新引入的节点关联特性的最大好处是能够指定调度程序在调度特定pod时应该选择哪个节点
+                    对节点设置权重，也就是优先级：
+                        apiVersion: extensions/v1beta1
+                        kind: Deployment
+                        metadata:
+                          name: pref
+                        spec:
+                          template:
+                            ...
+                            spec:
+                              affinity:
+                                nodeAffinity:
+                                preferredDuringSchedulingIgnoredDuringExecution:
+                                - weight: 80
+                                       preference:
+                                    matchExpressions:
+                                    - key: availability-zone
+                                      operator: In
+                                      values:
+                                      - zone1
+                                - weight: 20
+                                  preference:
+                                    matchExpressions:
+                                    - key: share-type
+                                      operator: In
+                                      values:
+                                      - dedicated
+            16.3 使两种pod和pod共存
+                16.3.1 使用pod间关联在同一节点上部署pod
+                    将一个pod标签应用到后面pod的关联规则中
+                        apiVersion: extensions/v1beta1
+                        kind: Deployment
+                        metadata:
+                          name: frontend
+                        spec:
+                          replicas: 5
+                          template:
+                        ... spec:
+                              affinity:
+                                podAffinity:
+                                  requiredDuringSchedulingIgnoredDuringExecution:
+                                  - topologyKey: kubernetes.io/hostname
+                                    labelSelector:
+                                      matchLabels:
+                                        app: backend
+                    pod之间亲和原理：在指定的节点设置高优先级
+                16.3.2 在同一框架、可用性区域或地理区域部署pod
+                    topologyKey=rack
+                    topologyKey=failure-domain.beta.kubernetes.io/zone.
+                    topologyKey=failure-domain.beta.kubernetes.io/region.
+                16.3.3 最好使用pod亲和偏好，而不是硬性要求
+                    apiVersion: extensions/v1beta1
+                    kind: Deployment
+                    metadata:
+                      name: frontend
+                    spec:
+                      replicas: 5
+                      template:
+                    ... spec:
+                          affinity:
+                            podAffinity:
+                              preferredDuringSchedulingIgnoredDuringExecution:
+                              - weight: 80
+                                podAffinityTerm:
+                                  topologyKey: kubernetes.io/hostname
+                                  labelSelector:
+                                    matchLabels:
+                                      app: backend
+                          containers: ...
+                16.3.4 使用pod反亲和力将pod彼此隔离
+                    不选择和指定标签相同的节点运行pod。使用podAntiAffinity
+            16.4 总结
+                如何确保pod调度到特定的节点。使用了taints和tolerate。还有affinity和Antiaffinity
+        17.开发应用程序的最佳实践
+            17.1 把一切都在一起（最少有24个组件）
+                由开发者在app manifest中定义
+                    水平Pod自动伸缩--》部署--》pod template --》容器
+                                         --》标签
+                                                         --》Volumn --》持久化卷声明 --》持久化卷
+                                                                                   --》存储类
+                                                                                   限制范围
+                                                                                   资源引用
+                                                                    --》ConfigMap
+                                                                    --》Secret
+                                                         --》(镜像拉取)Secret
+                                                         --》服务账户 --》Secret
+                                        --》副本集合  --》 标签选择器 --》多个Pods和标签
+                                        客户端入口--》服务 --》 端点
+                                                         --》多个Pods和标签
+                    状态集合
+                    守护进程集合
+                    作业
+                    定时作业
+            17.2 理解pod的生命周期
+                17.2.1 应用程序必须被杀死并重新定位
+                    期望更改本地IP和主机名：使用statefulSet
+                    期望写入磁盘的数据消失：pod重新加载时。类似与开启一个新的实例。旧的数据应该消失。
+                                        写入容器文件系统的文件在容器重启后，文件会消失
+                    使用卷在跨容器重新启动时保存数据
+                        如果需要使用容器重启之前的数据，那么使用pod级别的Volumn存储
+                17.2.2 死pod或部分死pod的重新调度
+                    多个pod运行，其中一个或多个pod不断的崩溃重启。需要解决奔溃的pod
+                17.2.3 按特定顺序启动pods
+                    在yaml文件中配置
+                    使用init容器，能够初始化pod。主要是写数据到volumn，然后挂载到pod的主容器。
+                    init容器可以用来顺序启动pod，当某个pod启动成功后再启动新的pod
+                    添加init容器例子：spec:
+                                     initContainers:
+                                     - name: init
+                                       image: busybox
+                                       command: 死循环的发送请求。知道响应成功
+                    查看init容器的日志：kubectl logs fortune-client -c init
+                17.2.4 添加生命周期钩子
+                    Post-start钩子：在主容器启动后立即启动这个钩子
+                        apiVersion: v1
+                        kind: Pod
+                        metadata:
+                          name: pod-with-poststart-hook
+                        spec:
+                        containers:
+                        - image: luksa/kubia
+                          name: kubia
+                          lifecycle:
+                            postStart:
+                              exec:
+                                command:
+                                - sh
+                                - -c
+                                - "echo 'hook will fail with exit code 15'; sleep 5; exit 15"
+                        在容器中查看该钩子的日志：kubectl exec my-pod cat logfile.txt
+                    Pre-stop钩子：在容器终端之后立刻执行。进行资源回收。但是一般不怎么使用
+                        lifecycle:
+                           preStop:
+                             httpGet:
+                                port: 8080
+                                path: shutdown
+                    这两个钩子作用在容器上，init容器作用在pod上。这两个钩子可以在容器中执行命令行，执行http请求
+                17.2.5 理解pods关闭
+                    发送http删除请求，API服务器设置deletionTimestamp，kubernetes开始终止该pod中的每个容器
+                    它给每个容器提供有有限的关闭时间。然后，运行pre-stop钩子，发送SIGTERM信号到容器的主进程
+                    终止宽限期默认为30秒，也可以设置spec.terminationGracePeriodSeconds
+                    kubectl delete po mypod --grace-period=5   //5秒后删除
+                    kubectl delete po mypod --grace-period=0 --force   //立即强制删除
+            17.3 确保正确处理所有客户端请求
+                17.3.1 防止在pod启动时断开客户机连接
+                    使用就绪探针进行检测
+                17.3.2 防止在pods关闭期间断开连接
+                    当接收到删除pod请求时，端点控制器移除pod，同时Kubelet停止容器，kube-proxy从iptables移除pod
+                    这个问题不能彻底解决，因为无法保证每个pod什么时候能够完全正确的关闭
+                    基本的几个步骤：
+                        等待几秒钟，然后停止接受新连接。
+                        关闭所有保持活动的连接，而不是在请求的过程中。
+                        等待所有活动请求完成。
+                        然后完全关闭。
+            17.4 使您的应用程序易于运行和管理在Kubernetes
+                17.4.1 制作可管理的容器映像
+                    image应该尽量小，但是不能太小，否则无法调试。go语言程序是推荐的
+                17.4.2 正确地给图片加上标签，明智地使用imagePullPolicy
+                    应该明确的指定image的版本，而不是使用latest，否则可能造成版本混乱
+                    如果每次推送的版本都是同样的，但是修改了内容，需要设置imagePullPolicy=Always
+                17.4.3 使用多维而不是一维标签
+                    这样更加容易搜索。标签的值应该包括应用的名字，前后端，环境，版本，发布的类型，租户，系统等
+                17.4.4 通过注释描述每个资源
+                    应该给每个资源一个描述和一个带有负责人的注释
+                17.4.5 提供关于进程终止原因的信息
+                    让进程将终止消息写入容器文件系统中的特定文件。当容器终止时，Kubelet将读取该文件的内容，并显示在kubectl describe pod的输出中
+                    默认的日志文件：/dev/termination-log。也可以设置terminationMessagePath的取值。
+                    也可以使用kubectl describe po
+                17.4.6 处理应用程序的日志
+                    kubectl logs --previous
+                    kubectl exec <pod> cat <logfile>
+                    //将容器中的文件复制到本地机器
+                    kubectl cp foo-pod:/var/log/foo.log foo.log
+                    //将本地问及复制到pod中的某个容器
+                    kubectl cp localfile foo-pod:/etc/remotefile -c containerName
+                    在生产环境中，需要部署一个集中的日志管理的pod
+                    常用组件：ElasticSearch--》FluentD
+                             Logstash
+                             Kibana
+            17.5 开发和测试的最佳实践
+                17.5.1 在开发期间运行Kubernetes之外的应用程序
+                    在开发期间不用都在kubernetes上运行，可以直接在本地IDE上运行，通过后再在kubernetes上运行
+                17.5.2 在开发中使用Minikube
+                    可以完成在kubernetes上的运行效果，虽然只有单一的工作节点
+                    将本地文件装入minikube虚拟机，然后装入容器
+                    使用MINIKUBE VM中的DOCKER守护进程来构建映像
+                    在本地构建映像并将其直接复制到MINIKUBE VM
+                17.5.3 版本控制和自动部署资源清单
+                    kubectl apply
+                17.5.4 引入Ksonnet作为编写YAML/JSON清单的替代方案
+                    它是一种用于构建JSON数据结构的数据模板语言。
+                        local k = import "../ksonnet-lib/ksonnet.beta.1/k.libsonnet";
+                        local container = k.core.v1.container;
+                        local deployment = k.apps.v1beta1.deployment;
+                    执行命令：jsonnet kubia.ksonnet
+                17.5.5 采用持续集成和持续交付(CI/CD)
+                    Fabric8是一个kubernetes的继承部署平台。
+            17.6 总结
+                更深入地了解Kubernetes的工作原理
+        18.扩展Kubernetes
+            18.1 定义自定义API对象
+                18.1.1 引入CustomResourceDefinitions
+                    用来描述自定义资源类型，能够被API服务器使用。每个资源都有一个对应的控制器
+                    apiVersion: apiextensions.k8s.io/v1beta1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: websites.extensions.example.com
+                    spec:
+                      scope: Namespaced
+                      group: extensions.example.com
+                      version: v1
+                      names:
+                        kind: Website
+                        singular: website
+                        plural: websites
+                    可以创建，查找，删除该资源
+                18.1.2 使用自定义控制器自动化自定义资源
+                    控制器接收到watch事件，根据传入的参数进行一系列的操作
+                18.1.3 验证自定义对象
+                    对于自定的对象，我们应该给予约束，表明什么字段可以添加，数值范围是多少
+                18.1.4 为自定义对象提供自定义API服务器
+                    使用API server aggregation进行这种操作
+                    将一个大的API服务器，切分成集群方式，有各种各样小的API服务器
+                    将自定义API服务器作为pod部署，注册到主API服务器上：当发送的请求过来时，会被转发到自定义API服务器
+                        apiVersion: apiregistration.k8s.io/v1beta1
+                        kind: APIService
+                        metadata:
+                          name: v1alpha1.extensions.example.com
+                        spec:
+                           group: extensions.example.com
+                        version: v1alpha1
+                        priority: 150
+                        service:
+                          name: website-api
+                          namespace: default
+            18.2 使用Kubernetes服务目录扩展Kubernetes
+                18.2.1 介绍服务目录
+                    它是一个服务的目录。有4个通用API资源
+                        ClusterServiceBroker
+                        ClusterServiceClass
+                        ServiceInstance
+                        ServiceBinding
+                    4者关系：
+                        ServiceBinding--》Clinet pods
+                                      --》ServiceInstance--》ClusterServiceClass--》ClusterServiceBroker
+                18.2.2 介绍服务目录API服务器和控制器管理器
+                    服务目录是分布式系统，由以下组成：服务目录API服务器
+                                                 etcd作为存储
+                                                 所有控制器运行的控制管理器
+                18.2.3 介绍服务代理和OpenServiceBroker API
+                    服务目录通过该API与代理通信。
+                18.2.4 准备和使用服务
+                    创建服务实例:
+                        apiVersion: servicecatalog.k8s.io/v1alpha1
+                        kind: ServiceInstance
+                        metadata:
+                          name: my-postgres-db
+                        spec:
+                          clusterServiceClassName: postgres-database
+                          clusterServicePlanName: free
+                          parameters:
+                            init-db-args: --data-checksums
+                    绑定服务实例:
+                        apiVersion: servicecatalog.k8s.io/v1alpha1
+                        kind: ServiceBinding
+                        metadata:
+                          name: my-postgres-db-binding
+                        spec:
+                          instanceRef:
+                            name: my-postgres-db
+                          secretName: postgres-secret
+                    在客户端pod使用最新创建的Secret
+                        运行服务前，需要将Secret放到指定的位置
+                18.2.5 解绑和移除
+                    kubectl delete servicebinding my-postgres-db-binding
+                    kubectl delete serviceinstance my-postgres-db
+                18.2.6 了解服务目录带来了什么
+                    服务目录使服务提供者能够通过在任何Kubernetes集群中注册代理来公开这些服务
+            18.3 建立在Kubernetes之上的平台
+                18.3.1 Red Hat OpenShift容器平台
+                    它是一个Platform-as-a-Service。版本3是基于kubernetes构建的。
+                    OpenShift还提供了用户和组管理，允许您运行一个安全的多租户Kubernetes集群
+                    它有一些专门的特性：
+                        Users & Groups：提供多租户环境
+                        Projects
+                        Templates：可以参数花定义pod和service的名字
+                        BuildConfigs：可以将git上的资源部署成image
+                        DeploymentConfigs
+                        ImageStreams：是一个image的stream
+                        Routes
+                18.3.2 Deis工作流和Helm
+                    Deis工作流也是平台即服务，helm是其部署应用的标准方式。目前被微软收购
+                    它们基于Kubernetes，需要使用则应该插入命令行工具
+                    helm类似与包管理工具。部署命令：helm install --name my-database stable/mysql
+            18.4 总结
+                如何扩展kubernets，学习一些基于kubernetes的平台
+
+接下来是具体的附录操作：
+    1.附录A--使用带有多个集群的kubectl
+        1.1 在Minikube和谷歌Kubernetes引擎之间切换
+            切换minikube命令行: minikube start  //自动重新切换配置
+            切换GKE： gcloud container clusters get-credentials my-gke-cluster
+        1.2 将kubectl与多个集群或名称空间一起使用
+            1.2.1 配置kubeconfig文件的位置
+                默认文件位置：~/.kube/config file
+                设置新的位置，利用环境变量：KUBECONFIG
+            1.2.2 理解kubeconfig文件的内容
+                由4部分组成：集群列表
+                           用户列表
+                           上下文列表
+                           当前上下文名字
+
+                    apiVersion: v1
+                    clusters:
+                    - cluster:
+                        certificate-authority: /home/luksa/.minikube/ca.crt
+                        server: https://192.168.99.100:8443
+                      name: minikube
+                    contexts:
+                    - context:
+                        cluster: minikube
+                        user: minikube
+                        namespace: default
+                      name: minikube
+                    current-context: minikube
+                    kind: Config
+                    preferences: {}
+                    users:
+                    - name: minikube
+                        user:
+                            client-certificate: /home/luksa/.minikube/apiserver.crt
+                            client-key: /home/luksa/.minikube/apiserver.key
+            1.2.3 列出、添加和修改kube配置项
+                添加或修改集群：kubectl config set-cluster my-other-cluster
+                              --server=https://k8s.example.com:6443
+                              --certificate-authority=path/to/the/cafile
+                添加或修改用户凭据：kubectl config set-credentials foo --username=foo --password=pass
+                                 kubectl config set-credentials foo --token=mysecrettokenXFDJIQ1234
+                将集群和用户凭证绑定在一起：（上下文）
+                     kubectl config set-context some-context --cluster=my-other-cluster --user=foo --namespace=bar
+                    //获取当前上下文
+                    kubectl config current-context
+            1.2.4 将kubectl用于不同的集群、用户和上下文
+                相关参数：--user： 默认用户
+                        --username和--password：
+                        --cluster
+                        --server
+                        --namespace
+            1.2.5 切换上下文
+                kubectl config use-context my-other-context
+            1.2.6 列出上下文和集群配置
+                kubectl config get-contexts
+                kubectl config get-clusters
+            1.2.7 删除上下文和集群配置
+                kubectl config delete-context my-unused-context
+                kubectl config delete-cluster my-old-cluster
+    2.附录B--使用kubeadm设置多节点集群
+        2.1 设置操作系统和所需的包
+            2.1.1 创建虚拟机
+                使用virtualBox安装linux操作系统
+            2.1.2 为VM配置网络适配器
+                使用桥接适配器模式，让虚拟机也能够访问网络
+            2.1.3 插入操作系统
+                按照提示点击按钮即可，设置正确的时区
+            2.1.4 插入docker和kubernetes
+                禁用SELinux：setenforce 0
+                            /etc/selinux/config file   内容：SELINUX=permissive
+                禁用防火墙：systemctl disable firewalld && systemctl stop firewalld
+                //插入包
+                yum install -y docker kubelet kubeadm kubectl kubernetes-cni
+                //启动服务
+                systemctl enable docker && systemctl start docker
+                systemctl enable kubelet && systemctl start kubelet
+            2.1.5 关闭虚拟机
+                shutdown now
+                修改克隆的主机名：hostnamectl --static set-hostname node1.k8s
+        2.2 使用kubeadm配置主服务器
+            2.2.1 了解kubeadm如何运行组件
+                初始化UI面板：kubeadm init
+                设置环境变量KUBECONFIG运行kubectl：export KUBECONFIG=/etc/kubernetes/admin.conf
+        2.3 使用kubeadm配置工作节点
+            2.3.1 建立容器网络
+                方便容器进行网络连接：Weave Net container networking插件
+                    kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectlversion | base64 | tr -d '\n')
+        2.4 使用本地机器上的集群
+            将master上的配置文件复制到本地机器上：scp root@192.168.64.138:/etc/kubernetes/admin.conf ~/.kube/config2
+            替换IP地址并设置环境变量：export KUBECONFIG=~/.kube/config2
+    3.附录C--使用其他容器运行时
+        3.1 用rkt替换Docker
+            3.1.1 配置Kubernetes使用rkt
+                rkt支持pod的概念，docker只运行单个容器。rkt可以运行docker格式的容器映像
+                设置运行是环境：--container-runtime=rkt
+            3.1.2 用minkube测试rkt
+                minikube start --container-runtime=rkt --network-plugin=cni
+                minikube ssh
+                rkt list
+                rkt image list
+        3.2 通过CRI使用其他容器运行时
+            3.2.1 介绍crio容器运行时
+                容器运行时接口（CRI),能够运行不同的容器，除了docker和rkt
+                --container-runtime=crio
+    4.附录D--集群联合
+        4.1 介绍Kubernetes集群联盟
+            多个集群进行组合通过Cluster Federation
+        4.2 理解体系结构
+            它是集群的集群，处理的基本单位是集群
+        4.3 理解federated API对象
+            4.3.1 介绍Kubernetes资源的federated版本
+                支持的资源：Namespaces
+                          ConfigMaps and Secrets
+                          Services and Ingresses
+                          Deployments, ReplicaSets, Jobs, and Daemonsets
+                          HorizontalPodAutoscalers
+
+
+
+
+
+

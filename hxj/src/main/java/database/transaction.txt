@@ -1,0 +1,67 @@
+1.sql的事务的处理过程：
+    1.原则：
+        1.1 当遇到并行future的时候，总之，将其转化为顺序执行，如果该future中有多个操作，那么后续的每个操作都是queryBatch;
+        1.2 当遇到二重循环的future时，将最外层的循环的数据结构进行重构，将里层数据需要的数据，在最开始就传入进行；
+    2.模式化的事务代码：🌿🌿🌿🌿🌿
+        ⚠️⚠️⚠️：事务失败的时候，使用tx.commit()和使用tx.rollback()的效果是一样的
+                 并行future中的多个事务，最好在future内部就把事务提交了或者回滚
+        2.1 查询操作：【当sql失败的时候，tx.commit，但是future要让它失败，成功了也不要立刻进行tx.commit】
+              private Future<Void> setProductsCustomer() {
+                var promise = Promise.<Void>promise();
+
+                tx.queryOneOrNone("getOrderById", Tuple.of(realm, orderId), collectDataObject(xxx.class), ar -> {
+                  if (ar.succeeded()) {
+                    promise.complete();
+                  } else {
+                    tx.commit();
+                    promise.fail(ar.cause());
+                  }
+                });
+                return promise.future();
+              }
+        2.2 修改操作：
+              private Future<Void> publishMaterials() {
+                var promise = Promise.<Void>promise();
+
+                tx.queryBatch("changeMaterialStatus", tuples, ar -> {
+                  if (ar.succeeded()) {
+                    promise.complete(ar.result());
+                  } else {
+                    tx.commit();
+                    promise.fail(ar.cause());
+                  }
+                });
+                return promise.future();
+              }
+        2.3 批量执行sql中，如果其中一个有问题的处理：【整体失败，还是照样commit，但是部分成功的结果，需要额外判断，这时候需要的是tx.rollback，并抛出500异常】
+              private Future<List<Long>> createMaterials() {
+                var promise = Promise.<List<Long>>promise();
+
+                tx.queryBatch("createMaterial", tuples, collectLong(), ar -> {
+                  if (ar.succeeded()) {
+                    var materails = ar.result();
+
+                    if (materails.size() == list.size()) {
+                      promise.complete(materails);
+                    } else {
+                      tx.rollback();
+                      promise.fail(FailureUtils.create(500, FAILURE_TITLE, "xxx"));
+                    }
+                  } else {
+                    tx.commit();
+                    promise.fail(ar.cause());
+                  }
+                });
+                return promise.future();
+              }
+        2.4 在非sql部分的检查出错的处理：
+            if (partMap.containsKey(number)) {
+                tx.rollback();
+                return FailureUtils.createClientError(FAILURE_TITLE, "xxxx");
+            } else {
+                ......
+            }
+        2.5 在顺序执行的future的最后，添加提交操作：
+            .compose(v -> Future.future(tx::commit));
+        2.6 如果已经在最外层的tx包含了，那么内部最好全部都变成顺序执行；
+            反之，没被事务包含，开启并行future操作，单独的future中如果有事务，最好在该future中就进行提交或者回滚。

@@ -1,0 +1,117 @@
+1.配置kubernetes步骤如下：
+    0.重要的Hazelcast Kubernetes插件页面：
+        https://github.com/hazelcast/hazelcast-kubernetes
+
+    1.在项目中添加两个依赖：
+        <dependency>
+         <groupId>io.vertx</groupId>
+         <artifactId>vertx-hazelcast</artifactId>
+         <version>${vertx.version}</version>
+        </dependency>
+        <dependency>
+         <groupId>com.hazelcast</groupId>
+         <artifactId>hazelcast-kubernetes</artifactId>
+         <version>${hazelcast-kubernetes.version}</version>
+        </dependency>
+        ⚠️：当打包images时，需要查看vertx-stack.json是否添加了这两个jar包
+            hazelcast.xml
+
+    2.在Hazlcast中配置发现插件：配置文件名为cluster.xml
+        这种插件提供两种发现模式：Kubernetes API 和 DNS Lookup
+        <hazelcast>
+         <properties>
+           <property name="hazelcast.discovery.enabled">true</property>
+         </properties>
+
+         <network>
+           <join>
+             <multicast enabled="false"/>
+             <tcp-ip enabled="false" />
+
+             <discovery-strategies>
+               <discovery-strategy enabled="true"
+                   class="com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy">
+                 <properties>
+                   <property name="service-dns">MY-SERVICE-DNS-NAME</property>
+                 </properties>
+               </discovery-strategy>
+             </discovery-strategies>
+           </join>
+         </network>
+        </hazelcast>
+
+        ⚠️：MY-SERVICE-DNS-NAME的值必须是headless的k8s的Service对象
+            apiVersion: v1
+            kind: Service
+            metadata:
+             namespace: MY-NAMESPACE
+             name: MY-SERVICE-NAME
+            spec:
+             selector:
+               component: MY-SERVICE-NAME
+             clusterIP: None
+             ports:
+             - name: hz-port-name
+               port: 5701
+               protocol: TCP
+
+        ⚠️：将标签匹配对应的部署，用于服务发现
+            apiVersion: extensions/v1beta1
+            kind: Deployment
+            metadata:
+             namespace: MY-NAMESPACE
+            spec:
+             template:
+               metadata:
+                 labels:
+                   component: MY-SERVICE-NAME
+        ⚠️：cluster.xml文件最终应该挂载到容器中
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

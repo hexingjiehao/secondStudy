@@ -1,0 +1,63 @@
+1.redis：(c语言写的key-value数据库,同时类似于一个小型的语言)
+    常用数据类型：(设值/获取值)
+        String: 适用于普通的key/value
+            set hello world; get hello
+        List(字符串链表): 适用于好友列表，粉丝列表，消息队列，最新消息排行
+            rpush list-key hello; lrange list-key 0,2
+        Set(集合): 适用于共同好友、共同兴趣、分类标签
+            sadd set-key hello; smembers set-key
+        Hash(哈希表): 适用于对象存储信息
+            hset hash-key   hello world; hgetall hash-key
+        Sorted Set(有序集合)：有一个顺序属性score。适用于时间排序的时间轴。
+            zadd zset-key 86 world;zrange zset-key 0,2 withscores
+    核心对象：redisObject
+        字段：
+            type:数据类型
+            encoding:编码格式
+            ptr:数据指针
+            vm:虚拟内存：
+            其他
+
+    reids高级应用：(单线程封装连接，所以不用担心线程安全。能够存储大数据，确保都从内存读数据,从而提高查询效率)
+        安全性设置：
+            设置客户端操作密码：修改redis.conf。添加requirepass 你的密码
+            客户端授权方式：
+                登陆时 -a 指定密码
+                登陆后 auth 指定密码
+        主从复制：(数据一致性)
+            原理：
+                1.slave发送SYNC同步命令给master
+                2.master开启后台进程执行BGSAVE,将所有新执行的写入命令都保存到一个缓冲区里面。
+                3.master将.rdb文件发送给slave
+                4.slave载入.rdb文件复制数据
+                5.master将缓冲区命令发送slave
+            配置slave: 修改slave服务器的redis.conf,增加master的ip和port，以及password
+                slaveof 主服务器IP 主服务器port
+                masterauth 主服务器密码
+        事务与锁：
+            MULTI:开启事务，发送的命令在队列待命
+            EXEC:顺序执行命令
+            DISCARD：取消事务,丢弃，队列清空
+            WATCH：在multi和exec中间监控key是否修改，等价于乐观锁,如果被多方修改，则事务执行失败。
+        持久化机制：
+            快照（snapshotting）,也称RDB方式：默认的持久化方式。
+                二进制的方式写入dump.rdb的文件中。可以在redi.conf设置周期性自动保存数据集
+                save 900 1： (900秒内如果有超过1个key被修改则发起保存快照)
+            追加文件方式（append-only file),也称AOF方式:
+                记录服务器执行的所有写操作命令
+                配置追加文件的时机：(redis.conf)
+                    appendonly yes：启用AOF方式
+                    appendfsync always：来一个命令,持久化1次。慢and安全
+                    appendfsync everysec：1秒持久化1次。推荐
+                    appendfsync no：系统决定持久化。快and不安全
+        发布以及订阅消息：
+            生产者发布消息到管道。消费者从订阅的管道接受消息
+
+        redis的高并发问题： (noSql数据库),
+            产生原因：连接超时、数据混乱或错误、请求阻塞等多种问题。即总结为，产生Redis并发诱因是程序中的业务复杂度导致。
+            解决方案：
+                建立redis连接池：redis也是数据库。
+                执行关键读写时添加内部锁：合理运用读写锁
+
+
+        未完待续......(增加基础代码的练习,高并发的处理逻辑)

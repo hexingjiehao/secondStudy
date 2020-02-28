@@ -1,0 +1,25 @@
+1.学习storm知识点：
+    1.概念：它是一个分布式的、容错的实时计算系统。
+    2.官网: http://storm.apache.org  最新版本2.1.0
+
+2.storm文档学习：
+    2.1 教程：
+            将项目打包成jar，然后执行storm jar xxx.jar org.apache.storm.MyTopology arg1 arg2
+            storm使用元组作为数据模型
+            简单拓扑举例：TopologyBuilder builder = new TopologyBuilder();
+                        builder.setSpout("words", new TestWordSpout(), 10);
+                        builder.setBolt("exclaim1", new ExclamationBolt(), 3)
+                               .shuffleGrouping("words");
+                        builder.setBolt("exclaim2", new ExclamationBolt(), 2)
+                               .shuffleGrouping("exclaim1");
+            相关概念：
+                Topologies：类似于mapReduce作业
+                Streams：流是一个无界的元组序列
+                Spouts：喷口项拓扑中发送一个或者多个流数据
+                Bolts：螺栓进行具体的数据处理，比如过滤，函数，聚合，连接，与数据库对话
+                Stream groupings：定义拓扑的一部分是指定每个bolt应该接收哪些流作为输入
+                Reliability：Storm保证每个spout元组都将被拓扑完全处理
+                Tasks：每个spout或bolt跨集群执行相同数量的任务
+                Workers：Storm试图将任务平均分配给所有工人
+
+未完待续......

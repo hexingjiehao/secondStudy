@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<embedded-cache-manager>
+    <id></id>
+    <configuration></configuration>
+</embedded-cache-manager>
+
+<remote-cache-manager>
+    <id></id>
+    <configuration></configuration>
+</remote-cache-manager>
+
+<container-cache-manager>
+    <id></id>
+    <cache-container-ref></cache-container-ref>
+</container-cache-manager>

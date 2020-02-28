@@ -1,0 +1,1487 @@
+1.JBPM工作流的学习--java business process management
+    1.定义：商业流程管理框架.纯java。使用它可以对商业流程进行建模、运行以及全生命周期的监控流程运转。
+    2.版本：
+        jBPM2.x:加入jboss,全名jboss jbpm,有自己的一套业务逻辑定义规范jpdl(java process definition language),hibernate管理数据库
+        jBPM3.x:增加功能，完整的工作流系统实现，不支持标准
+        jBPM4.x:完全重写项目，全部换了.网上大部分的人还在讨论这个版本。
+        jBPM5.x:创始人离去，完全重写代码,代码基于Drools Flow,不再支持jpdl。很多用户开始转战activity,activity延续jbpm4的代码
+        JBPM6.x:基于BPMN2.0规范，支持完整的业务流程的生命周期
+        jBPM7.x:目前官网只保留了7的所有版本，其他都没有了
+        最新版本：jBPM7.15.o.Fin,时间是2018年11月29日
+                新特性：1.业务中心取代了kie workbench和kie drools workbench
+                       2.管理部分错误消息处理
+                       3.任务日志的新时间轴视图
+                       4.KIE服务器表单HTML元素支持变量.<h3>Hello ${user.name}!</h3>
+                       5.jBPM的Camel组件得到了显著改进。camel-jbpm,kie-server-client代替kie-remote-client
+                       6.审计日志模式适用于任务和案例审计日志
+                       7.案例文件数据支持的变量索引器
+    3.潜在的坑：
+        jBPM没有本地Spring支持
+    4.技术栈：
+        1.1 runtime management:运行时管理
+                process management:流程管理
+                task lists:任务列表
+        1.2 reporting:报表
+                business activity monitoring:业务活动监视
+        2.execution:执行阶段,(CDI--java上下文和依赖注入,REST--表现层状态转移，用请求类型(post等)来决定crud,JMS--java消息服务)
+            core engine:核心引擎，执行流程
+            human task service:人工任务服务
+            persistence:持久化
+        3.1 modeling & deployment:建模和部署，maven打包
+            process designer: 流程设计器
+            data modeler:数据建模
+            rules authoring:规则编写
+            form modeler:报表建模
+            guvnor repository:仓库，git版本管理
+        3.2 eclipse developer tools:eclipse开发者工具
+
+        搭建demo的步骤：
+            1.下载引擎jar包：jBPM-installer-full 7.15.0.Final.zip。作为jbpm的运行时环境
+            2.如果是eclipse，就下载插件，然后创建jbpm的hello项目
+            3.如果是idea,创建springboot项目，然后导入jbpm的jar包.jbpm-bpmn2
+            4.创建测试类，创建两个方法，一个是手动代码创建流程并执行，一个是绑定bpmn文件并执行
+                4.1手动创建流程：
+                    4.1.1 RuleFlowProcessFactory创建规则流工厂，并给流程取名
+                    4.1.2 工厂取名/版本/打包，之后开始创建节点，并在节点中增加action，最后连接节点
+                    4.1.3 工厂验证流程并获取流程对象
+                    4.1.4 获取流程服务，并获取流程对象的字节流资源
+                    4.1.5 资源对象设置bpmn2文件的路径
+                    4.1.6 通过知识库服务对象获取知识库文件系统对象
+                    4.1.7 文件系统对象将资源进行写入，将bpmn2文件实体化到引擎中
+                    4.1.8 服务对象发布一个包的版本对象
+                    4.1.9 文件系统对象设置版本号并且写pom.xml文件的操作
+                    4.1.10 知识库服务对象使用文件对象创建构建器，构建出流程
+                    4.1.11 知识库服务对象使用版本号创建容器，进而创建会话，最后启动流程
+                4.2绑定bpmn文件：(最常用推荐的！！！)
+                    4.2.1 new一个知识库辅助类
+                    4.2.2 helper类增加资源，通过资源工厂加载resources路径下的bpmn文件，然后构建出知识库对象
+                    4.2.3 知识库对象创建会话对象
+                    4.2.4 会话对象启动流程，通过流程的名字
+            5.建人工服务的测试类：目前有点问题。关键是继承JbpmJUnitBaseTestCase类
+                5.1 创建运行时管理器，传递参数有策略，标识符，bpmn文件名
+                5.2 获取运行时引擎，通过流程实例上下文作为参数
+                5.3 使用运行时引擎获取会话对象
+                5.4 会话对象启动流程
+                5.5 运行时引擎重新根据流程实例ID获取
+                5.6 运行时引擎获取任务服务对象
+                5.7 任务服务对象获取当前任务，并分配给指定用户
+                5.8 用户服务开始执行某个用户的指定任务和完成指定任务
+                5.9 重复这样的人工任务，最后流程结束
+
+    5.使用工具：KIE workbench application,可用https://demo.bpmn.io网页编辑工具
+        工作台功能：流程设计，数据建模，流程管理，任务收件箱，业务活动监视
+    6.Bussiness Application项目：
+        1.在start.jbpm.org网站生成3个项目，本地进行处理
+        2.使用maven命令手动初始化3个项目：
+            mvn archetype:generate -B -DarchetypeGroupId=org.kie -DarchetypeArtifactId=kie-model-archetype -DarchetypeVersion={PRODUCT_VERSION_FINAL} -DgroupId=com.company -DartifactId=test-model -Dversion=1.0-SNAPSHOT -Dpackage=com.company.model
+            mvn archetype:generate -B -DarchetypeGroupId=org.kie -DarchetypeArtifactId=kie-kjar-archetype -DarchetypeVersion={PRODUCT_VERSION_FINAL} -DgroupId=com.company -DartifactId=test-kjar -Dversion=1.0-SNAPSHOT -Dpackage=com.company
+            mvn archetype:generate -B -DarchetypeGroupId=org.kie -DarchetypeArtifactId=kie-service-spring-boot-archetype -DarchetypeVersion={PRODUCT_VERSION_FINAL} -DgroupId=com.company -DartifactId=test-service -Dversion=1.0-SNAPSHOT -Dpackage=com.company.service -DappType=bpm
+        3.business Application项目配置：
+                1.application.properties:配置服务器，端口，REST apis的路径
+                2.DefaultWebSecurityConfig.java:配置验证和授权
+                3.配置keycloak单点登陆验证：
+                    1.pom.xml引入
+                    2.application.properties配置keycloak参数
+                4.其他的都是一些常规的springboot的配置了
+                5.数据库切换启动：
+                    H2:默认，./launch.sh clean install
+                    mysql：./launch.sh clean install -Pmysql
+                    postgres:./launch.sh clean install -Ppostgres
+                6.用户或者组信息的备份：
+                    分别实现两个接口UserGroupCallback和UserInfo
+                7.配置swagger风格：
+                    1.pom.xml引入
+                    2.application.properties配置
+                    3.常用URL：http://localhost:8090/rest/swagger.json
+                              http://localhost:8090/rest/api-docs/?url=../swagger.json
+                8.部署方式：
+                    1.openshift:下载容器，命令行配置启动，wb控制台监视
+                        ./launch.sh clean install -Popenshift,h2
+                    2.docker:下载容器，命令行配置启动，wb控制台监视
+                        ./launch.sh clean install -Pdocker,h2
+        4.启动项目：主要是service模块，
+            1. 通过脚本方式启动 ./launch.sh clean install
+               首先是docker方式启动，其次是openshift方式启动，最后是Java -jar启动
+            2.可以手动打包springboot的jar包，然后java -jar
+            3.启动成功可查看http://localhost:8090/
+    8.jbpm-server-distribute项目：jbpm控制台,多种管理工具，jBPM-server-7.15.0.Final-dist.zip
+        0-WildFly server: http://localhost:8080 [这是一个社区]
+        1-jBPM Console：http://localhost:8080/jbpm-console  【也就是business center，需登录】
+        2-KIE Server：http://localhost:8080/kie-server/docs  【REST API风格，swagger接口文档】
+        3-jBPM Case Management showcase app：http://localhost:8080/jbpm-casemgmt  [案例管理，需登录]
+        4-jBPM Service repository (with community work items)：http://localhost:8080/repository [资源仓库，可下载工作插件workitem]
+        常用的默认用户名密码： wbadmin/wbadmin
+                            krisv/krisv
+                            john/john
+                            mary/mary
+                            katy/katy
+                            jack/jack
+                            kieserver/kieserver1!
+        备注：这是一个编译好的可执行项目，启动方法：jbpm-server-7/bin/standalone.sh
+        切换数据库：h2文件存储：默认
+                  mysql: 【还未测试启动】
+                    启动：<控制台项目位置>/bin/jboss-cli.sh --file=jbpm-mysql-config.cli
+                    host:localhost
+                    port:3306
+                    database:jbpm
+                    username:jbpm
+                    password:jbpm
+                  postgreSQL: 【启动还有疑问，没有启动起来】
+                    启动：<控制台项目位置>/bin/jboss-cli.sh --file=jbpm-postgres-config.cli
+                    host:localhost
+                    port:5432
+                    database:jbpm
+                    username:jbpm
+                    password:jbpm
+    9.真正的jpmn教程
+        1.下载full-install版本，不是server
+        2.在安装目录下进行构建demo
+            1.ant install.demo.noeclipse
+                结果：下载wildfly-server,并在其中启动executer-server,workbench,case-management
+            2.ant start.demo.noeclipse
+                结果：启动h2数据库，启动wildfly-server
+                     默认用户名密码：krisv/krisv
+            3.ant stop.demo
+            4.ant clean.demo
+        3.在jbpm-console工作台处理流程：
+            1.导入有流程的项目
+            2.构建项目并部署项目
+            3.在process define中启动一个进程，并进行进程的流动审批
+            4.在任务中声明该进程，然后进行评价，之后完成
+            5.其他人进行审批，进行4中相同的操作。最后流程结束
+            6.可以在process report 中查看进程情况
+        4.配置：
+            1.验证和授权的xml配置,ant启动的用户不一样：如下
+                Name	Password	Workbench roles	        Task roles
+                admin   admin       admin,analyst,kiemgmt,rest-all,kie-server
+                krisv   krisv       admin,analyst,rest-all,kie-server
+                john    john        analyst,kie-server          Accounting,PM
+                mary    mary        analyst,kie-server          HR
+                sales-rep   sales-rep   analyst,kie-server  sales
+                jack    jack        analyst,kie-server          IT
+                katy    katy        analyst,kie-server          HR
+                salaboy salaboy     admin,analyst,rest-all,kie-server   IT,HR,Accounting
+                kieserver   kieserver1! kie-server
+                可以通过文件配置：$JBOSS_HOME/standalone/configuration/users.properties
+                           $JBOSS_HOME/standalone/configuration/roles.properties
+            2.切换数据库进行持久化：[切换失败。。。]
+                build.xml:将不同的数据库配置注释或者打开注释
+                db/jbpm-persistence-JPA2.xml：修改dialect
+                所有的standalone-*.xml :修改datasource和驱动连接
+                    非常复杂，暂时跳过，应该有一键修改才对一共有25个文件
+                    查找指令： find ./ -name "standalone*.xml"
+                db/mysql_module.xml: 和build.properties配置的一致
+        5.项目启动初始化数据库：DDL script
+            jbpm-installer/db/ddl-scripts/h2
+            启动项目前首先需要执行：jbpm-installer/db/ddl-scripts/postgresql/postgresql-jbpm-lo-trigger-clob.sql
+        6.使用jbpm的常用命令：
+            clean:清空资源
+                clean.db
+                clean.demo
+                clean.demo.noeclipse
+                clean.eclipse
+                clean.generated.ddl
+                clean.jboss
+                clean.jboss.repository
+            download:下载资源
+                download.db.driver
+                download.ddl.dependencies
+                download.droolsjbpm.eclipse
+                download.eclipse
+                download.eclipse.gef
+                download.jboss
+                download.jBPM.bin
+                download.jBPM.casemgmt
+                download.jBPM.conso.le
+                download.kie.server
+            install：插入项目和资源
+                install.db.files
+                install.demo
+                install.demo.eclipse
+                install.demo.noeclipse
+                install.droolsjbpm-eclipse.into.eclipse
+                install.eclipse
+                install.jboss
+                install.jBPM-casemgmt.into.jboss
+                install.jBPM-console.into.jboss
+                install.kie-server.into.jboss
+        7.常见问题：
+            1.资源下载失败：手动下载并放入jbpm-installer/lib folder
+        8.项目导入的细节：
+            1.git:URL地址和权限验证。举例：https://github.com/kiegroup/jbpm-playground
+
+    10.jbpm核心引擎：
+        1.API生命周期或者功能：为了和核心引擎进行交互
+            说明：引擎交互-->需要设置session-->需要索引到KIE base(知识库)==包含大量流程定义
+                 首先创建KIE base,加载必要的流程定义；接着实例化session，然后开始执行流程(自动生成具体流程实例)，最终和引擎交互
+        2.KieBase:(knowledge base)
+            创建代码(例子是单个流程定义--不推荐)：KieHelper kieHelper = new KieHelper();
+                                        KieBase kieBase = kieHelper
+                                                                    .addResource(ResourceFactory.newClassPathResource("MyProcess.bpmn"))
+                                                                    .build();
+        3.KieSession:会话（需要实现4个主要的接口）
+            0.创建代码(通过流程ID启动流程)：KieSession ksession = kieBase.newKieSession();
+                                      ProcessInstance processInstance = ksession.startProcess("com.sample.MyProcess");
+            1.ProcessRuntime:这个接口定义了所有和流程交互的session方法。有开始流程，信号事件，获取流程，终止流程，获取工具管理器
+                             包位置：org.kie.api.runtime.process.ProcessRuntime接口
+
+            2.Event Listeners:这个接口定义了事件的监听器有关操作。有流程开始前后操作，流程完成前后操作，节点触发前后操作，变量改变前后操作
+                              包位置：org.kie.api.event.process.ProcessEventListener
+                将日志加入session的代码：KieRuntimeLogger logger = KieServices.Factory.get().getLoggers().newFileLogger(ksession, "test");
+                                       ......
+                                      logger.close();
+            3.Correlation Keys:相关秘钥，可以不通过流程ID来找到流程实例。由接口CorrelationAwareProcessRuntime实现该功能。
+                时机分别是开始流程，创建流程实例，获取流程实例。主要应用于长期运行项目，持久化保存信息
+                包位置：org.kie.internal.process.CorrelationAwareProcessRuntime;它不在API中。
+
+            4.Threads:多线程。说的那个一致，我不关心你执行结果，我留个监视就可以。继续往前执行，你好了我再处理。应用于手工任务，得益于异步触发器
+                逻辑多线程：bpmn图上的分支。引擎支持，并行网关。单线程实现，避免竞态和死锁
+                技术多线程：代码上的实现
+
+        4.RuntimeManager:运行时管理器。是一个接口，管理运行时引擎实例并交付给调用者。方法有获取引擎，获取识别号，关闭引擎，某时有引擎吗
+                         包位置：org.kie.api.runtime.manager.RuntimeManager
+                         获取引擎-》获取session和taskService
+            1.目标：简化和加强knowledge api,特别是流程上下文。提供策略控制运行时执行。有一个运行时引擎。
+                 (推荐使用和jbpm引擎交互)
+            2.策略：Singleton--单例。所有流程一个kieSession。
+                 Per Request--每次来一个请求就分发一个kieSession
+                 Per Process Instance--一个流程配置一个kieSession。无论访问多少次
+                    有上下文：emptyContext:开始流程实例时
+                             processinstanceidcontext:流程实例被创建后使用
+                             correlationkeycontext:使用key来标记流程
+            3.运行时引擎：封装kieSession和TaskService。也是接口获取两个组件。
+            4.应用场景：应用开始时获取runtimemanager
+                    在请求时从runtimemanager获取runtimeengine，从而获取kiesession和taskservice
+                    在应用关闭时关闭runtimemanager
+
+                    可以通过创建drools.session.conf文件，配置简单工作项句柄。位置是：WEB-INF/classes/META-INF
+                        步骤：1.在WEB-INF/classes/META-INF路径下创建drools.session.conf文件
+                             2.在drools.session.conf文件中添加内容drools.workItemHandlers = CustomWorkItemHandlers.conf
+                             3.在WEB-INF/classes/META-INF路径下创建CustomWorkItemHandlers.conf文件
+                             4.在CustomWorkItemHandlers.conf文件中添加内容：[
+                                                                             "Log": new org.jbpm.process.instance.impl.demo.SystemOutWorkItemHandler(),
+                                                                             "WebService": new org.jbpm.process.workitem.webservice.WebServiceWorkItemHandler(ksession),
+                                                                             "Rest": new org.jbpm.process.workitem.rest.RESTWorkItemHandler(),
+                                                                             "Service Task" : new org.jbpm.process.workitem.bpmn2.ServiceTaskHandler(ksession)
+                                                                         ]
+                        效果：任何在该应用下的工作想句柄都会被注册到session中，无论是否runtimemanager创建的session
+
+            5.案例代码：RuntimeEnvironment environment = RuntimeEnvironmentBuilder.Factory.get()
+                                                            .newDefaultInMemoryBuilder()
+                                                            .addAsset(ResourceFactory.newClassPathResource("BPMN2-ScriptTask.bpmn2"), ResourceType.BPMN2)
+                                                            .get();
+                     RuntimeManager manager = RuntimeManagerFactory.Factory.get().newSingletonRuntimeManager(environment);
+                     RuntimeEngine runtime = manager.getRuntimeEngine(EmptyContext.get());
+                     KieSession ksession = runtimeEngine.getKieSession();
+                     manager.disposeRuntimeEngine(runtimeEngine);
+            6.配置接口等：RuntimeEnvironment：获取kiebase，获取环境，获取配置，使用持久化吗？获取注册工厂，获取用户组回调，获取类加载器，关闭
+                      RuntimeEnvironmentBuilder：持久化，实体管理工厂，增加资产，增加环境实体，增加配置，知识库，用户组回调，注册工厂，获取，类加载器，计划服务
+                      RuntimeEnvironmentBuilderFactory：创建builder,创建默认builder，创建默认内存builder，创建类路径模式默认builder
+
+                      RegisterableItemsFactory：和taskservice有关方法。注册句柄和监听器
+                        org.jbpm.runtime.manager.impl.SimpleRegisterableItemsFactory实现类：简单实现。基于类名，通过反射创建句柄实例。
+                        org.jbpm.runtime.manager.impl.DefaultRegisterableItemsFactory实现类：继承简单实现。重写部分方法。功能同样实现。
+                        org.jbpm.runtime.manager.impl.KModuleRegisterableItemsFactory实习类：继承默认实现。提供kmodule的功能和简单实现一样的功能。
+                        org.jbpm.runtime.manager.impl.cdi.InjectableRegisterableItemsFactory实现类：依赖注入实现。为依赖注入定制环境的缺省实现。使用依赖注入风格。通过生产者查找句柄和监听器
+                      WorkItemHandlerProducer：传统工件句柄和监听器
+                      EventListenerProducer<T>:@Process - for ProcessEventListener
+                                               @Agenda - for AgendaEventListener
+                                               @WorkingMemory - for WorkingMemoryEventListener
+        5.服务API：
+            概述分类：
+                jbpm-services-api:
+                jbpm-kie-services:
+                jbpm-services-cdi:
+                ejb（企业级Java类）:它是j2ee服务器端的组件模型，包括会话Session bean,实体bean,消息驱动bean。是一套规范。企业级Java类。
+                    jbpm-services-ejb-api:
+                    jbpm-services-ejb-impl:
+                    jbpm-services-ejb-timer:
+                    jbpm-services-ejb-client:
+            具体的service接口：kjar可能是知识库jar--基于maven打包的jar包,也可能是小型Java，手机pda程序。
+                1.deployment service：部署单元kjar。它带来可执行的业务资源(流程，规则，数据对象，表单)。该服务可获取部署单元和runnermanager实例。
+                                    功能有部署/不部署单元，获取运行时管理器和部署单元，激活/反激活，被部署了吗？
+                                    应用场景：
+                                        为系统提供动态行为，让多个kjar可以同时激活并同时执行
+
+                    功能案例代码：DeploymentUnit deploymentUnit = new KModuleDeploymentUnit(GROUP_ID, ARTIFACT_ID, VERSION);
+                                deploymentService.deploy(deploymentUnit);
+                                DeployedUnit deployed = deploymentService.getDeployedUnit(deploymentUnit.getIdentifier());
+                                RuntimeManager manager = deployed.getRuntimeManager();
+                2.Definition service：是一种支持服务，从bpmn2图中获取流程信息。可和服务组合/单独使用来获取流程定义的信息，这个流程信息不是来自kjar包。
+                                    功能有创建/获取流程定义，获取可重用的子流程/流程变量/服务任务，获取关联实体/任务定义/任务输入映射/任务输出映射。
+                    功能案例代码：String processId = "org.jbpm.writedocument";
+                                Collection<UserTaskDefinition> processTasks =
+                                        bpmn2Service.getTasksDefinitions(deploymentUnit.getIdentifier(), processId);
+                                Map<String, String> processData =
+                                        bpmn2Service.getProcessVariables(deploymentUnit.getIdentifier(), processId);
+                                Map<String, String> taskInputMappings =
+                                        bpmn2Service.getTaskInputMappings(deploymentUnit.getIdentifier(), processId, "Write a Document" );
+                3.Process Service(关键)：对执行环境访问。是一个命令执行器，聚焦运行时操作，注重update而不是read
+                                      功能有开始流程，中止/标记/获取流程实例，设置流程变量，获取流程实例变量/合适信号，完成/中止/获取工作项，通过流程实例获取工作项，执行
+                    功能案例代码(部署和运行流程)：KModuleDeploymentUnit deploymentUnit = new KModuleDeploymentUnit(GROUP_ID, ARTIFACT_ID, VERSION);
+                                              deploymentService.deploy(deploymentUnit);
+                                              long processInstanceId = processService.startProcess(deploymentUnit.getIdentifier(), "customtask");
+                                              ProcessInstance pi = processService.getProcessInstance(processInstanceId);
+                4.Runtime Data Service：处理运行时所有信息。包括开始流程实例，执行节点实例。作为UI信息源。
+                                      功能有获取流程实例(条件过滤：流程ID/流程名字/部署ID)，获取流程组，获取节点实例，获取流程实例历史，获取变量的最近状态/历史，获取任务相关信息等
+                    功能案例代码:Collection definitions = runtimeDataService.getProcesses(new QueryContext());
+                               Collection<processinstancedesc> instances = runtimeDataService.getProcessInstances(new QueryContext());
+                               Collection<nodeinstancedesc> instances = runtimeDataService.getProcessInstanceHistoryActive(processInstanceId, new QueryContext());
+                               List<tasksummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner("john", new QueryFilter(0, 10));
+                5.User Task Service:包括个人任务的完整生命周期。范围执行，查询操作移动到运行时服务中。
+                                    功能有选定属性修改，访问任务变量/附件/评论
+                    功能案例代码（开始流程并完成用户任务）：long processInstanceId =
+                                                                    processService.startProcess(deployUnit.getIdentifier(), "org.jbpm.writedocument");
+                                                       List<Long> taskIds =
+                                                                    runtimeDataService.getTasksByProcessInstanceId(processInstanceId);
+                                                       Long taskId = taskIds.get(0);
+                                                       userTaskService.start(taskId, "john");
+                                                       UserTaskInstanceDesc task = runtimeDataService.getTaskById(taskId);
+                                                       Map<String, Object> results = new HashMap<String, Object>();
+                                                       results.put("Result", "some document data");
+                                                       userTaskService.complete(taskId, "john", results);
+                6.Quartz-based Timer Service:内部有集群就绪定时器服务，允许在任何时候处理和加载kiesession。
+                    配置文件代码：org.quartz.scheduler.instanceName = jBPMClusteredScheduler
+                                org.quartz.scheduler.instanceId = AUTO
+
+                                org.quartz.threadPool.class = org.quartz.simpl.SimpleThreadPool
+                                org.quartz.threadPool.threadCount = 5
+                                org.quartz.threadPool.threadPriority = 5
+
+                                org.quartz.jobStore.misfireThreshold = 60000
+                                org.quartz.jobStore.class=org.quartz.impl.jdbcjobstore.JobStoreCMT
+                                org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+                                org.quartz.jobStore.useProperties=false
+                                org.quartz.jobStore.dataSource=managedDS
+                                org.quartz.jobStore.nonManagedTXDataSource=nonManagedDS
+                                org.quartz.jobStore.tablePrefix=QRTZ_
+                                org.quartz.jobStore.isClustered=true
+                                org.quartz.jobStore.clusterCheckinInterval = 20000
+
+                                #org.quartz.dataSource.managedDS.jndiURL=
+                                #org.quartz.dataSource.nonManagedDS.jndiURL=
+                7.QueryService:基于Dashbuilder数据集，它是一个子集。概念是用户可以从底层数据存储中检索数据。由管理操作和运行时操作构建。
+                    1.定义：
+                        管理操作：注册/替换/移除/获取查询定义，获取所有查询定义
+                        运行时操作：基于QueryParam，基于QueryParamBuilder。
+                    2.术语：
+                        QueryDefinition：
+                        QueryParam：
+                        QueryResultMapper：从数据集到实体对象映射。策略是给定名称而非类名。
+                            常用类：org.jbpm.kie.services.impl.query.mapper.*：
+                                    ProcessInstanceQueryMapper
+                                    ProcessInstanceWithVarsQueryMapper
+                                    ProcessInstanceWithCustomVarsQueryMapper
+                                    UserTaskInstanceQueryMapper
+                                    UserTaskInstanceWithVarsQueryMapper
+                                    UserTaskInstanceWithCustomVarsQueryMapper
+                                    TaskSummaryQueryMapper
+                                    RawListQueryMapper
+                            案例代码：queryService.query("my query def", new NamedQueryMapper<Collection<ProcessInstanceDesc>>("ProcessInstances"), new QueryContext());
+                        QueryParamBuilder：查询筛选器/结果集过滤。
+                            常用命令：空/等于/模糊查询/在什么中间/大于小于
+                                     IS_NULL
+                                     NOT_NULL
+                                     EQUALS_TO
+                                     NOT_EQUALS_TO
+                                     LIKE_TO
+                                     GREATER_THAN
+                                     GREATER_OR_EQUALS_TO
+                                     LOWER_THAN
+                                     LOWER_OR_EQUALS_TO
+                                     BETWEEN
+                                     IN
+                                     NOT_IN
+                            功能案例代码：public class TestQueryParamBuilder implements QueryParamBuilder<ColumnFilter> {
+                                           private Map<String, Object> parameters;
+                                           private boolean built = false;
+                                           public TestQueryParamBuilder(Map<String, Object> parameters) {
+                                               this.parameters = parameters;
+                                           }
+                                           @Override
+                                           public ColumnFilter build() {
+                                               if (built) {
+                                                   return null;
+                                               }
+                                               String columnName = "processInstanceId";
+                                               ColumnFilter filter = FilterFactory.OR(
+                                                       FilterFactory.greaterOrEqualsTo((Long)parameters.get("min")),
+                                                       FilterFactory.lowerOrEqualsTo((Long)parameters.get("max")));
+                                               filter.setColumnId(columnName);
+                                               built = true;
+                                               return filter;
+                                           }
+                                       }
+                                       queryService.query("my query def", ProcessInstanceQueryMapper.get(), new QueryContext(), paramBuilder);
+                    3.应用场景：用户想要处理某种数据
+                        案例代码举例：1.调用查询定义：
+                                        SqlQueryDefinition query = new SqlQueryDefinition("getAllProcessInstances", "java:jboss/datasources/ExampleDS");
+                                        query.setExpression("select * from processinstancelog");
+                                    2.注册查询定义：方便后续调用执行
+                                        queryService.registerQuery(query);
+                                    3.执行查询获取结果集：（结果集是一堆流程实例）
+                                        Collection<ProcessInstanceDesc> instances = queryService.query("getAllProcessInstances", ProcessInstanceQueryMapper.get(), new QueryContext());
+                                        3.1.可以进行分页和排序策略调整：使用稍微复杂的上下文
+                                            QueryContext ctx = new QueryContext(0, 100, "start_date", true);
+                                            Collection<ProcessInstanceDesc> instances = queryService.query("getAllProcessInstances", ProcessInstanceQueryMapper.get(), ctx);
+                                    4.进行结果集的过滤：
+                                        Collection<ProcessInstanceDesc> instances = queryService.query("getAllProcessInstances", ProcessInstanceQueryMapper.get(), new QueryContext(), QueryParam.likeTo(COLUMN_PROCESSID, true, "org.jbpm%"));
+                                        Collection<ProcessInstanceDesc> instances = queryService.query("getAllProcessInstances", ProcessInstanceQueryMapper.get(), new QueryContext(),
+                                                                                                        QueryParam.likeTo(COLUMN_PROCESSID, true, "org.jbpm%"),
+                                                                                                        QueryParam.in(COLUMN_STATUS, 1, 3));
+                8.ProcessInstanceMigrationService:流程实例迁移服务。它能够把一个部署的项目上的流程迁移到另一个部署的项目上。流程/任务变量不受影响。能够改变流程定义。
+                                                  结束旧的流程实例并开启新的流程实例。迁移时需要考虑向后兼容性，数据改变和节点映射
+                    具体接口：ProcessInstanceMigrationService只有迁移功能
+                             ProcessAdminServicesClient：以前的迁移功能实现
+                             注意：迁移多个流程实例，实现是每个流程分开的事务，确保互不影响。迁移结束后返回报告。
+                    功能案例代码(将活动流程进行迁移)：public class ProcessInstanceMigrationTest{
+                                                    private static final String SOURCE_CONTAINER = "com.redhat:MigrateMe:1.0";
+                                                    private static final String SOURCE_PROCESS_ID = "MigrateMe.MigrateMev1";
+                                                    private static final String TARGET_CONTAINER = "com.redhat:MigrateMe:2";
+                                                    private static final String TARGET_PROCESS_ID = "MigrateMe.MigrateMeV2";
+
+                                                    public static void main(String[] args) {
+                                                        KieServicesConfiguration config = KieServicesFactory.newRestConfiguration("http://HOST:PORT/kie-server/services/rest/server", "USERNAME", "PASSWORD");
+                                                        config.setMarshallingFormat(MarshallingFormat.JSON);
+                                                        KieServicesClient client = KieServicesFactory.newKieServicesClient(config);
+                                                        long sourcePid = client.getProcessClient().startProcess(SOURCE_CONTAINER, SOURCE_PROCESS_ID);
+
+                                                        MigrationReportInstance report = client.getAdminClient().migrateProcessInstance(SOURCE_CONTAINER, sourcePid,TARGET_CONTAINER, TARGET_PROCESS_ID);
+                                                        System.out.println("Was migration successful:" + report.isSuccessful());
+                                                        client.getProcessClient().abortProcessInstance(TARGET_CONTAINER, sourcePid);
+                                                   }
+                                                }
+                9.Working with deployments:关于旧流程用旧版本的流程定义，新流程用新版本的流程定义问题。activate/deactivate。
+                    1.Deployment synchronization：将可用的部署存储到数据库中，并且不断监视该表来保持同步
+                    2.同步配置代码(不停的同步部署的项目流程)：TransactionalCommandService commandService = new TransactionalCommandService(emf);
+                                                       DeploymentStore store = new DeploymentStore();
+                                                       store.setCommandService(commandService);
+                                                       DeploymentSynchronizer sync = new DeploymentSynchronizer();
+                                                       sync.setDeploymentService(deploymentService);
+                                                       sync.setDeploymentStore(store);
+                                                       DeploymentSyncInvoker invoker = new DeploymentSyncInvoker(sync, 2L, 3L, TimeUnit.SECONDS);
+                                                       invoker.start();
+                                                       ....
+                                                       invoker.stop();
+                    3.确保随时调用流程的最新版本：使用关键字latest。
+                        举例：org.jbpm：HR：1.0
+                             org.jbpm：HR：2.0
+                             org.jbpm：HR：latest
+                        功能案例代码：KModuleDeploymentUnit deploymentUnitV1 = new KModuleDeploymentUnit("org.jbpm", "HR", "1.0");
+                                    deploymentService.deploy(deploymentUnitV1);
+                                    long processInstanceId = processService.startProcess("org.jbpm:HR:LATEST", "customtask");
+                                    ProcessInstanceDesc piDesc = runtimeDataService.getProcessInstanceById(processInstanceId);
+                                    assertEquals(deploymentUnitV1.getIdentifier(), piDesc.getDeploymentId());
+
+                                    KModuleDeploymentUnit deploymentUnitV2 = new KModuleDeploymentUnit("org.jbpm", "HR", "2.0");
+                                    deploymentService.deploy(deploymentUnitV2);
+                                    processInstanceId = processService.startProcess("org.jbpm:HR:LATEST", "customtask");
+                                    piDesc = runtimeDataService.getProcessInstanceById(processInstanceId);
+                                    assertEquals(deploymentUnitV2.getIdentifier(), piDesc.getDeploymentId());
+        6.核心引擎API的配置：jvm层面的微调，-D参数
+
+    11.processes:流程，最后有代码测试
+        主要节点： Events：
+                 Activities：定义各种action动作。和task绑定
+                 Gateways：定义路径
+        idea的插件使用画bpmn图：https://blog.csdn.net/gozhuyinglong/article/details/80336765
+        流程图的加载和执行：private static KnowledgeBase createKnowledgeBase() throws Exception {
+                             KieHelper kieHelper = new KieHelper();
+                             KieBase kieBase = kieHelper.addResource(ResourceFactory.newClassPathResource("sample.bpmn2"))
+                                                        .build();
+                             return kieBase;
+                         }
+                         KieBase kbase = createKnowledgeBase();
+                         KieSession ksession = kbase.newKieSession();
+                         ksession.startProcess("com.sample.HelloWorld");
+        1.process创建：图表流程编辑器
+                      使用xml文件编辑
+                      直接代码创建，使用process API
+        2.process属性：ID/name/version/package
+                      variables:流程执行时存储数据
+                      swimlanes:分发手工任务
+        3.acticites:各种活动
+            script task：有一个action，可使用Java，javacript,mvel编写代码。有ProcessContext对象可访问流程/节点实例。即时执行，不应该抛异常。
+            service task：jbpm引擎之外的工作皆可表示。有Parameter mapping和Result mapping属性。类似函数
+            User task：需要被人手工执行的任务。各种属性，有Comment，Priority，Parameter mapping，Result mapping等
+            Reusable sub-process：可重用子流程。流程调用流程。属性有ProcessId，Wait for completion，Independent等
+                                  On-entry and on-exit actions的含义：在实体和节点退出时的动作将会被执行
+            Business rule task：引擎执行规则，将其分发到规则流组中。没有活动规则时，流程直接跳过到下一个节点。属性有RuleFlowGroup
+            Embedded sub-process：嵌入子流程。相当于节点容器，持有其他节点。属性有Variables
+            Multi-instance sub-process：多实例子流程。类似与数组。属性有CollectionExpression，VariableName。
+        4.Events：事件。开始/结束/中间事件。结束事件有属性Terminate。
+            Throwing error event：结束的一种。没有输出，抛出错误后查找是否有处理句柄，无则流程中止。属性有FaultVariable等
+            Catching timer event：中间的一种。触发时间任务。属性有Timer delay，Timer period。格式[d][#h][#m][#s][[ms]]
+            Catching signal event：中间的一种。信号触发。属性有EventType等。
+                代码如下：ksession.signalEvent(eventType, data, processInstanceId)
+                         context.getKieRuntime().signalEvent(eventType, data, kcontext.getProcessInstance().getId());
+        5.Gateways：网关，决定流程的路由
+            Diverging gateway：分发网关.类型有AND，XOR，OR。属性有Type，Constraints等
+            Converging gateway：融合网关。通过多分支流程。类型有AND，XOR，OR，类型有Type等
+        6.其他：
+            1.Variables：能够检索/存储/传递/使用数据。类型有boolean/int/String/Object(序列化)。节点在父容器搜索变量。流程变量是全局的，在KIESession
+                       代码使用：person.setAge；  kcontext.setVariable(variableName, value);  #{person.getName()}
+                                variable = ((WorkflowProcessInstance) processInstance).getVariable("variableName");
+                                Map<String, Object> variables = ksession.execute(new GenericCommand<Map<String, Object>>() {
+                                    public Map<String, Object> execute(Context context) {
+                                        KieSession ksession = ((KnowledgeCommandContext) context).getStatefulKnowledgesession();
+                                        org.jbpm.process.instance.ProcessInstance processInstance = (org.jbpm.process.instance.ProcessInstance) ksession.getProcessInstance(piId);
+                                        VariableScopeInstance variableScope = (VariableScopeInstance) processInstance.getContextInstance(VariableScope.VARIABLE_SCOPE);
+                                        Map<String, Object> variables = variableScope.getVariables();
+                                        return variables;
+                                    }
+                                });
+            2.Script:动作脚本。用于脚本任务和实体/节点退出的动作。kcontext是全局变量，类型是processcontext，用于获取最近节点/流程实例
+                案例代码：NodeInstance node = kcontext.getNodeInstance();
+                        String name = node.getNodeName();
+                        ProcessInstance proc = kcontext.getProcessInstance();
+                        proc.signalEvent( type, eventObject );
+                        打印变量值：
+                            // Java dialect
+                            System.out.println( person.getName() );
+                            // JavaScript dialect
+                            print(person.name + '\n);
+                            //  MVEL dialect==看上去像Java和javascript的组合
+                            System.out.println( person.name );
+            3.Constraints：约束。作用于各种流程位置，比如分叉网关。类型有代码约束和规则约束。代码约束体现在boolean值上。
+                         规则约束等于Drools规则条件，使用Drools规则语言语法Person( age > 20 )，不能访问流程内变量。
+                案例代码：code：
+                             Java： return person.getAge() > 20;
+                             mvel: return person.age > 20;
+                             javascript: person.age > 20
+                         drools rule：
+                            processInstance : WorkflowProcessInstance()
+                            Person( name == ( processInstance.getVariable("name") ) )
+            4.Timers：定时器。类型有开始/中间/边界事件定时器。有ISO-8601数据格式：PT1S意思是1秒后激活。
+                配置方式：delay and period：格式[d][#h][#m][#s][[ms]]：例子1h
+                         CRON like expression：例子：0/1 * * * * ?
+                         process variables：格式A Timer Event/作为边界事件绑定到子流程。
+                修改方法：在运行时流程实例中修改。使用类org.jbpm.process.instance.command.UpdateTimerCommand
+                    案例代码：long id = kieSession.startProcess(BOUNDARY_PROCESS_NAME).getId();
+                             kieSession.execute(new UpdateTimerCommand(id, BOUNDARY_TIMER_ATTACHED_TO_NAME, 3));
+        7.Process Fluent API：代码构建流程图，不用编辑器。核心包org.jbpm.workflow.core and org.jbpm.workflow.core.node
+            案例代码：RuleFlowProcessFactory factory =RuleFlowProcessFactory.createProcess("org.jbpm.HelloWorld");
+                     factory.name("HelloWorldProcess").version("1.0").packageName("org.jbpm")
+                                                      .startNode(1).name("Start").done()
+                                                      .actionNode(2).name("Action").action("java", "System.out.println(\"Hello World\");").done()
+                                                      .endNode(3).name("End").done()
+                                                      .connection(1, 2)
+                                                      .connection(2, 3);
+                    RuleFlowProcess process = factory.validate().getProcess();
+
+                    KieServices ks = KieServices.Factory.get();
+                    KieFileSystem kfs = ks.newKieFileSystem();
+                    Resource resource = ks.getResources().newByteArrayResource(XmlBPMNProcessDumper.INSTANCE.dump(process).getBytes());
+                    resource.setSourcePath("helloworld.bpmn2");
+                    kfs.write(resource);
+                    ReleaseId releaseId = ks.newReleaseId("org.jbpm", "helloworld", "1.0");
+                    kfs.generateAndWritePomXML(releaseId);
+                    ks.newKieBuilder(kfs).buildAll();
+                    ks.newKieContainer(releaseId).newKieSession().startProcess("org.jbpm.HelloWorld");
+        8.Testing:jbpm的测试。有辅助类：JbpmJUnitBaseTestCase，验证是否流程执行完。----还是存在bpmn文件找不到的问题！！！
+                需要引入模块：<dependency>
+                              <groupId>org.jbpm</groupId>
+                              <artifactId>jbpm-test</artifactId>
+                              <version>7.15.0.Final</version>
+                              <scope>test</scope>
+                            </dependency>
+                单元测试：@Test
+                         public void testProcess() {
+                             createRuntimeManager("hello.bpmn");
+                             RuntimeEngine runtimeEngine = getRuntimeEngine();
+                             KieSession ksession = runtimeEngine.getKieSession();
+                             ProcessInstance processInstance = ksession.startProcess("com.sample.bpmn.hello");
+                             assertProcessInstanceCompleted(processInstance.getId(), ksession);
+                             assertNodeTriggered(processInstance.getId(), "StartProcess", "Hello", "EndProcess");
+                         }
+                        是否使用持久化：public ProcessHumanTaskTest() {
+                                        //调用父类构造函数
+                                        //super(true, false);//执行在内存中
+                                        super(true, true);//执行持久化流程，h2数据库
+                                     }
+    12.Human Tasks:人工任务，基于WS-HumanTask说明书。
+        基本要求：1.创建人工任务节点(UserTask节点)：属性有Actors/Group/Name/TaskName/DataInputSet/DataOutputSet/Assignments
+                                               用户任务使用swimlane来分配多个人工任务给相同操作者。数据is mapped to给人工任务节点。
+                 2.集成任务管理组件
+                 3.最终用户和人工任务客户机交互，请求任务列表，声明并完成分配的任务
+        生命周期：多个状态。
+                 激活-》创建-》准备-》保留-》在流程中-》完成-》关闭
+                 在准备/保留/流程中有：暂停状态。
+                 失败状态有：失败，错误，退出，过时状态
+        任务权限：org.jbpm.services.task.exception.PermissionDeniedException。所有角色都有检索retrieve权限
+                权限矩阵：+：能操作；-：不能操作；0：不能操作并且不是一个操作
+                角色：Initiator：创建任务实例。
+                        权限有activate/delegate/forward/nominate/release/resume/skip/suspend
+                     Stakeholder：调用任务
+                        权限没有remove，其他全有
+                     Potential：声明ready状态任务，
+                        权限有claim/delegate/forward/nominate/release/resume/skip/start/suspend
+                     Actual：处理任务
+                        权限没有activate/claim/remove,其他全有
+                     Administrator：超级用户，修改任务周期状态
+                        拥有所有权限(14个)：activate/claim/complete/delegate/fail/forward/nominate/release/remove/resume/skip/start/stop/suspend
+        任务Service API：管理任务的生命周期。org.kie.api.task.TaskService。参数都有taskID和userID
+            案例代码：Task taskById = taskQueryService.getTaskInstanceById(taskId);
+                     Content contentById = taskContentService.getContentById(taskById.getTaskData().getDocumentContentId());
+                     ContentMarshallerContext context = getMarshallerContext(taskById);
+                     Object unmarshalledObject = ContentMarshallerHelper.unmarshall(contentById.getContent(), context.getEnvironment(), context.getClassloader());
+                     if (!(unmarshalledObject instanceof Map)) {
+                         throw new IllegalStateException(" The Task Content Needs to be a Map in order to use this method and it was: "+unmarshalledObject.getClass());
+                     }
+                     Map<String, Object> content = (Map<String, Object>) unmarshalledObject;
+                     return content;
+            任务事件监听器：切面编程。org.kie.api.task.TaskLifeCycleEventListener接口。loadTaskVariables(Task task)填充任务变量
+            数据模型：
+        任务交互：使用运行时管理器访问。
+            案例代码：RuntimeEngine engine = runtimeManager.getRuntimeEngine(EmptyContext.get());
+                     KieSession kieSession = engine.getKieSession();
+                     kieSession.startProcess("CustomersRelationship.customers", params);
+                     TaskService taskService = engine.getTaskService();
+                     List<TaskSummary> tasksAssignedAsPotentialOwner = taskService.getTasksAssignedAsPotentialOwner("mary", "en-UK");
+                     taskService.claim(taskSummary.getId(), "mary");
+                     taskService.start(taskSummary.getId(), "mary");
+    13.Persistence and Transactions；持久化和事务。保存流程运行时状态。存储在流程引擎的安全点。有审计日志监视。
+        1.运行时状态：默认不持久化。使用二进制持久化。
+            常用代码：ksession.getId()。sessioninfo类/processinstanceinfo类/eventtypes类/workiteminfo类
+                                      CorrelationKeyInfo类/CorrelationPropertyInfo类/ContextMappingInfo类
+        2.Audit log：审计日志。
+            1.审计数据模型：包含事件监听器存储流程相关信息。
+                ProcessInstanceLog类：
+                NodeInstanceLog类：
+                VariableInstanceLog类：
+                AuditTaskImpl类：
+                BAMTaskSummary类：构建图表和指示板
+                TaskVariableImpl类：
+                TaskEvent类：
+            2.数据库中存储流程事件：修改persistence.xml类来指定数据库
+                案例代码：KieSession ksession = ...;
+                         AbstractAuditLogger auditLogger = AuditLoggerFactory.newInstance(Type.JPA, ksession, null);
+                         ksession.addProcessEventListener(auditLogger);
+            3.消息队列存储流程事件：解决持久化效率问题。AuditLoggerFactory类
+                案例代码：ConnectionFactory factory = ...;
+                         Queue queue = ...;
+                         StatefulKnowledgeSession ksession = ...;
+                         Map<String, Object> jmsProps = new HashMap<String, Object>();
+                         jmsProps.put("jbpm.audit.jms.transacted", true);
+                         jmsProps.put("jbpm.audit.jms.connection.factory", factory);
+                         jmsProps.put("jbpm.audit.jms.queue", queue);
+                         AbstractAuditLogger auditLogger = AuditLoggerFactory.newInstance(Type.JMS, ksession, jmsProps);
+                         ksession.addProcessEventListener(auditLogger);
+            4.变量审计：实现tostring方法。新方法VariableIndexers接口。构建和注册自定义索引器。流程/任务变量支持索引器
+                    org.kie.internal.process.ProcessVariableIndexer和org.kie.internal.task.api.TaskVariableIndexer
+                    必要文件：META-INF/services/org.kie.internal.task.api.TaskVariableIndexer。每行一个类名。
+                案例代码：public class PersonTaskVariablesIndexer implements TaskVariableIndexer {
+                             @Override
+                             public boolean accept(Object variable) {
+                                 if (variable instanceof Person) {
+                                     return true;
+                                 }
+                                 return false;
+                             }
+                             @Override
+                             public List<TaskVariable> index(String name, Object variable) {
+                                 Person person = (Person) variable;
+                                 List<TaskVariable> indexed = new ArrayList<TaskVariable>();
+                                 TaskVariableImpl personNameVar = new TaskVariableImpl();
+                                 personNameVar.setName("person.name");
+                                 personNameVar.setValue(person.getName());
+                                 indexed.add(personNameVar);
+                                 TaskVariableImpl personAgeVar = new TaskVariableImpl();
+                                 personAgeVar.setName("person.age");
+                                 personAgeVar.setValue(person.getAge()+"");
+                                 indexed.add(personAgeVar);
+                                 return indexed;
+                             }
+                        }
+        3.Transactions：事务.jbpm引擎支持jta事务和spring的本地事务。默认有jndi.properties，配置了InitialContextFactory，UserTransaction，TransactionManager，TransactionSynchronizationRegistry
+                        配置内容如下：java.naming.factory.initial=org.jbpm.test.util.CloseSafeMemoryContextFactory
+                                    org.osjava.sj.root=target/test-classes/config
+                                    org.osjava.jndi.delimiter=/
+                                    org.osjava.sj.jndi.shared=true
+                        防止事务竞态：synchronized (ksession) {
+                                       try {
+                                           tx.begin();
+                                                ......
+                                           tx.commit();
+                                       } catch (Exception e) {
+                                       }
+                                    }
+                        容器管理事务(CMT)：jbpm的的事务管理的实现是UserTransaction。专用事务管理器org.jbpm.persistence.jta.ContainerManagedTransactionManager
+                                         事务完成后处理ID
+                            配置要求：1.插入事务管理器和持久化上下文管理器，从而创建session
+                                        Environment env = EnvironmentFactory.newEnvironment();
+                                        env.set(EnvironmentName.ENTITY_MANAGER_FACTORY, emf);
+                                        env.set(EnvironmentName.TRANSACTION_MANAGER, new ContainerManagedTransactionManager());
+                                        env.set(EnvironmentName.PERSISTENCE_CONTEXT_MANAGER, new JpaProcessPersistenceContextManager(env));
+                                        env.set(EnvironmentName.TASK_PERSISTENCE_CONTEXT_MANAGER, new JPATaskPersistenceContextManager(env));
+                                     2.配置 JPA provider：比如hibernate和websphere
+                                        <property name="hibernate.transaction.factory_class" value="org.hibernate.transaction.CMTTransactionFactory"/>
+                                        <property name="hibernate.transaction.jta.platform" value="org.hibernate.service.jta.platform.internal.WebSphereJtaPlatform"/>
+            案例代码：EntityManagerFactory emf = EntityManagerFactoryManager.get().getOrCreate("org.jbpm.persistence.jpa");
+                     TransactionManager tm = TransactionManagerServices.getTransactionManager();
+                     RuntimeEnvironment environment = RuntimeEnvironmentBuilder.Factory.get().newDefaultBuilder()
+                                                                               .addAsset(ResourceFactory.newClassPathResource("MyProcessDefinition.bpmn2"), ResourceType.BPMN2)
+                                                                               .addEnvironmentEntry(EnvironmentName.TRANSACTION_MANAGER, tm)
+                                                                               .get();
+                     RuntimeManager manager = RuntimeManagerFactory.Factory.get().newPerRequestRuntimeManager(environment);
+                     RuntimeEngine runtime = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
+                     KieSession ksession = runtime.getKieSession();
+                     UserTransaction ut = InitialContext.doLookup("java:comp/UserTransaction");
+                     ut.begin();
+                        ksession.insert( new Person( "John Doe" ) );
+                        ksession.startProcess("MyProcess");
+                     ut.commit();
+        4.Configuration：配置引擎持久化。默认是不持久化的。默认配置hibernate。persistence.xml进行配置
+            默认组合配置：hibernate + H2 + Narayana事务管理器 + Tomcat + jbpm-persistence-jpa.jar等
+            手动配置引擎持久化：JPAKnowledgeService-》创建KIE session-》然后索引到Entity Manager Factory
+                案例代码：EntityManagerFactory emf = Persistence.createEntityManagerFactory( "org.jbpm.persistence.jpa" );
+                         Environment env = KnowledgeBaseFactory.newEnvironment();
+                         env.set( EnvironmentName.ENTITY_MANAGER_FACTORY, emf );
+                         StatefulKnowledgeSession ksession = JPAKnowledgeService.newStatefulKnowledgeSession( kbase, null, env );
+                         //ksession = JPAKnowledgeService.loadStatefulKnowledgeSession(sessionId, kbase, null, env );
+                         int sessionId = ksession.getId();
+                         ksession.startProcess( "MyProcess" );
+                         ksession.dispose();
+                配置数据源：<?xml version="1.0" encoding="UTF-8"?>
+                          <datasources>
+                            <local-tx-datasource>
+                              <jndi-name>jdbc/jbpm-ds</jndi-name>
+                              <connection-url>jdbc:h2:tcp://localhost/~/test</connection-url>
+                              <driver-class>org.h2.jdbcx.JdbcDataSource</driver-class>
+                              <user-name>sa</user-name>
+                              <password></password>
+                            </local-tx-datasource>
+                          </datasources>
+                JBPMHelper：测试专用配置持久化。jBPM.properties配置文件：# for creating a datasource
+                                                         persistence.datasource.name=jdbc/jbpm-ds
+                                                         persistence.datasource.user=sa
+                                                         persistence.datasource.password=
+                                                         persistence.datasource.url=jdbc:h2:tcp://localhost/~/jbpm-db
+                                                         persistence.datasource.driverClassName=org.h2.Driver
+
+                                                         # for configuring persistence of the session
+                                                         persistence.enabled=true
+                                                         persistence.persistenceunit.name=org.jbpm.persistence.jpa
+                                                         persistence.persistenceunit.dialect=org.hibernate.dialect.H2Dialect
+
+                                                         # for configuring the human task service
+                                                         taskservice.enabled=true
+                                                         taskservice.datasource.name=org.jbpm.task
+                                                         taskservice.usergroupcallback=org.jbpm.services.task.identity.JBossUserGroupCallbackImpl
+                                                         taskservice.usergroupmapping=classpath:/usergroups.properties
+                    代码执行持久化配置：JBPMHelper.startH2Server();
+                                     JBPMHelper.setupDataSource();
+                                     StatefulKnowledgeSession ksession = JBPMHelper.newStatefulKnowledgeSession(kbase);
+                                     StatefulKnowledgeSession ksession = JBPMHelper.loadStatefulKnowledgeSession(kbase, sessionId);
+    14.jBPM Workbench:java商业流程管理工作台。
+        工作台基础：
+            war包插入，服务器自带eap7和wildfly14项目。数据默认存储在$WORKING_DIRECTORY/.niogit。系统属性丰富。
+            故障排除：主要是工作台可视化界面一直加载。文档位置在11.1.4.1小节。地址https://docs.jboss.org/jbpm/release/latest/jbpm-docs/html_single/index.html#_wb.systemproperties
+            快速开始：1.导入项目/添加项目。本质是创建一个git项目，然后进行代码编辑等操作
+                     2.定义数据模型,在添加资产位置。
+                     3.定义规则
+                     4.构建项目和部署项目
+            工作台配置：基本用户管理，使用脚本增加用户。$JBOSS_HOME/bin/add-user.sh
+                      角色：admin
+                           analyst
+                           developer
+                           manager
+                           user
+                      代码编写：构建库,类似于maven的包管理
+                               资产编辑器，比如bpmn,rule等。编辑时会进行lock资源
+                               规则编辑
+                               跳过网站的各种功能11.6小节......
+                               数据集的缓存：数据库--Backend--client
+                               数据源的配置页面：URL/用户名/密码/驱动
+                      安全管理:不同页面的访问权限。用户/组/角色。项目启动时，策略文件加载并存储到内存中
+                              权限：
+                              授权策略：WEB-INF/classes/security-policy.properties
+                                # Role "admin"
+                                role.admin.permission.perspective.read=true
+                                role.admin.permission.perspective.read.Dashboard=false
+                                # Role "user"
+                                role.user.permission.perspective.read=false
+                                role.user.permission.perspective.read.Home=true
+                                role.user.permission.perspective.read.Dashboard=true
+                              security provider：安全供应者realm对象。可以禁用用户和组管理。权限策略：Workbench/Pages/Organizational Units/Repositories/Projects
+                                配置文件：Wildfly -》application-users.properties/application-roles.properties
+                                        Tomcat -》tomcat-users.xml
+                                相关jar包：WEB-INF/lib/uberfire-security-management-api-?.jar
+                                          WEB-INF/lib/uberfire-security-management-backend-?.jar
+                                          WEB-INF/lib/uberfire-security-management-wildfly-?.jar
+                              替换或者创建：WEB-INF/classes/security-management.properties
+                              安全策略存储：在workbench’s VFS。叫做security-policy.properties
+                                内容：role.admin.home=HomePage
+                                     role.admin.priority=0
+                                     role.admin.permission.perspective.read=true
+                                     role.admin.permission.perspective.create=true
+                                     role.admin.permission.perspective.delete=true
+                                     role.admin.permission.perspective.update=true
+                      嵌入项目到workbench中：使用standalone mode--单机模式
+        工作台集成：
+            知识库存储REST API(关键!!!)：和jbpm的中的项目和空间交互，而不用使用工作台。由下面组件构成：
+                Authentication：身份验证。用户角色rest-all
+                    文件：~/$SERVER_HOME/standalone/configuration/application-roles.properties
+                    命令行：$ ./add-user.sh -a --user <USERNAME> --password <PASSWORD> --role rest-all
+                HTTP headers：请求头。参数由Accept和Content-Type。数据格式都是application/json
+                HTTP methods：请求方法。GET/POST/DELETE
+                Base URL：基础地址。http://localhost:8080/kie-wb/rest/
+                Endpoints:节点。URL后的路径空间
+                Request data：请求数据。json格式
+                请求的curl命令行工具：-u:用户。-H：请求头。-X：请求方式 "URL..."请求方法。-d:增加json的请求体或者文件
+            集成keycloak单点登陆: 功能有可以给工作台授权/执行服务器授权/使用远程服务/安全区域管理。
+                定义：它是单独程序，提供远端验证，授权和管理员服务。。最新版本4.7.0
+                避免端口冲突：$KC_HOME/bin/standalone.sh -Djboss.socket.binding.port-offset=100
+                相关接口：http://localhost:8180/auth/
+                接下来是使用keycloak的网页客户端进行的各种操作......
+        工作台进阶高可用性：
+            1.虚拟文件系统集群：存储所有资产。使用Apache Zookeeper and Apache Helix进行同步。
+                             Zookeeper将所有组件粘在一起。Helix集群管理器注册所有细节。
+                             Uberfire使用上述组件进行虚拟文件系统集群
+                操作步骤：1.下载Zookeeper和Helix并且插入
+                         2.配置Zookeeper集群
+                         3.配置Helix集群
+                         4.配置应用程序服务器的安全领域
+                         5.配置应用服务器的系统文件的集群
+            2.jBPM集群
+    15.bpmn设计器：主要考虑如何绑定数据.流程变量的取名，可以进行流程模拟。
+    16.运行时管理：Apache Maven的打包(称为知识档案)kjar。
+        部署描述符号：KIE bases/KIE sessions/work item handlers/event listeners
+            层次级别：服务器曾/kjar层/部署时间层/依赖kjar层
+            合并模式：KEEP_ALL
+                     OVERRIDE_ALL
+                     OVERRIDE_EMPTY
+                     MERGE_COLLECTIONS：合并集合
+            收集配置项：对象模型：组成元素有标识符+参数+解决器
+                        event-listeners
+                        task-event-listeners
+                        marshalling-strategies
+                      命名对象模型：
+                        work-item-handlers
+                        globals
+                        environment-entries
+                        configurations
+                      案例代码：DeploymentDescriptor descriptor = new DeploymentDescriptorImpl("org.jbpm.domain");
+                               descriptor.getBuilder()
+                               .addMarshalingStrategy(new ObjectModel("org.jbpm.testCustomStrategy",new Object[]{new ObjectModel("java.lang.String", new Object[]{"param1"}),
+                           			                                  "param2"})
+                           			                 );
+            相关配置：<deployment-descriptor>
+                    ...
+                        <required-roles>
+                           <required-role>view:management(还有很多其他配置)</required-role>
+                        </required-roles>
+                    ...
+                    </deployment-descriptor>
+    17.流程管理：界面的引导使用。包括流程/任务/工作/执行器异常
+    18.商业活动监视：一些图形面板。
+    19.知识库服务器(关键!!!)：是规则的独立执行服务器。
+        术语：Kie Server：
+             Kie Server Extension:插件。默认有BRM和BPM
+             Kie Server state：各种配置
+             Kie Server ID:
+             Kie Container:
+             Controller：
+        使用war包部署kie服务器。有很多配置的启动开关。不同的服务器实现配置文件不一样
+        框架图：顶层git VFS->workbeach->多个kie Server(有状态)-》底层共享数据库。对于多个工作台，使用Zookeeper集群
+        kie容器：有部署的规则实例和持有的实例。GAV=Group Name+Artifact Id+Version.
+            相关java client API：相关的jar包无法下载kie-server-client.jar
+                Authentication: 用户角色kie-server。命令行./add-user.sh -a --user <USERNAME> --password <PASSWORD> --role kie-server
+                Project dependencies：pom文件中有kie-server-client，rools-compiler，logback-classic
+                Client request configuration：关键类KieServicesConfiguration，KieServicesClient，KieServicesFactory，RuleServicesClient，ProcessServicesClient，QueryServicesClient
+        运行时命令：处理各种事件
+        jBPM控制器Java客户端API：pom文件中kie-server-controller-client，resteasy-client，undertow-websockets-jsr，logback-classic
+                               相关的jar包无法下载kie-server-controller-client.jar
+    20.jBPM的Eclipse插件： http://downloads.jboss.org/jbpm/release/6.0.1.Final/updatesite/
+                          或者jBoss jBPM Core插件
+        创建jBPM项目：eclipse有hello程序的demo。kmodule.xml用来加载流程图。工作台仓库和本地仓库可以使用git进行同步
+        导入工作台仓库：URL输入：ssh://<hostname>:8001/<repository_name>，输入用户名密码，选择分支。
+    21.Eclipse的BPMN2.0建模：教程文档http://eclipse.org/bpmn2-modeler/documentation/UserGuide-v1.0.pdf
+    22.jbpm集成各种工具：maven：作为部署单元和依赖管理的工具.kmodule.xml和pom.xml
+                       CDI:上下文和依赖注入。 DeploymentService
+                                           ProcessService
+                                           UserTaskService
+                                           RuntimeDataService
+                                           DefinitionService
+                            特殊注解：@Observes @Deploy @Kjar @Vfs
+                       Spring: runtime manager API和jbpm services。主要是spring.xml中的各种工厂管理器类
+                            <bean id="runtimeEnvironment" class="org.kie.spring.factorybeans.RuntimeEnvironmentFactoryBean">
+                              <property name="type" value="DEFAULT"/>
+                              <property name="entityManagerFactory" ref="jbpmEMF"/>
+                              <property name="transactionManager" ref="jbpmTxManager"/>
+                              <property name="assets">
+                                <map>
+                                  <entry key-ref="process"><util:constant static-field="org.kie.api.io.ResourceType.BPMN2"/></entry>
+                                </map>
+                              </property>
+                            </bean>
+                       Ejb:企业级Java类。pom文件中jboss-as-ejb-client-bom
+                            本地接口：@EJB
+                                     private DefinitionServiceEJBLocal bpmn2Service;
+                                     @EJB
+                                     private DeploymentServiceEJBLocal deploymentService;
+                                     @EJB
+                                     private ProcessServiceEJBLocal processService;
+                                     @EJB
+                                     private RuntimeDataServiceEJBLocal runtimeDataService;
+                       OSGi：包含MANIFEST.MF文件描述依赖包
+    23.领域特定流程：custom work items/service nodes。画图。后缀为.wid的工作项定义文件，json格式，表述一张图。
+        人为定义工作项：名字，输入输出，图片。
+        创建工作项句柄：实现接口WorkItemHandler。绑定数据映射
+        注册工作项句柄：往工作项管理器注册句柄
+        可以从远端仓库下载最新的工作项：https://docs.jboss.org/jbpm/service-repository/7.5.0.Final
+    24.异常管理：特殊异常--WorkflowRuntimeException。处理WorkItemManager
+        使用WorkItemHandler处理异常：SignallingTaskHandlerDecorator 和 LoggingTaskHandlerDecorator
+    25.并发和异步执行：逻辑多线程和代码多线程。单线程实现逻辑多线程。
+        多个kieSession持久化。使用数据库表的行级锁。WorkItemHandler支持异步执行器
+        异步执行的实现：jms发消息，开新线程，jbpm executor使用Command接口。
+    26.发布的版本和新特性：
+        7.15:
+             错误消息处理的管理界面
+             任务日志的新时间轴视图
+             KIE服务器表单HTML元素支持变量.<h3>Hello ${user.name}!</h3>
+             jBPM的Camel组件得到了显著改进。camel-jbpm,kie-server-client代替kie-remote-client
+             审计日志模式适用于任务和案例审计日志
+             案例文件数据支持的变量索引器
+        7.14:
+             支持wildfly14服务器
+             管理部分的流程和任务变量的查询性能增强
+             jBPM的控制器rest API的swagger风格文档
+             kie服务器中呈现多个子表单
+             增强的有负载信息的KIE服务器文档
+             运行时事件的弹力搜索事件触发器
+             流程实例日志的过滤功能
+        7.13:
+            jBPM控制台中管理结果列表的默认分页系统首选项
+            管理工作项处理程序异常
+            KIE服务器的表单渲染器
+            https支持智能路由
+            kie服务器上的kie容器的停用。服务器不重启
+            高级查询中数据源的解析
+            异步作业的流程实例迁移支持。
+            流程实例日志的新时间轴视图
+            工作台新特性：
+                测试场景(预览)编辑器
+                实验功能支持
+                SSH密钥存储库
+        7.12:
+            业务应用程序——首次推出
+            jBPM服务和案例管理的测试helper类
+            在服务注册器中可用的jBPM执行器服务
+        7.11:
+            jBPM控制台中的CMMN支持
+            jBPM控制台任务注释增强
+            kie项目增加对springboot的支持
+            SLA支持增强
+            业务模型的验证增强
+            运行时引擎增强
+            工作台新特性；
+                多个Git分支支持
+        7.10:
+            jBPM服务器完整发布Docker镜像
+            作业管理:添加批量操作
+            流程实例管理：更加灵活的访问流程实例相关数据
+            案件数据类型信息将自动导入流程上下文
+            触发特定片段的阶段名称
+            参数化的阶段名字
+            原型/基础模型
+            使用计时器处理实例迁移
+            JPA实体可以用作案件文件变量
+        7.9:
+            直接从服务存储库安装工作项
+            在Heroku上运行服务存储库
+            服务存储库rest服务
+            SpringBoot jBPM自动配置更新
+            jBPM 7的性能基线--7是一套标准，有更多的细化版本
+            为所有数据库表创建索引
+            流程设计器--允许用户使用HiDPI
+        7.8:
+            CMMN 1.1本地执行
+            jBPM的单个zip发行版
+            KIE服务器中的可插拔启动策略
+            自定义查询作为workbench中的数据集编辑器
+            支持FEEL(感觉)语言作为序列流的表达式
+            里程碑条件支持多个实例
+            案例实例迁移
+            更多关于服务存储库和工作项的改进
+            流程设计器--Stunner成为默认的流程编辑器
+            工作台新特性：
+                在pom.xml文件中设置maven仓库的新的系统属性
+        7.7:
+             jBPM执行器重新设计。过去基于polling。依赖定时线程池执行器
+             用户信息接口允许通过电子邮件获取用户id
+             过程和案例的服务水平协议(SLA)跟踪
+             案件阶段激活条件
+             NoSQL集成
+             流程设计器--stunner
+             jBPM管理部分重新设计
+             管理控制台屏幕上的其他特定更改
+             工作台新特性：
+                面向项目的工作台
+                连接到headlessjBPM控制器
+                内容管理器增强
+                新的迁移工具
+        7.6:
+            流程设计器预览--stunner
+            表格建模器
+            定时器更新到2.2.3
+            支持懒加载变量
+            在KIE服务器中公开准备就绪和活动状态检查
+            允许禁用KIE服务器的管理api
+            对kie项目的springboot支持
+            作业创建(管理控制台):允许立即启动作业或调度作业
+            工作台新特性：
+                内容管理增强
+        7.5:
+            案件管理
+            文档列表编组策略
+            在单个操作中更新任务元数据和变量
+            Quartz改进——db作业存储区可以识别部署的kjars
+            将jBPM工作项移动到专用存储库
+            XStream安全改进
+            jBPM控制器通信安全--KIE服务器使用REST或者WebSocket来交流和控制器
+            业务规则任务触发限制
+            基于Swagger的KIE服务器文档
+            模版支持的电子邮件工作项
+            更新的jBPM服务存储库
+            流程设计器(预览)--Stunner
+            工作台新特性：
+                内容管理的改进
+                额外的导航组件
+            新的jBPMN控制器客户端API
+            在Kie服务器7.5.1中，从7.0开始的变化：
+                jBPM控制器API更改
+                kie服务器API更改
+        7.4:
+            kie服务器路由增强
+            用户任务更新(属性和数据)
+            工作项原型
+            KIE工作台的改进
+            禁用实验编辑
+        7.3:
+            KIE Workbench监视Web应用程序
+            KIE服务器Maven插件
+            工作台新特性：
+                新主页和菜单栏
+        7.2:
+            改进了部署描述符编辑器中的验证
+            基于Websocket的KIE服务器与jBPM控制器的通信
+        7.1:
+            jBPM Workbench
+            工作台新特性：
+                项目度量仪表板
+                团队指标指示板
+        7.0:
+            流程引擎
+            流程执行服务器
+            案件管理展示
+            jBPM工作台
+            工作台新特性：
+                新的代码编写库
+                代码编写--导入项目例子
+                编辑-弹出窗口的改进
+                编辑-项目编辑-重新导入按钮
+                安全管理
+                删除了kie-config-cli
+                用户和项目管理页面和首选项
+                GAV冲突检查和子GAV版本
+                数据源管理
+            从6.x开始在Kie Server 7.0中进行更改：
+                ServiceResponse XStream编组更改
+                简化规划器REST API
+        6.5:
+            流程实例的迁移
+            Kie服务器客户机——启动和忘记以及异步响应处理(JMS)
+            在任务生命周期时间监听器中支持任务变量
+            用于部署的远程API改进
+            改进了在设计器中国呢导入服务任务的自动化
+            设计器的复制粘贴
+            结合工作台和kie-server
+            更新wildfly/eap/spring服务器等
+            在数据建模中支持枚举
+            工作台新特性：
+                指导规则编辑器:支持复合字段约束中的公式
+                编辑-项目编辑-重新导入按钮
+        6.4:
+            新的jBPM流程和任务仪表板
+            审计任务变量
+            流程和任务变量索引
+            查询服务
+            可插入任务截止日期通知侦听器
+            能够在任务列表中显示业务数据
+            流程文档
+            工作台新特性：
+                新外观
+                各种UI的改进
+                新的地区
+                编辑-导入-一致性的术语
+                禁用自动构建
+                支持SCP风格的git存储库url
+                编辑-重复的GAV检测
+                新的执行服务器管理用户界面
+                用户和组管理
+        6.3:
+            流程引擎的扩展
+            案件管理API
+            远程服务API
+            OSGi
+            jBPM设计器数据I/O编辑器
+            jBPM执行器
+            统一KIE执行服务器
+            流程和任务列出了UI改进
+            工作台新特性：
+                决策表的实施验证和确认
+                改善DRL编辑器
+                资产锁
+                数据建模工具窗口
+                生成JPA支持的数据模型
+                数据集编写
+        6.2:
+            jBPM服务
+            流程引擎扩展
+            OSGi
+            Camel处理程序
+            表单建模改进
+            工作台新特性：
+                下载仓库或者仓库的部分作为ZIP文件
+                项目编辑权限
+                在向导决策表中统一验证样式
+                改进的向导
+                XLS、导向决策表和导向模板的一致行为
+                改进的元数据标签
+                改进的数据对象编辑器
+                执行服务器管理UI
+                社会活动
+                贡献者仪表板
+                包选择器
+                改善视觉一致性
+                向导决策树编辑器
+                创建存储库向导
+                存储库结构屏幕
+        6.1:
+            在外部应用程序中嵌入表单
+            在表格上附上文件
+            用于远程API的Web服务(SOAP)接口
+            部署描述符
+            在运行时对流程定义和流程实例进行基于角色的授权
+            jBPM安装更新
+            jBPM和Spring集成。其他
+            工作台新特性：
+                数据建模器-往返和源代码保存
+                数据建模器-改进的注释
+                表格数据显示的标准化
+                生成modify(x){…}块
+        6.0:
+            新的知识库的名称
+            与Maven一致的项目和模块以及Maven部署
+            基于配置和约定的项目
+            知识库的包容
+            KieModules, KieContainer and KIE-CI,KieScanner：带有kmodule.xml文件maven项目被认为是kieModule
+            分层的类加载器
+            遗留API适配器
+            KIE文档
+            工作台新特性：使用UberFire工作台
+                集成了CDI，Spring，Aries蓝图，OSGi Ready
+
+
+附加：
+    验证流程是否执行完的方法：assertEquals(ProcessInstance.STATE_COMPLETED, processInstance.getState());
+        如果没有手动执行usertask,流程不会往下走，但是主流程结束时，流程也会跟着中断不报错。
+    jBPM7.15定义的标签有：
+
+
+jBPM7.15的引擎内部的流程的执行原理：
+    原则；使用了Java设计模式的命令模式，将各种动作设计成命令接口
+    封装后的步骤：
+        1.创建kiebase知识库，加载流程文件和决策文件
+        2.从知识库创建kiesession会话
+        3.通过kiesession注册handler任务句柄
+        4.通过kiesession注册节点的事件监听器
+        5.通过kiesession启动流程
+    代码的执行顺序：
+        1.创建kiebase知识库，加载流程文件和决策文件
+        2.创建一个命令对象接口的集合
+        3.在命令接口集合中添加注册任务句柄的实现类
+        4.在命令接口集合中添加启动流程的实现类
+        5.使用kiesession执行批量的命令，参数就是命令集合和数据集合
+
+
+jBPM7.15的启动流程的代码逻辑：
+    第一：ksession.startProcess("...")的原理分析：重要的类和细节的逻辑. SLA的意思是服务等级协议
+        1.获取InternalProcessRuntime流程运行时对象
+        2.在流程运行时对象中创建流程实例ProcessInstance
+        3.传递流程实例的ID和数据参数，在触发流程前进行空闲时间计数器的+1操作，在之后进行空闲时间计数器的-1操作。
+            并且，在开始节点之前触发对应的before事件，之后触发对应的after事件。具体的开始事件如下：WorkflowProcessInstanceImpl.start()
+        4.首先synchronized方法块。在其中进行流程操作。注册外部事件节点监听器，获取所有节点，并且在事件节点，事件子流程节点，动态节点，补偿节点设置监听器
+        6.数据参数开启流程，首先synchronized(this),锁定当前类，设置流程状态为1
+        7.调用最最核心方法：internalStart(数据)。首先获取流程的开始节点，比如StartNode，定时器启动，事件启动，条件触发
+        8.开始节点调用trigger方法。首先获取节点的具体类型，然后获取规则流节点实例工厂，获取节点实例的实现类。之后开始触发。触发的操作是：
+            获取运行时环境对象，这里会触发节点前后的监听操作。正式触发节点的方法是internalTrigger(节点，节点类型)，设置检点的容器的level为当前节点的level
+            然后开始真正的节点的流转操作:
+                8.1 将当前节点增加到完成list中，并且删除未完成map中对应的节点ID。
+                8.2 获取节点的下一个弧线，从下一个弧线中获取下一个节点，并且存入节点容器中。节点对象Node那个自带输入输出连接对象Connect，Connect对象可以存储前后的节点
+                8.3 流程向前推进，将下一个节点进行触发，不同的节点具体的触发方法不同，但有些代码是共通的.不是结束的节点都会在自己完成任务后，调用父类的triggerComplete方法，从而继续下一个节点的访问
+                8.4 在流程的节点都执行完后，每个节点的离开执行方法开始执行，从后往前的调用方法，是栈的特性
+                8.5 流程执行完成后，设置状态为2
+        9.获取自动开始节点,一般是中间被动触发节点,比如定时启动，条件启动等。从一系列到达的触发节点中选取指定条件的开始节点
+        10.逐个节点被作为参数调用方法signalEvent。关键的是调用WorkflowProcessInstanceimpl.signalEvent(type,event)。
+            首先synchronized(this)锁住该类，然后判断流程状态，等于1时继续操作，如果节点类型是timerTriggered或者slaViolation,调用对应的handleSLAViolation()方法。
+            然后获取指定类型的内部和外部事件监听器，逐个调用listener.signalEvent(type,event)。然后获取流程中的事件类型节点，调用signalEvent()方法
+            如果是动态节点，比如用户任务执行到此，需要手动输入等操作时，给定参数，继续触发节点完成剩下的流程
+
+重点：SLA的意思是服务等级协议，Service-Level Agreement。
+     SLA包括在可能影响用户行为的网络变化之前的通知安排；目的是保障服务有效性，
+     服务等级目标（SLO）有所谓的操作时段，在这个时间范围内，SLO必须被实现
+
+springboot+mysql+jbpm7的代码整合：
+    参考文档：https://blog.csdn.net/leezh0808/article/details/80225480
+    1.在install的包中，使用ant命令创建项目ant install.demo.noeclipse
+    2.修改数据库配置：/build.properties
+                    /build.xml
+                    /db/jbpm-persistence-JPA2.xml
+                    /standalone-full-wildfly-10.1.0.Final.xml
+                    /db/mysql_module.xml
+    3.生成数据库的连接脚本
+    4.创建bpmn2文件，编写业务逻辑
+
+jbpm7主要的贡献人的GitHub：https://github.com/mswiderski/jbpm-examples/tree/master/spring-boot-jbpm
+
+
+2019年1月7日：贡献者的jbpm的demo配置学习。好开心！！！项目可以跑起来，只不过数据库没有数据。权限认证的配置需要注意.（用户名）= （一堆密码）。这里的配置全部是<bean>
+    1.在Application类增加配置：@Configuration
+                             @ComponentScan
+                             @EnableAutoConfiguration(exclude=HibernateJpaAutoConfiguration.class)
+                             @ImportResource(value= {"classpath:config/jee-tx-context.xml",
+                        		                "classpath:config/jpa-context.xml",
+                        		                "classpath:config/jbpm-context.xml",
+                        		                "classpath:config/security-context.xml",}
+                        		            )
+
+    2.jbpm-context.xml：配置jbpm引擎的9个核心service类--属性/构造参数的依赖
+            :syncInvoker-->依赖deploymentSync-->依赖deploymentStore-->依赖transactionCmdService-->依赖entityManagerFactory【报红,实体在jpa-context.xml中】
+                                             -->依赖deploymentService-->依赖entityManagerFactory【报红,实体在jpa-context.xml中】
+                                                                     -->依赖definitionService-->依赖BPMN2DataServiceImpl【最终实现类】
+                                                                     -->依赖identityProvider-->依赖SpringSecurityIdentityProvider【最终实现类】
+                                                                     -->依赖runtimeManagerFactory-->依赖transactionManager【报红,实体在jee-tx-context.xml中】
+                                                                                                -->依赖userGroupCallback-->依赖roleProperties-->依赖roles.properties文件：(用户名)=（多个密码）
+                                                                     -->依赖runtimeDataService-->依赖transactionCmdService-->依赖transactionManager【报红,实体在jee-tx-context.xml中】
+                                                                                             -->依赖identityProvider-->依赖SpringSecurityIdentityProvider【最终实现类】
+                                                                                             -->依赖taskService-->依赖entityManagerFactory【报红,实体在jpa-context.xml中】
+                                                                                                              -->依赖transactionManager【报红,实体在jee-tx-context.xml中】
+                                                                                                              -->依赖userGroupCallback-->依赖roleProperties-->依赖roles.properties文件：(用户名)=（多个密码）
+                                                                                                              -->依赖listener属性列表中的JPATaskLifeCycleEventListener类
+            :userTaskService-->依赖deploymentService......
+                            -->依赖runtimeDataService......
+            :processService-->依赖deploymentService......
+                           -->依赖runtimeDataService......
+            :data(反射调用方法)-->依赖deploymentService
+                             -->依赖targetMethod,直接写死方法名
+                             -->依赖arguments列表中的具体runtimeDataService类
+
+    3.jpa-context.xml: 配置JPA,数据持久化。主要是entityManagerFactory
+            :entityManagerFactory-->依赖classpath:/META-INF/jbpm-persistence.xml
+                                 -->依赖transactionManager【报红,实体在jee-tx-context.xml中】
+
+    4.jee-tx-context.xml: 配置JTA，事务管理。【关键！！！可修改数据库配置】
+            ：transactionManager-->依赖bitronixTransactionManager-->依赖TransactionManagerServices【最终实现类】
+                                -->依赖datasource-->属性uniqueName(jdbc/jbpm)
+                                                -->属性className
+                                                -->属性maxPoolSize
+                                                -->属性allowLocalTransactions
+                                                -->属性driverProperties:
+                                                   -->二级属性user
+                                                   -->二级属性password
+                                                   -->二级属性driverClassName
+                                                   -->二级属性url
+            ：<context:annotation-config />
+            ：<tx:annotation-driven />
+            ：<tx:jta-transaction-manager />
+
+    5.security-context.xml: 配置安全路由，登陆验证.Spring自己的安全方法
+            ：<http auto-config="true" use-expressions="true">
+                 <intercept-url pattern="/**" access="isAuthenticated()" />
+                 <http-basic />
+              </http>
+            ：<authentication-manager>
+                 <authentication-provider>
+                   <user-service properties="classpath:/roles.properties"/>
+                 </authentication-provider>
+             </authentication-manager>
+
+    6.jbpm-persistence.xml: 具体的持久化和事务配置。可配置hibernate动作。
+            ：persistence-unit-->属性provider
+                              -->属性<jta-data-source>jdbc/jbpm</jta-data-source>
+                              -->属性多个<mapping-file>, jbpm的相关特点配置
+                              -->属性多个<class>-->类型task service
+                                               -->类型Event Classes
+                                               -->类型Task Audit Classes
+                                               -->类型BAM for task service
+                                               -->类型engine
+                                               -->类型manager
+                                               -->类型bam(后台管理模块，处理日志等操作)
+                                               -->类型deployment store
+                              -->属性properties-->子属性hibernate.dialect
+                                              -->子属性hibernate.max_fetch_depth
+                                              -->子属性hibernate.hbm2ddl.auto
+                                              -->子属性hibernate.show_sql
+                                              -->子属性hibernate.id.new_generator_mappings
+                                              -->子属性hibernate.transaction.jta.platform
+
+
+    7.jndi.properties: 配置Java命名和目录接口，现在主要用于配置数据源。
+            ：java.naming.factory.initial=bitronix.tm.jndi.BitronixInitialContextFactory
+
+
+
+关于jbpm数据库的切换操作：
+    1.mysql: 版本8.0.13的驱动名是com.mysql.cj.jdbc.Driver
+             而且xa-datasource-class是com.mysql.cj.jdbc.MysqlXADataSource的情况下，对应的jar包是6.0.14
+             配置URL的时候最好配置：jdbc:mysql://localhost:3306/jbpm?serverTimezone=GMT &amp;useSSL=false
+            ：这里切换数据库时，如果安装的是mysql5之前的，只需要将驱动换成com.mysql.jdbc.Driver
+              如果安装的是mysql8最新的，只需要将驱动换成com.mysql.cj.jdbc.Driver
+              同时需要在pom.xml文件中引入jar包和hibernate方法org.hibernate.dialect.MySQL5InnoDBDialect
+
+    2.Postgres：版本是9.1-901-1.jdbc4的驱动名是org.postgresql.Driver
+                同时需要在pom.xml文件中引入jar包和hibernate方法org.hibernate.dialect.PostgreSQLDialect，这个方言已经过期了
+                我是切换成了org.hibernate.dialect.PostgreSQL82Dialect
+
+    备注：当我们启动项目的时候，自动的会在8080端口启动wildFly服务器.
+         使用postgresql数据库，在项目启动时会自动创建37张表，不过都是小写的，而项目中进行查找时是使用驼峰命名规则的表
+         原因：最终生成的表名都是小写的。手动在客户端可以创建大写表名，不过查询时需要在表名上添加双引号。怀疑的的原因，
+              hibernate的命名映射策略有问题？或者Postgresql内部实现机制都是小写，除非认为给名字加双引号
+        使用mysql数据库，在项目启动时会创建完全正常的表，没有大小写问题
+        同样的代码，切换成mysql表名没问题，换成PostgreSQL就自动变成小写了！！！应该不是代码问题
+
+
+    3.jbpm7.15自带的数据库表：H2数据库显示一共37张表,别人的项目中mysql增加了15张表，而且有大小写的问题
+        Attachment                                         Attachment
+        AuditTaskImpl                                      AuditTaskImpl
+        BAMTaskSummary                                     BAMTaskSummary
+        BooleanExpression                                  BooleanExpression
+        Content                                            Content
+        ContextMappingInfo                                 ContextMappingInfo
+        CorrelationKeyInfo                                 CorrelationKeyInfo
+        CorrelationPropertyInfo                            CorrelationPropertyInfo
+        Deadline                                           Deadline
+        Delegation_delegates                               Delegation_delegates
+        DeploymentStore                                    DeploymentStore
+        Escalation                                         Escalation
+        EventTypes                                         EventTypes
+        I18NText                                           I18NText
+        NodeInstanceLog                                    NodeInstanceLog
+        Notification                                       Notification
+        Notification_BAs                                   Notification_BAs
+        Notification_Recipients                            Notification_email_header
+        Notification_email_header                          Notification_Recipients
+        OrganizationalEntity                               OrganizationalEntity
+        PeopleAssignments_BAs                              PeopleAssignments_BAs
+        PeopleAssignments_ExclOwners                       PeopleAssignments_ExclOwners
+        PeopleAssignments_PotOwners                        PeopleAssignments_PotOwners
+        PeopleAssignments_Recipients                       PeopleAssignments_Recipients
+        PeopleAssignments_Stakeholders                     PeopleAssignments_Stakeholders
+        ProcessInstanceInfo                                ProcessInstanceInfo
+        ProcessInstanceLog                                 ProcessInstanceLog
+        Reassignment                                       Reassignment
+        Reassignment_potentialOwners                       Reassignment_potentialOwners
+        SessionInfo                                        SessionInfo
+        Task                                               Task
+        TaskDef                                            TaskDef
+        TaskEvent                                          TaskEvent
+        VariableInstanceLog                                VariableInstanceLog
+        WorkItemInfo                                       WorkItemInfo
+        email_header                                       email_header
+        task_comment                                       task_comment
+                                                    业务表：errorinfo
+                                                           requestinfo
+                                                           t_business1
+                                                           t_business1_review_log
+                                                           t_permission
+                                                           t_role
+                                                           t_role_permission
+                                                           t_user
+                                                           t_user_role
+                                                           taskvariableimpl
+                                                           casefiledatalog
+                                                           caseidinfo
+                                                           caseroleassignmentlog
+                                                           executionerrorinfo
+                                                           querydefinitionstore
+
+注意：实际上这些表的生成都是在jbpm-persistence.xml中配置了class类，如果有表名，则按照表建表，没有则基于默认的规则，而且实际上31个类配置出了37张表
+
+
+jbpm特殊关系处理:
+    1.条件：给定两个流程，一个流程通过startProcess启动，另一个流程通过上一个流程发消息进行触发启动
+    2.猜测的处理逻辑：
+  【OK】第一种：创建一个bpmn文件，流程中有一个中间抛出节点和中介捕获节点，在抛出节点上有一个抛出事件，当执行到该节点时，手动抛出，然后可以触发中间捕获事件
+  【OK】第二种：创建一个bpmn文件，流程中有一个子流程节点，还有一个边界捕获事件，子流程中的结束节点是什么类型，对应的边界捕获事件解释什么类型，当子流程的结束事件开始发出信号时，边界事件就能捕获到，可以自动抛出，自动捕获
+  【OK】第三种：创建两个bpmn文件，同时加载到kiebase,手动启动其中一个，然后在某一节点处发出消息，另一个消息开始事件进行捕获catch。关键是消息开始事件
+  【OK】第四种：创建两个bpmn文件，同时加载到kiebase,手动启动其中一个的sendTask任务，然后另一个流程只有receiveTask节点进行开始。
+  【OK】第五种：创建两个bpmn文件，同时加载到kiebase,手动启动其中一个流程，然后在handler或者listener中，手动指定另一个流程的startProcess方法
+    3.朋友的建议：如果和之前的流程没关系，直接在那个节点开一个流程。如果有关系那就画到一起啊
+
+
+2019年1月11日整理jbpm7的多个流程文件打包部署
+    1.查看mysql8的longblob格式数据，可以通过读取字节流方式。也可以点击navicate的《复制为insert语句》命令来粘贴查看值
+    2.mysql8重启后出现一个Key Retrieval is not allowed错误，解决办法在URL中添加allowPublicKeyRetrieval=true
+    3.多个流程文件可以进行打包处理，这样就有版本编号，然后部署到jbpm的仓库中，就可以通过runtimeDataService从缓存中查找这些流程定义从而进行各种操作。
+    4.已经部署过的版本，在数据库中有记录了，就不能再部署同样的版本，即使里面的流程不一样。
+    5.重新整理流程的部署到启动:
+        5.0 加载资源文件Resource，从项目指定位置加载文件
+        5.1 通过KieServiceFactory创建KieService
+        5.2 KieService创建一个KieFileSystem
+        5.3 KieFileSystem将Resource对象写入
+        5.4 创建流程文件的打包版本：
+            5.4.1 KieServices获取KieRepository，然后KieRepository获取默认的ReleaseId
+            5.4.2 KieServices创建自定义参数的ReleaseId，然后KieFileSystem将ReleaseId写入pom文件
+        5.5 KieServices通过参数KieFileSystem创建KieBuilder
+        5.6 KieBuilder进行构建pom文件
+        5.7 KieServices通过参数ReleaseId创建KieContainer
+        5.8 KieContainer获取KieBase
+        5.9 KieContainer创建KieSession 或者 KieBase创建KieSession
+    6.如果要在项目启动时自动加载资源，需要配置@Bean：
+        KieFileSystem.class: 加载资源,注意只能加载bpmn资源，其他类型()会报错
+        KieContainer.class：流程仓库容器
+        KieBase.class：当前部署的的流程的知识库
+        KieSession.class：当前部署的流程的会话
+        KModuleBeanFactoryPostProcessor.class：
+    7.注解的使用：@ConditionalOnClass：该注解的参数对应的类必须存在，否则不解析该注解修饰的配置类；
+                @ConditionalOnMissingBean：该注解表示，如果存在它修饰的类的bean，则不需要再创建这个bean；
+                                           可以给该注解传入参数例如@ConditionOnMissingBean(name = "example")，这个表示如果name为“example”的bean存在，这该注解修饰的代码块不执行。
+    8.修改部署的版本信息后可以进行正确部署。正常情况下，如果流程中有task，则会报错There are no known Business Administrators, task cannot be created according to WS-HT specification。
+      说明角色或者用户表中没有对应数据。
+    9.hibernate的报错原因找到：java.lang.IllegalArgumentException: Named query not found: getDeploymentUnitsByState
+        类似于mapper的xml文件中配置对应的查询sql,就可以了<entity-mappings>,并且要将这个xml添加到persistence.xml文件中
+    10.完成正常启动项目需要配置的entity-mapper的xml文件个数和里面的方法个数。
+    11.卸载已经部署的版本：通过部署ID来查找部署单元。 deploymentService.undeploy(deployed.getDeploymentUnit());
+    12.卸载已经部署的打包版本，需要配置formManagerService的bean,并注入到deploymentService中.
+            卸载该版本，并不会在deploymentStore表中删除该条记录，只是状态设置为0。
+            加载到部署，状态0->1,卸载版本，状态1->0
+    13.可以在项目执行中手动添加版本流程，只需要重新构建一下pom文件，并发布到kieContainer中即可
+
+⚠️⚠️⚠️kjar的定义：https://developers.redhat.com/blog/2018/03/14/what-is-a-kjar/
+                  https://developer.jboss.org/message/840207#840207
+    概念：kjar=knowledge artifact！！！它来自于jboss redhat。它的核心是kmodule.xsd文件。内容格式地址：https://github.com/droolsjbpm/droolsjbpm-knowledge/blob/master/kie-api/src/main/resources/org/kie/api/kmodule.xsd
+         kjar的结构和maven项目结构是一样的，唯一的区别是kjar有kmodule.xml文件，它存放在main/resources/META-INF目录下,允许drools和jbpm扫描出现在该目录的jar，
+         kmodule.xml文件允许配置不同的session，kiebase对于kjar。如果kmodule.xml为空，则创建单例session包括所有资源
+         kjar的本质也是一个.jar包，只是里面有kmodule.xml的配置。kjar聚焦于规则和流程。
+         kjar的打包需求：pom文件有<packaging>kjar</packaging>和插件kie-maven-plugin
+
+⚠️⚠️⚠️️使用jBPM 运行时管理器的步骤：
+            ：初始化运行时管理器的封装类ProcessEngineService，可以从中获取流程集合
+            ：从封装类获取运行时管理器RuntimeManager
+            ：从运行时管理器获取运行时引擎RuntimeEngine
+            ：从运行时引擎获取知识库会话KieSession
+            ：从知识库会话启动流程
+            ：   从运行时引擎获取任务列表TaskService
+            ：   从任务列表获取指定任务，将任务开始，完成任务。断言流程的执行状态
+        JUnit 生命周期阶段：
+            BeforeClass：配置数据源持久化
+            Before：清空单例会话，因为单例会话会持久化，在测试代码中不需要持久化
+            After：处理流程引擎实例
+            AfterClass：关闭数据源
+
+⚠️⚠️⚠️jBPM的应用场景：
+    ：使用jBPM RuntimeManager
+    ：jBPM-CDI容器，能够注入关键类，使用注解方式
+    ：运行时部署kjar.

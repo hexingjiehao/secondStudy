@@ -1,0 +1,312 @@
+1.学习python的基础语法：
+    1.官网地址：https://www.python.org  。这是一个外国网址，最好的访问方式是翻墙访问
+    2.最新消息：目前最新的稳定版为Python 3.8.0。目前Python 3.5.8是合适的。
+               Python 3.8.0的文档地址：https://docs.python.org/zh-cn/3.8/
+    3.概述：python需要解释器进行运行。安装包自带shell控制台。可修改的启动器
+    4.章节整理：
+        1.安装与设置：
+            1.1 命令行与环境
+                    CPython 解析器会扫描命令行与环境用于获取各种设置信息。
+                    启动pyhton脚本：python hello.py 或者python3.8 hello.py
+                    mac上自带python2.7.10版本
+            1.2 编辑器和集成开发环境
+                    一般使用pycharm。
+                    激活码：MTW881U3Z5-eyJsaWNlbnNlSWQiOiJNVFc4ODFVM1o1IiwibGljZW5zZWVOYW1lIjoiTnNzIEltIiwiYXNzaWduZWVOYW1lIjoiIiwiYXNzaWduZWVFbWFpbCI6IiIsImxpY2Vuc2VSZXN0cmljdGlvbiI6IkZvciBlZHVjYXRpb25hbCB1c2Ugb25seSIsImNoZWNrQ29uY3VycmVudFVzZSI6ZmFsc2UsInByb2R1Y3RzIjpbeyJjb2RlIjoiSUkiLCJwYWlkVXBUbyI6IjIwMTktMTEtMDYifSx7ImNvZGUiOiJBQyIsInBhaWRVcFRvIjoiMjAxOS0xMS0wNiJ9LHsiY29kZSI6IkRQTiIsInBhaWRVcFRvIjoiMjAxOS0xMS0wNiJ9LHsiY29kZSI6IlBTIiwicGFpZFVwVG8iOiIyMDE5LTExLTA2In0seyJjb2RlIjoiR08iLCJwYWlkVXBUbyI6IjIwMTktMTEtMDYifSx7ImNvZGUiOiJETSIsInBhaWRVcFRvIjoiMjAxOS0xMS0wNiJ9LHsiY29kZSI6IkNMIiwicGFpZFVwVG8iOiIyMDE5LTExLTA2In0seyJjb2RlIjoiUlMwIiwicGFpZFVwVG8iOiIyMDE5LTExLTA2In0seyJjb2RlIjoiUkMiLCJwYWlkVXBUbyI6IjIwMTktMTEtMDYifSx7ImNvZGUiOiJSRCIsInBhaWRVcFRvIjoiMjAxOS0xMS0wNiJ9LHsiY29kZSI6IlBDIiwicGFpZFVwVG8iOiIyMDE5LTExLTA2In0seyJjb2RlIjoiUk0iLCJwYWlkVXBUbyI6IjIwMTktMTEtMDYifSx7ImNvZGUiOiJXUyIsInBhaWRVcFRvIjoiMjAxOS0xMS0wNiJ9LHsiY29kZSI6IkRCIiwicGFpZFVwVG8iOiIyMDE5LTExLTA2In0seyJjb2RlIjoiREMiLCJwYWlkVXBUbyI6IjIwMTktMTEtMDYifSx7ImNvZGUiOiJSU1UiLCJwYWlkVXBUbyI6IjIwMTktMTEtMDYifV0sImhhc2giOiIxMDgyODE0Ni8wIiwiZ3JhY2VQZXJpb2REYXlzIjowLCJhdXRvUHJvbG9uZ2F0ZWQiOmZhbHNlLCJpc0F1dG9Qcm9sb25nYXRlZCI6ZmFsc2V9-aKyalfjUfiV5UXfhaMGgOqrMzTYy2rnsmobL47k8tTpR/jvG6HeL3FxxleetI+W+Anw3ZSe8QAMsSxqVS4podwlQgIe7f+3w7zyAT1j8HMVlfl2h96KzygdGpDSbwTbwOkJ6/5TQOPgAP86mkaSiM97KgvkZV/2nXQHRz1yhm+MT+OsioTwxDhd/22sSGq6KuIztZ03UvSciEmyrPdl2ueJw1WuT9YmFjdtTm9G7LuXvCM6eav+BgCRm+wwtUeDfoQqigbp0t6FQgkdQrcjoWvLSB0IUgp/f4qGf254fA7lXskT2VCFdDvi0jgxLyMVct1cKnPdM6fkHnbdSXKYDWw==-MIIElTCCAn2gAwIBAgIBCTANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQDDA1KZXRQcm9maWxlIENBMB4XDTE4MTEwMTEyMjk0NloXDTIwMTEwMjEyMjk0NlowaDELMAkGA1UEBhMCQ1oxDjAMBgNVBAgMBU51c2xlMQ8wDQYDVQQHDAZQcmFndWUxGTAXBgNVBAoMEEpldEJyYWlucyBzLnIuby4xHTAbBgNVBAMMFHByb2QzeS1mcm9tLTIwMTgxMTAxMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxcQkq+zdxlR2mmRYBPzGbUNdMN6OaXiXzxIWtMEkrJMO/5oUfQJbLLuMSMK0QHFmaI37WShyxZcfRCidwXjot4zmNBKnlyHodDij/78TmVqFl8nOeD5+07B8VEaIu7c3E1N+e1doC6wht4I4+IEmtsPAdoaj5WCQVQbrI8KeT8M9VcBIWX7fD0fhexfg3ZRt0xqwMcXGNp3DdJHiO0rCdU+Itv7EmtnSVq9jBG1usMSFvMowR25mju2JcPFp1+I4ZI+FqgR8gyG8oiNDyNEoAbsR3lOpI7grUYSvkB/xVy/VoklPCK2h0f0GJxFjnye8NT1PAywoyl7RmiAVRE/EKwIDAQABo4GZMIGWMAkGA1UdEwQCMAAwHQYDVR0OBBYEFGEpG9oZGcfLMGNBkY7SgHiMGgTcMEgGA1UdIwRBMD+AFKOetkhnQhI2Qb1t4Lm0oFKLl/GzoRykGjAYMRYwFAYDVQQDDA1KZXRQcm9maWxlIENBggkA0myxg7KDeeEwEwYDVR0lBAwwCgYIKwYBBQUHAwEwCwYDVR0PBAQDAgWgMA0GCSqGSIb3DQEBCwUAA4ICAQAF8uc+YJOHHwOFcPzmbjcxNDuGoOUIP+2h1R75Lecswb7ru2LWWSUMtXVKQzChLNPn/72W0k+oI056tgiwuG7M49LXp4zQVlQnFmWU1wwGvVhq5R63Rpjx1zjGUhcXgayu7+9zMUW596Lbomsg8qVve6euqsrFicYkIIuUu4zYPndJwfe0YkS5nY72SHnNdbPhEnN8wcB2Kz+OIG0lih3yz5EqFhld03bGp222ZQCIghCTVL6QBNadGsiN/lWLl4JdR3lJkZzlpFdiHijoVRdWeSWqM4y0t23c92HXKrgppoSV18XMxrWVdoSM3nuMHwxGhFyde05OdDtLpCv+jlWf5REAHHA201pAU6bJSZINyHDUTB+Beo28rRXSwSh3OUIvYwKNVeoBY+KwOJ7WnuTCUq1meE6GkKc4D/cXmgpOyW/1SmBz3XjVIi/zprZ0zf3qH5mkphtg6ksjKgKjmx1cXfZAAX6wcDBNaCL+Ortep1Dh8xDUbqbBVNBL4jbiL3i3xsfNiyJgaZ5sX7i8tmStEpLbPwvHcByuf59qJhV/bZOl8KqJBETCDJcY6O2aqhTUy+9x93ThKs1GKrRPePrWPluud7ttlgtRveit/pcBrnQcXOl1rHq7ByB8CFAxNotRUYL9IF5n3wJOgkPojMy6jetQA5Ogc8Sm7RG6vg1yow==
+        2.入门教程：
+            2.1 背景： Python是一种解释型语言。处理各种自动化任务。感觉和matlab差不多
+            2.2 使用python解释器：
+                    输入提示符号：>>> 和 ...
+                    安装路径： /usr/local/bin/python3.8
+                    退出解释器： control + D 或者 quit()
+                    传入参数：命令行参数会存储到sys模块的argv变量中
+                    在解释器中进行多行输入：冒号(:)作为上下连接符号
+                    默认的文件编码：UTF-8。修改编码：在文件头添加注释：# -*- coding: GBK -*-
+            2.3 python的变量和四则运算
+                    解释；# 这是解释的内容
+                    举例：
+                    数字和四则运算：
+                         >>> 2 + 2
+                         4
+                         >>> 50 - 5*6
+                         20
+                         >>> (50 - 5*6) / 4
+                         5.0
+                         >>> 8 / 5    #除法(/)总是返回浮点数
+                         1.6
+                         >>> 17//3    #双除号(//)返回整数
+                         5
+                         >>> 5 ** 2   #双星号(*)表示乘方
+                         25
+                    变量：
+                         >>> width=20   #等号(=)表示声明变量并赋值，如果没有赋值，则该变量使用报错
+                         >>> 1
+                         1
+                         >>> _   #下划线(_)保存上一次打印的值
+                         1
+                    字符串：
+                         >>> 'hello'  #单引号和双引号表示字符串，引号内部嵌套使用，可能需要转义\ 。防止字符串被转义，在字符串前加r
+                         'hello'
+                         >>> print("""\
+                                hello
+                                  world
+                             """)  #跨行输入，使用3个引号扩起来，如果不想包括换行符，在行尾添加\符号
+                         >>> 3*'un'+'hello'  #字符串可以用*重复，+连接，而且相邻具体字符串可以自动连接到一起，变量不行
+                         >>>word='hello'
+                         >>>word[-1]  #字符串可以用负数下标，表示从右往左数。字符串的类型是immutable
+                         o
+                         >>>word[0:2] #字符串支持切片，范围为[)左闭右开。而且word[:2]+word[2:]=word。左边默认从0开始，右边默认到最后。字符串中某个位置不能被赋值
+                         he
+                    列表：包括数组
+                         >>> squares = [1, 4, 9, 16, 25]  #支持索引和分片，以及拼接操作+。 列表类型是mutable
+                         >>> squares
+                         [1, 4, 9, 16, 25]
+                         >>> squares.append(1) #添加值。也可以给切片赋值，造成列表大小改变
+                    多重赋值：
+                         >>> a,b=0,1
+                         >>> a,b=b,a+b;
+            2.4 其他的流程控制语句
+                    2.4.1 if语句：
+                        if x<0:
+                            print(1)
+                        elif x==0:
+                            print(2)
+                        else:
+                            print(3)
+                    2.4.2 for语句: 对任意序列进行迭代
+                        words = ['cat', 'window', 'defenestrate']
+                        for w in words:
+                            print(w)
+                    2.4.3 range()函数: 生成指定范围内的自然数序列
+                        for i in range(5):  #从0开始，逐步+1，生成5个随机数
+                            print(i)
+                        for i in range(5,10):  #从5开始，逐步+1，生成小于10的随机数
+                            print(i)
+                        for i in range(0,10,3):  #从0开始，逐步+3，生成小于10的随机数
+                            print(i)
+                    2.4.4 break和continue语句,以及循环中的else子句
+                        for n in range(2,10):
+                            for x in range(2,n):
+                                if n % x ==0:
+                                print (n,"isn't prime")
+                                break;
+                            else:
+                                print(n,"is prime")
+
+                        for n in range(2,10):
+                            if n % 2 ==0:
+                                print (n,"isn't prime")
+                                continue
+                            print(n)
+                    2.4.5 pass语句: 表示什么都不做。可以用于创建最小的类
+                        while True:
+                            pass
+
+                        class MyEmptyClass:
+                            pass
+                    2.4.6 定义函数：函数名何其赋值给其他变量
+                        def fib():    #定义函数，下一行必须缩进
+                            .....
+
+                        fib(10)  #调用函数
+            2.5 数据结构
+                列表：列表作为栈使用
+                        stack=[3,4,5]
+                        stack.append(6)
+                        stack.pop()
+                    列表作为队列使用：
+                        queue=[3,4,5]
+                        queue.append(6)
+                        queue.popleft()
+                del语句：用来删除指定元素或者切片或者列表
+                    a = [-1, 1, 66.25, 333, 333, 1234.5]
+                    del a[0]
+                    del a[2:4]  #左闭右开
+                    del a
+                元组和序列：里面可以存储不同的数据类型。而且元组可以互相嵌套🌿🌿🌿🌿🌿
+                    t=1,2,'hello'
+                    x,y,z=t   #也是可以的,元组t被解包成了x,y,z
+                集合：
+                    集合是由不重复元素组成的无序的集。
+                    a=set()
+                    a={1,2}
+                字典：本质是映射
+                    a={"key":1}
+                循环技巧：
+                    字典循环时：items可以将key和value同时取出
+                        knights = {'gallahad': 'the pure', 'robin': 'the brave'}
+                        for k, v in knights.items():
+                           print(k, v)
+                    序列循环：enumerate() 函数可以将索引位置和其对应的值同时取出
+                        for i, v in enumerate(['tic', 'tac', 'toe']):
+                           print(i, v)
+                    多个序列同时循环：zip()可以一一对应
+                        questions = ['name', 'quest', 'favorite color']
+                        answers = ['lancelot', 'the holy grail', 'blue']
+                        for q, a in zip(questions, answers):
+                             print('What is your {0}?  It is {1}.'.format(q, a))
+                    反向循环：
+                        for i in reversed(range(1, 10, 2)):
+                             print(i)
+                    指定顺序循环，不改变原来的序列：
+                        basket = ['apple', 'orange', 'apple', 'pear', 'orange', 'banana']
+                        for f in sorted(set(basket)):
+                             print(f)
+            2.6 模块：lib文件
+                    模块名.py ,在模块内部---模块名可以通过全局变量_name_获取
+                    import 自定义模块名
+                    from 方法1 import 模块  #将模块中的方法导入到当前py文件
+                    if __name__=="__main__":   #如果当前模块名为__main__，则运行程序
+                        print('执行')
+                    import sys  #导入标准模块
+            2.7 输入输出
+                    输出方式：print()
+                             f'输出的值'
+
+                             name=xj
+                             f'你的名字{name}'      #f引导下的输出可以在字符串中进行变量替换，也就是类似String.format()的操作
+
+                             str('hello')
+                             repr('hello')
+
+                             x=1
+                             y=2
+                             repr((x,y('1','2')))  #这里输出1,2。类似于c语言的占位符
+
+                             print('{0:2d}'.format('1.23456'))  #这里输出1.23, 类似于保留小数点后两位
+
+                             import math
+                             print('this is %5.3f' % math.pi)
+                    读写文件：
+                        f=open('mt.txt','w')
+                        with open('mt.txt') as f:   #最好使用with方式操作文件对象
+                            read_data=f.read()
+                        f.close()
+                    使用json保存数据：
+                        import json
+                        json.dumps([1,'hello','world'])   #dumps()将数据序列化成列表和字典
+            2.8 错误和异常
+                    处理异常: 使用try-catch语句。而且如果异常之间是父子关系切从上到下为子到父，那么所有异常信息都会被打印
+                        while True:
+                            try:
+                                x=1/0
+                                break;
+                            except valueError:
+                                print('exception happen')
+                        抛出异常：raise NameError('hello')
+                        try:
+                            raise NameError()
+                        finally:
+                            print('bye')
+            2.9 python中的类和对象
+                    定义操作：class MyClass：
+                                ......
+                    实例化操作：x=MyClass()
+                    构造方法： def __init__(self,param1,....):
+                                self.data=[]
+                    方法的赋值和调用： xf=x.f  #方法的赋值
+                                     print( xf() )  #方法的调用
+                    可以在外部定义方法，然后将其赋值给类内部的方法引用
+                    类的继承操作：class SubClass(baseclassname):   #和java不一样的是支持多重继承
+                                    ......
+                    迭代器：遍厉完所有结果还next，将会报错
+                        it=iter('abc')
+                        next(it)   #输出a
+                        next(it)   #输出b
+                        next(it)   #输出c
+
+            2.10 标准库介绍：
+                    import os  #处理操作系统函数
+                    import shutil  #处理文件和目录
+                    import glob   #可以使用通配符搜索文件
+                    import sys    #处理命令行参数
+                    import argparse
+                    from getpass import getuser
+
+                    sys.stderr.write()  #输出错误信息
+                    sys.exit()  #终止脚本
+
+                    import re   #使用正则表达式
+                    import math   #使用数学函数
+                    import random  #随机数处理
+                    import statistics
+
+                    import urllib.request import urlopen   #互联网访问
+                    import smtplib
+                    from datetime import date  #日期和时间处理
+                    import zlib  #数据压缩
+                    from timeit import Timer  #性能测试，主要是计算某条语句的执行时间
+
+                    import reprlib  #格式化输出
+                    import pprint
+                    import textwrap
+                    import locale
+
+                    from string import Template  #模版
+                    import threading  #多线程，可以被继承，然后使用start()方法启动
+                    import logging  #处理日志
+                    from array import array    #操作列表工具
+                    form collections import deque
+                    import bisect
+                    from heapq import heapify,heappop,heappush
+                    from decimal import *   #十进制浮点运算
+
+
+1.python语言的学习
+    官网：https://www.python.org。语法文档https://docs.python.org/3.7/。排版格式不好看！
+    版本：稳定版3.7,最新开发版3.8。版本2.x和3.x不兼容。mac系统自带python2.7版本
+         python2.x和python3.x可以共存。python -version查看2.x版本，python3 -version查看3.x版本
+    安装步骤：
+        MAC版本：使用命令brew install python3
+        Windows版本：下载exe文件，然后配置到系统路径
+    概念和应用场景：
+        ：它是解释性语言，交互式语言。无需编译，直接在控制台交互，也可以写成源文件来交互。运行速度较慢。代码无法加密
+          它优势在于复杂数学数据处理，和matlab相似。主要是各种第三方库的使用。
+        ：解释器
+            ：它是Python执行.py文件的机器。有多种解释器。
+              CPython--官方解释器，最流行
+              IPython--增强官方解释器
+              PyPy--动态编译，提高运行速度
+              Jython--运行在Java平台，可以将python代码编译成Java字节码
+              IronPython--运行在.net平台，可以将python代码编译成.net字节码
+              ⚠️⚠️⚠️和Java交互，不推荐嵌入Jython，而是使用http来交互，确保独立性
+        :常用第三方模块，推荐使用Anaconda
+    基础交互命令：
+        :python==【进行python编辑模式】
+        :exit()==【退出python编辑模式】
+        :input()==【等待用户在命令行输入,3.x版本，2.7版本的命令是raw_input()】
+        :print()==【在命令行打印值，默认换行输出，不换行输出需要在变量后增加,】
+        :中文乱码解决小技巧==【行首添加# -*- coding: UTF-8 -*-代码】
+    语法知识点：
+        0.注释：单行注释为#，多行注释为'''中间代码'''
+        1.行和缩进：代替{},严格相同缩进格式，不规范会报错
+        2.多行语句：使用\来进行连接，如果是集合类型就不需要使用\
+        3.数据类型：整型，浮点型，字符串，布尔值，空值None，列表，字典,元组
+            列表list：
+                有序集合，类似于数组[1,2,3...]。数据的截取list[头下标:尾下标]
+                同一个list内可以存放不同类型的数据，按照下标查找
+            元组tuple：
+                指向不变的有序列表，值得是只有一层的不变，如果元素是多层的，则其中的数据还是可以改变的。一般用(,)表示
+                同一个tuple内可以存放不同类型的数据，按照下标查找
+            字典Dictionary:
+                类似于map,一般用{:}表示，按照键值查找
+            字符串：
+                从左到有索引[0,1,2,3...],从右到左索引[-1,-2,-3,-4....]
+        4.运算符：逻辑运算符【and,or,not】, **表示幂运算，成员运算符【in, not in】,身份运算符【is,is not】
+        4.条件和循环:
+            if 判断条件1:
+                执行语句1……
+            elif 判断条件2:
+                执行语句2……
+            else:
+                执行语句4……
+            ----------华丽的分割线-----------
+            for x in [1,2,3...]:
+                执行语句….
+            while n>0:
+                执行语句….
+            ⚠️⚠️⚠️pass是空语句，用于占位，一般和没想好的空函数搭配使用，类似于todo
+        5.函数：必须严格缩进。可以使用def和lambda定义函数
+            def 函数名(参数1，2，3...):
+                执行代码......
+                return [任意值];
+            lambda 参数1，2，3...: 执行代码......

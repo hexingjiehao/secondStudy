@@ -1,0 +1,101 @@
+1.linux的相关命令学习：(参考于http://man.linuxde.net)
+    1.vim的操作：(常用的)
+        ctrl+f: 翻页
+        ctrl+v：进入多行操作模式
+        :$：跳转到最后一行
+        :行号： (跳转到指定行数)
+        /查找内容：查找/后面的内容
+        s/需要替换的内容/替换成的内容: 替换文本的内容
+        o: 插入一行
+        dd:  删除当前行
+        i: 从命令模式切换到编辑模式，并在当前字符前插入文本
+        Esc: 编辑模式切换到命令模式
+        :w :存储修改
+        :q :退出vim
+        :wq :存储修改并退出vim
+        :q! :强制退出vim
+    2.权限的设置:
+        权限的映射关系：
+            r=读取属性＝4
+            w=写入属性＝2
+            x=执行属性＝1
+            -=没有权限＝0
+        用户级别：
+            拥有者：u
+            所属群组：g
+            其他用户：o
+            全部用户：a
+        命令的选项：
+            -R: 处理目录和子目录的所有对应文件
+        chmod:(改变文件目录权限,所有用到这个目录的用户，大局考量)
+            chmod 拥有者+权限,所属群组+权限,其他用户+权限,全部用户+权限 文件名
+            举例: chmod u+x,g+w f.txt　　//为文件f.txt设置自己可以执行，组员可以写入的权限
+                 chmod –R 644 *  //为当前目录的所有包含文件设置(拥有者读写权限,所属群组读权限,其他用户读权限)
+        chown:(将文件目录的权限分配给指定用户或者组,细节考量)
+            chown <用户名>:<所属组名> 文件名
+            举例：chown user:market f.txt　　//把文件t.txt给uesr，添加到market组
+                 chown -R liu /usr/meng   //将目录下的所有文件的拥有者修改为liu
+        通俗说明：
+            使用chmod的时候，我们已经知道这个文件的拥有者，拥有者的群组是谁。我们只需要给用户具体的处理文件的权限，读写执
+            使用chown的时候，文件不甘心被选择，于是它主动选择自己的拥有者是谁，和哪个用户在一起。
+
+    3.文件的相关操作：
+        文件查询操作：
+            find /目录 -name "*.txt"  :(查找指定目录和子目录下所有后缀是.txt的文件)
+        批量重命名文件名字操作:
+            rename 旧字符 新字符 要匹配的文件(比如*.csv)  ---当前目录下
+        文件移动和复制操作：
+            mv *.txt 新的目录  :(移动)
+            cp xx.txt 新的目录 :(复制)
+        文件和目录删除和创建：
+            rm xx.txt
+            rm -f xx.txt :(强制删除文件)
+            rm -r 需要删除的目录
+            rm -rf 需要删除的目录 :(强制删除目录)
+            mkdir 目录 :(创建目录)
+        文件压缩和解压：
+            压　缩：tar -zcvf xx.tar.gz xx.txt
+            解压缩：tar -zxvf xx.tar.gz 指定目录
+            解压：unrar e xx.tar 指定目录
+
+    4.开发中常用操作：
+        关闭和重启系统：
+            reboot :(重启)
+            shutdown -h now:(当前立即关机)
+        设置环境变量：
+            echo $HOMME: 查看home环境变量
+            env: 显示所有环境变量
+            set: 显示本地定义的环境变量
+            unset xiongjie :删除环境变量xiongjie
+            export xiongjie="熊杰的环境变量"： 设置临时环境变量，shell关闭后失效
+            修改~/.bash_profile文件：export xiongjie=单一用户变量的路径.然后输入命令生效：source /.bash_profile
+            修改/etc/profile文件：export xiongjie=全局变量路径.然后输入命令生效：source /etc/profile
+        下载插件：
+            yum install ...(centos系列)
+            apt-get ...(ubuntu系列)
+            npm ...(mac常用,js常用)
+        定时任务执行脚本：
+            crontab -e打开默认文件
+            设置内容：时间正则表达式 /bin/sh  shell脚本的路径
+            保存文件内容, crond restart
+        清空文本数据：
+            > 文件名
+        后台启动jar包并写日志：
+            nohup java -jar xx.jar >xx.log 2>&1 &
+        查看后台进程：
+            ps -ef|grep 名字
+        杀死进程：
+            kill -9 具体pid
+        显示端口占用进程：
+            netstat -tunlp|grep 端口
+
+    5.程序在linux前后台切换运行：
+        jobs     //查看任务，返回任务编号n和进程号
+        bg  %n   //将编号为n的任务转后台运行
+        fg  %n   //将编号为n的任务转前台运行
+        ctrl+z   //挂起当前任务
+        ctrl+c   //结束当前任务
+
+
+
+

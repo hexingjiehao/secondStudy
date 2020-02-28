@@ -1,0 +1,167 @@
+0.springboot：
+    1.使用注解替代了spring中的很多xml配置
+    2.将一些jar包封装起来，使用maven导入
+
+1.简单springboot项目的搭建：
+    1.pom文件添加配置：
+        <parent>标签：spring-boot-starter-parent
+        <dependency>标签：
+            spring-boot-starter:核心模块，包括自动配置支持、日志和YAML
+            spring-boot-starter-test:测试模块，包括JUnit、Hamcrest、Mockito
+        <build>下的<plugin>标签：
+            spring-boot-maven-plugin
+    2.Application类：
+        类头增加@SpringBootApplication
+        main方法调用SpringApplication.run(DemoApplication.class, args);
+
+
+2.常用的springboot的注解：
+    @SpringBootApplication：(扫描IoA包，自动配置xml)
+        @ComponentScan: 组件扫描,可自动发现和装配一些Bean。
+            @Component: 泛指组件
+            @Bean：等价于XML中配置的bean。
+            @Repository：注解接口和实现类
+            @Service：修饰service层的组件
+            @Autowired：自动导入依赖的bean
+        @Configuration：等同于spring的XML配置文件;
+        @EnableAutoConfiguration: 根据maven添加的jar自动配置spring应用
+    @RestController：(控制器+http响应体)
+        @Controller：控制器,将发来的URl请求转发到服务接口
+        @ResponseBody：返回值封住成http格式
+        @RequestMapping: 提供路由信息。即请求的路径
+    @PathVariable：获取路径参数。
+    @Value:注入application.properties配置值
+
+3.springboot的单元测试：
+    1.新增测试类，最好同名后+Test
+    2.测试类头增加注解@RunWith(SpringRunner.class)和@SpringBootTest
+    3.测试方法上加注解@Test
+    4.需要测试的类声明为组件,通过@Bean，@Component,@Service等
+    5.在测试类中将需要测试的类@Autowired注入进来
+
+4.简单的springboot的web项目搭建：
+    1.pom文件添加配置：spring-boot-starter-web
+    2.在Controller类上添加：@RestController或者@Controller
+    3.在方法上添加路由：@RequestMapping("")
+    4.自定义Filter:(调用日志、排除有XSS威胁的字符、执行权限验证)
+        1.使用@Configuration注解自定义filter类
+        2.在返回自定义过滤器的方法头加上@Bean
+    5.配置日志的级别：
+        在application.properties文件中设置key-value。其中路径一定要存在才行
+
+
+5.测试Controller的方法：
+    1.MockMvcBuilders初始化1个controller:  mockMvc = MockMvcBuilders.standaloneSetup(new HelloWorldController()).build();
+    2.movkMvc对象执行制定的url方法：mockMvc.perform( MockMvcRequestBuilders.get("/hello").accept(MediaType.APPLICATION_JSON)  )
+                                          .andExpect(MockMvcResultMatchers.status().isOk())
+                                          .andDo(MockMvcResultHandlers.print()) //将响应信息打印到控制台
+                                          .andReturn();
+
+6.开发环境调试,打包是自动忽略
+    1.在pom文件添加配置：<dependency标签>spring-boot-devtools
+    2.在maven插件中添加配置：<configuration><fork>true</fork></configuration>
+
+
+7.springboot与mysql+jpa的对接：(根据实体类变化自动修改表)
+    1.在application.properties配置jpa和数据源连接
+    2.创建实体类，增加对应的注解
+        @Entity: 实体表
+        @Id: 主键
+        @GeneratedValue :自增
+        @Colum: 列
+        @Transient: 注解的列不会实例化
+
+8.springboot和mybatis的对接： (需要给接口@Component)
+    接口内全注解: (需要人为的建表)
+        1.pom文件引入mybatis: <dependency>mybatis-spring-boot-starter
+        2.在application.properties文件中配置扫描的包：mybatis.type-aliases-package=classpath:实体类包名
+        3.在Application类头增加@MapperScan
+        4.在mapper类中的方法上使用注解：
+            @Select(sql,动态参数)
+            @Insert(sql,动态参数)
+            @Update(sql,动态参数)
+            @Delete(sql,动态参数)
+            @Results({
+                  @Result(property = "id", column = "id"),...
+            })
+    sql语句写在xml中，配置interface和xml映射关系
+        1.application.properties增加配置：mybatis.mapper-locations=classpath:mybatis/mapper/*.xml
+        2.在xml在中写sql
+
+9.springboot+mybatis的多数据源的配置：
+    1.在application.properties中配置两个数据源，名字有区分
+        springboot1.0使用url和driverClassName
+        springboot2.0使用jdbc-url和driver-class-name:(这里数据源的配置要小心)
+    2.创建两个配置类，其中一个有@Primary。其他主要是DataSource,SqlSessionFactory,test1SqlSessionTemplate的创建
+    3.分mapper包写dao和xml
+
+
+10.springboot的定时任务启动：
+    1.在Application类头上增加@EnableScheduling
+    2.在需要定时启动的方法上增加正则表达式：
+        cron=*/6 * * * * ? :上一次开始执行时间点之后6秒再执行
+        fixedRate=6000：上一次开始执行时间点之后6秒再执行
+        fixedDelay=6000 ：上一次执行完毕时间点之后6秒再执行
+        initialDelay=1000 ：第一次延迟1秒后执行
+
+11.springboot发送mail
+    1.在pom文件中添加<dependency>spring-boot-starter-mail
+    2.在application.properties配置：
+        spring.mail.host=smtp.qiye.163.com //邮箱服务器地址
+        spring.mail.username=用户名
+        spring.mail.password=密码
+        spring.mail.default-encoding=UTF-8
+        mail.fromMail.addr=xxx@oo.com  //以谁来发送邮件
+    3.创建邮件对象，然后发送：
+        SimpleMailMessage：简单邮件对象，发送文字
+        MimeMessage:富文本邮件对象
+            组装html内容：
+            FileSystemResource：附件对象
+                //解决附件名字乱码问题。因为文件名超过60且key的value=true，则拆分名字
+                static {
+                    System.setProperty("mail.mime.splitlongparameters","false");
+                }
+        静态资源发送(主要指图片)：
+            cid是图片资源路径的唯一标示。为了能够直接在邮件中使用html格式进行展示，所以使用cid内嵌图片
+
+    4.使用thymeleaf模板做的邮件系统发送邮件：
+        1.pom文件中引入<dependency>spring-boot-starter-thymeleaf
+        2.在resorces/templates下创建emailTemplate.html
+        3.解析模板并发送thymeleaf
+    5.邮件失败的解决办法：
+        1.接收到发送邮件请求，首先记录请求并且入库。
+        2.调用邮件发送接口发送邮件，并且将发送结果记录入库。
+        3.启动定时系统扫描时间段内，未发送成功并且重试次数小于3次的邮件，进行再次发送
+
+12.springboot+jpa+thymeleaf组建简单网站
+    1.重写Application启动类,增加Servlet支持。可以不需要重写Application类
+    2.使用jpa完成数据层的crud操作
+    3.在controller进行关系映射。其中thymelead模板自动在目录resources/templates下。
+        而且controller的注解头不应该是@RestController而应该是@Controller
+        调用方法返回时，直接返回、templates目录下的html地址
+    4.创建service类，业务处理查询数据库
+    5.创建对应的同名thymeleaf.html页面:内容一定要写正确
+
+
+13.Servlet生命周期分为三个阶段：(Servlet从被Web服务器加载到它被销毁的整个生命过程)
+   1：init()：初始化阶段
+   2：service()：响应客户请求阶段
+   3：destory():终止阶段
+
+
+14.springboot+fileUpload:文件上传
+    1.解除文件上传的大小限制：springboot1.5.9可以，springboot2.0.6暂时不知道
+        重写Aplication启动类,TomcatEmbeddedServletContainerFactory设置上传文件大小
+    2.编写模板页面
+    3.controller写路由
+    4.service写文件上传的业务逻辑
+    5.在application.properties中设置上传文件大小pring.http.multipart.maxFileSize
+
+15.springboot启动前初始化资源
+    CommandLineRunner：实现这个接口
+        按照顺序初始化：在实现类上@Order(1),数字越小，优先级越高
+    CommandLineRunner接口的Component会在所有 Spring Beans都初始化之后，SpringApplication.run()之前执行
+
+
+
+

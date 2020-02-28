@@ -1,0 +1,48 @@
+学习Mockito模拟测试语法：
+    6.Mockito：用于模拟的框架。官网地址：https://site.mockito.org。最新版本2.23.16。发布时间是2019-01-14。maven的仓库：<groupId>org.mockito</groupId>
+                       BDD=行为驱动开发                                                                                               <artifactId>mockito-core</artifactId>
+                                                                                                                      <version>2.23.4</version>
+                       官网的教程文档：https://static.javadoc.io/org.mockito/mockito-core/2.23.4/org/mockito/Mockito.html
+                       主要和JUnit搭配使用。初步理解是模拟接口和类的创建，模拟方法的调用，假定一个返回值。没有打桩的时候，方法调用会报错。
+                定义：它是一个Java模拟框架。行为驱动开发。辅助工具Yourkit可以检测Java性能，比如死锁，死循环等
+                局限：不能模拟静态方法，不能模拟构造函数。不能模拟equals()和hashCode()方法。默认返回zeros, falseys, empty collections or nulls.
+                      可以使用JMockit / Powermock来模拟静态方法。不能模拟私有方法。不能调用toString(),但是可以打桩toString() ？
+                      不能在thenReturn()方法中嵌入调用mock()方法。不能在when()进行链式结构的方法调用
+                      最好模拟实体类，尽量少模拟接口
+                核心方法；
+                    mock()/@Mock: 创建对象，可选的指定应答--模拟设置行为方式。
+                                  举例：@Mock private ArticleCalculator calculator;
+                                        MockitoAnnotations.initMocks(testClass);
+                    when()/given(): 指定模拟对象应该怎么行为。
+                    spy()/@Spy：部分模拟。
+                    @InjectMocks: 自动注入mocks/spies字段
+                    verify(): 用给定的参数检查调用的方法。 搭配使用的有any()，@Captor
+                参数匹配器：调用方法打桩时，灵活的给定参数值。
+                验证方法调用次数：默认是1次。参数times(1)
+                模拟有异常抛出的方法：doThrow()
+                顺序验证：inOrder对象
+                零交互方法的使用：never(),verifyZeroInteractions()
+                打桩的连续调用：方法的返回值和异常，一个方法的多个返回值。没测试成功。
+                回调的打桩：实现接口Answer。
+                常用的do*方法：doReturn()
+                             doThrow()
+                             doAnswer()
+                             doNothing()
+                             doCallRealMethod()
+                部分模拟：spy()。监视真正对象。对象确实被创建，但是有部分方法是模拟的，有部分方法是真的调用。
+                         类似与深拷贝了一个对象，用这个拷贝对象进行真假参半的操作。
+                捕获参数：用于断言。ArgumentCaptor<T>
+                重置模拟：最好不用。专注于写好的测试。reset()
+                序列化的模拟：尽量少用。 List serializableMock = mock(List.class, withSettings().serializable());
+                超时验证：作为verify()的第二个参数。timeout(100).times(1)
+                对象初始化的单行打桩：.getMock()
+                行为驱动开发验证：given().then()......
+                模拟抽象类：mock(),spy()
+                自定义验证失败信息：verify()第二个参数description("...")
+                Lambda表达式的支持：argThat(lambda....)，可以在参数传入进行参数的过滤
+                Answer接口默认常量：RETURNS_DEFAULTS：默认值。没打桩时返回空值
+                                  RETURNS_SMART_NULLS： mock(Class,Answer),只能空值，比如空的ArrayList。
+                                  RETURNS_MOCKS: 返回的模拟值，最终时null
+                                  RETURNS_DEEP_STUBS: 深度打桩。when()方法中进行链式调用。
+                                  CALLS_REAL_METHODS：调用真正的方法，而不是模拟。
+                                  RETURNS_SELF：比如返回父类，返回mock

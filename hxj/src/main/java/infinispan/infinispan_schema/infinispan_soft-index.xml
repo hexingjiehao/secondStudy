@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soft-index-file-store>
+    <open-files-limit>1000</open-files-limit>
+    <compaction-threshold value="0.5">
+        <index>
+            <path>Infinispan-SoftIndexFileStore-Index</path>
+            <segments>3</segments>
+            <max-queue-length>1000</max-queue-length>
+            <max-node-size>4096</max-node-size>
+            <min-node-size>0</min-node-size>
+        </index>
+        <data>
+            <path>Infinispan-SoftIndexFileStore-Data</path>
+            <max-file-size>16777216</max-file-size>
+            <sync-writes>false</sync-writes>
+        </data>
+    </compaction-threshold>
+
+
+    <shared>false</shared>
+    <transaction>false</transaction>
+    <preload>false</preload>
+    <fetch-state>false</fetch-state>
+    <purge>false</purge>
+    <singleton>false</singleton>
+    <read-only>false</read-only>
+    <max-batch-size value="100">
+        <write-behind>
+            <modification-queue-size>1024</modification-queue-size>
+            <thread-pool-size>1</thread-pool-size>
+            <fail-silently>false</fail-silently>
+        </write-behind>
+        <property>
+            <name></name>
+            <value></value>
+        </property>
+    </max-batch-size>
+</soft-index-file-store>
+

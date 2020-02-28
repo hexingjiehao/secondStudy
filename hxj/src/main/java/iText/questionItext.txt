@@ -1,0 +1,1996 @@
+1.学习《The Best iText Questions on stackoverflow》电子文档:
+    第1章：关于PDF的一般问题（19个问题）
+        1.iText、JasperReports和Adobe LC之间有什么区别?
+        答：这些都是创建pdf的技术。
+            iText是一个库，可以用来增强web和pdf功能
+            JasperReports是一个商业智能/报告工具，使用旧的iText版本创建报告
+            Adobe LC是一组模块，其中一些模块只能由Adobe提供
+
+        2.PDF文件有样式、页眉和页脚吗?
+        答：常规pdf没有样式，页眉和页脚。我们看到的都是在画布上绘制的符号而已。
+
+        3.如何从PDF文件中提取页码?
+        答：页码的概念在pdf中不存在。
+
+        4.如何禁用保存按钮并隐藏adobe reader中的菜单栏?
+        答：你想要的是禁止别人保存pdf文件，但是只有有文件，我们就不能阻止该文件被别人拷贝。除非你不把pdf文件给它。
+
+        5.如何关闭PDF文件以重新创建它?(档案使用问题)
+        答：你的问题就好像打开了一个文件，然后又重命名该文件。必然会导致报错。只能关闭文件再操作。
+            想要重复使用代码创建pdf文档，又不想每次都手动关闭它。可以给创建的文档增加时间戳名字。
+
+        6.在浏览器中显示PDF时如何隐藏Adobe浮动工具栏?
+        答：无法在浏览器中隐藏工具栏(或HUD)。无法通过编程禁用adobe的读取模式
+
+        7.即使内容相同，为什么PDF文件也不同?
+        答：差异是因为创建的时间不同，导致pdf文档中的内部有不同。但是不影响查看。显示是一致的
+
+        8.为什么pdf文件在处理时会发生变化?
+        答：pdf是增量更新的。没有两个pdf是一致的。所以hash值不可能一致。
+
+        9.如何查明PDF文件是否压缩?
+        答：iText的PdfReader有一个isNewXrefType()方法来检查是否存在这种情况。
+
+        10.如何使用用户名和密码保护PDF?
+        答：用户名和密码是不可以保护pdf的。想要保护pdf，可以使用证书，或者拥有者密码和用户密码。
+
+        11.如何使用证书加密PDF ?
+        答：PdfReader reader = new PdfReader(src);
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            Certificate cert = getPublicCertificate("resources/encryption/public.cer");
+            stamper.setEncryption(new Certificate[]{cert},new int[]{PdfWriter.ALLOW_PRINTING}, PdfWriter.ENCRYPTION_AES_128);
+            stamper.close();
+            reader.close();
+
+        12.如何使用密码保护已存在的PDF ?
+        答：public void encryptPdf(String src, String dest) throws IOException, DocumentException {
+              PdfReader reader = new PdfReader(src);
+              PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+              stamper.setEncryption(USER, OWNER, PdfWriter.ALLOW_PRINTING,PdfWriter.ENCRYPTION_AES_128 | PdfWriter.DO_NOT_ENCRYPT_METADATA);
+              stamper.close();
+              reader.close();
+           }
+
+        13.如何在设置密码安全性时允许提取页面?
+        答：没有页面提取的设置
+
+        14.如何将PDF页面旋转到任意角度?
+        答：pdf规范禁止这样做。旋转的角度只能是0，90，180，270度
+
+        15.pdf文件的大小限制是多少?
+        答：iText5.3以前是2g，之后的版本是1tb
+
+        16.我可以通过更改内部元数据来更改页面计数吗?
+        答：无法操作。
+
+        17.如何获取任意PDF对象的页码?
+        答：pfd中没有页码的概念。
+
+        18.PDF页面的原点(x,y)在哪里?
+        答：concatCTM()或transform()方法。这些方法允许您更改坐标系统。默认在左下角
+
+        19.我应该如何解释一个矩形在PDF中的坐标?
+        答：默认的坐标原点在左下角。
+
+    第2章：开始（16个问题）
+        1.如何使用iText或iTextSharp生成和设计pdf文件?
+        答：选项1:使用iText的高级对象创建布局
+            选项2:通过创建AcroForm模板创建布局
+            选项3:用XHTML格式创建数据，用CSS创建样式
+            选项4:使用XML Forms Architecture (XFA)定义模板
+            选项5:现在使用XML Worker将XHTML+CSS和XFA转换为PDF(普通PDF、PDF/A、PDF/UA)
+            选项6:使用第三方工具来定义模板，以及使用底层iText创建基于模板的pdf的第三方服务器
+
+        2.参数未在iTextSharp中指定
+        答：java版本的代码和C#的代码的格式是不同的
+
+        3.如何创建一个复杂的PDF文档?
+        答：其他软件建一个交互模版。代码填充内容。
+            PdfReader reader = new PdfReader(pathToCertificateTemplate);
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(pathToCertificate));
+            AcroFields form = stamper.getAcroFields();
+            form.setField("name", name);
+            form.setField("course", course);
+            form.setField("date", date); stamper.setFormFlattening(true);
+            stamper.close();
+            reader.close();
+
+        4.如何将两个段落对齐到同一行的左右?
+        答：方法1: 使用glue
+                Chunk glue = new Chunk(new VerticalPositionMark());
+                Paragraph p = new Paragraph("Text to the left");
+                p.add(new Chunk(glue));
+                p.add("Text to the right");
+                document.add(p);
+            方法2：使用PdfTable
+                PdfPTable table = new PdfPTable(3);
+                table.setWidthPercentage(100);
+                table.addCell(getCell("Text to the left", PdfPCell.ALIGN_LEFT));
+                table.addCell(getCell("Text in the middle", PdfPCell.ALIGN_CENTER));
+                table.addCell(getCell("Text to the right", PdfPCell.ALIGN_RIGHT));
+                document.add(table);
+            方法3：证明文本
+
+        5.如何对齐标签及其内容?
+        答：List list = new List();
+            list.setListSymbol(new Chunk(LABEL));
+            list.add(CONTENT);
+            document.add(list);
+            document.add(Chunk.NEWLINE);
+
+        6.如何将图形大小与页面大小匹配?
+        答：选项1：使页面适应您的图形:
+                PdfTemplate pdfTemplate = cb.createTemplate(750,750);
+                Document document = new Document(new Rectangle(770, 770));
+                cb.addTemplate(pdfTemplate, 10, 10);
+            选项2:根据页面大小调整图形大小:
+                PdfTemplate pdfTemplate = cb.createTemplate(750,750);
+                Graphics2D g2 = pdfTemplate.createGraphics(750, 750);
+                Drawer drawer = new Drawer();
+                drawer.setSource(new File(jTextField1.getText()));
+                drawer.paintComponent(g2);
+                g2.dispose();
+                Image img = Image.getInstance(pdfTemplate);
+                img.scaleToFit(575, 822);
+                img.setAbsolutePosition(10, 10);
+                document.add(img);
+
+        7.如何设置页面大小为信封大小与横向?
+        答：Rectangle envelope = new Rectangle(432, 252);
+            Document pdfDoc = new Document(envelope, 10f, 10f, 100f, 0f);
+
+        8.如何使用页面的全尺寸?
+        答：Rectangle rect = new Rectangle(85, 200);
+            Document document = new Document(rect, 0, 0, 0, 0);  //后续参数为0
+
+        9.如何创建页面大小不等的文档?
+        答：在初始化页面时设置大小。
+            Document document = new Document();
+            PdfWriter.getInstance(document, new FileOutputStream(dest));
+            Rectangle one = new Rectangle(70,140);
+            Rectangle two = new Rectangle(700,400);
+            document.setPageSize(one);
+            document.setMargins(2, 2, 2, 2);
+            document.open();
+            Paragraph p = new Paragraph("Hi");
+            document.add(p);
+            document.setPageSize(two);
+
+            document.setMargins(20, 20, 20, 20);
+            document.newPage();
+            document.add(p);
+            document.close();
+
+        10.如何更改文本的行间距?
+        答：paragraph.SetLeading(fixed, multiplied);
+
+        11.有人知道TabStop是怎么工作的吗?
+        答：类似于目录中的破折号线
+            java.util.List<TabStop> tabStopsList = new ArrayList<TabStop>();
+            tabStopsList.add(new TabStop(100, new DottedLineSeparator()));
+            tabStopsList.add(new TabStop(200, new LineSeparator(),TabStop.Alignment.CENTER));
+            tabStopsList.add(new TabStop(300, new DottedLineSeparator(),TabStop.Alignment.RIGHT));
+            p = new Paragraph(new Chunk("Hello world", f));
+            p.setTabSettings(new TabSettings(tabStopsList, 50));
+            addTabs(p, f, 0, "la|la");
+            ct.addElement(p);
+
+        12.如何使用iText对文本使用中划线?
+        答：Font font = new Font(FontFamily.HELVETICA, 12f, Font.STRIKETHRU);
+           table.addCell(new Phrase("0123456789", font));
+
+           chunk1.setUnderline(1.5f, -1);
+           table.addCell(new Phrase(chunk1));
+           Chunk chunk2 = new Chunk("0123456789");
+           chunk2.setUnderline(1.5f, 3.5f);
+           table.addCell(new Phrase(chunk2));
+
+        13.如何用虚线给文本下划线?
+        答：Paragraph p = new Paragraph("This line will be underlined with a dotted line.");
+            DottedLineSeparator dottedline = new DottedLineSeparator();
+            dottedline.setOffset(-2);
+            dottedline.setGap(2f);
+            p.add(dottedline);
+            document.add(p);
+
+        14.如何添加完整的换行符?
+        答：使用大于100%的DottedLineSeparator边距。
+
+        15.如何创建自定义虚线分隔符?
+        答：继承DottedLineSeparator。
+
+        16.如何生成与iText兼容的PDF/UA PDF ?
+        答：Document document = new Document(PageSize.A4.rotate());
+          PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(dest));
+          writer.setPdfVersion(PdfWriter.VERSION_1_7);
+          writer.setTagged();
+          writer.setViewerPreferences(PdfWriter.DisplayDocTitle);
+          document.addLanguage("en-US");
+          document.addTitle("English pangram");
+          writer.createXmpMetadata();
+
+    第3章：字体（25个问题）
+        1.如何使用字体Verdana在PdfStamper?
+        答: BaseFont.createFont("c:/windows/fonts/verdana.ttf", BaseFont.WINANSI, BaseFont.EMBEDDED)
+
+        2.为什么FontFactory.GetFont()不能适用于所有字体?
+        答：iText独立于平台，无法包含所有字体。可以通过传入路径对字体进行注册
+
+        3.为什么我的字体没有注册?
+        答：java版本和c#的iText的字体注册实现不一样。
+            如果找不到字体，就人为注册：FontFactory.RegisterDirectory(“/usr/share/fonts”);
+
+        4.如何在PDF中使用西里尔字母?
+        答：特殊字符有时候不能够在iText中正常显示。插入正确的字体可以，而且要注意编码
+
+        5.为什么iText嵌入字体，即使我指定不嵌入?
+        答：BaseFont.IDENTITY_H表示应该嵌入。
+
+        6.如何识别可以打印字符串中所有字符的单个字体?
+        答：一个字体不可能包含所有字符。FontSelector不寻找最小的字体集
+
+        7.使用FontSelector如何改变字体的颜色和大小时?
+        答：FontSelector selector1 = new FontSelector();
+            Font f1 = FontFactory.getFont(FontFactory.TIMES_ROMAN, 12);
+            f1.setColor(BaseColor.BLUE);
+            selector1.addFont(f1);
+            Phrase ph = selector.process(str1);
+
+            FontSelector selector2 = new FontSelector();
+            Font f2 = FontFactory.getFont(FontFactory.TIMES_ROMAN, 12); f2.setColor(BaseColor.GRAY);
+            selector2.addFont(f2);
+            Phrase ph = selector.process(str2);
+
+        8.如何在PDF中创建波斯语内容?
+        答：注意书写顺序和字体，还有编码格式。和一般语言不一样
+            Font font = new Font(bfComic, 12);
+            pdfCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
+        9.如何解决不支持的charsetexception当使用itext-asian.jar?
+        答：正常使用字体即可，不需要itext-asian.jar。
+            public static final String[] tempString ={ "KozMinPro-Regular.otf", "UniJIS-UCS2-H", pharseString };
+            bf = BaseFont.createFont(tempString[0], tempString[1], BaseFont.NOT_EMBEDDED);
+
+        10.如何选择字体的最佳大小?
+        答：BaseFont bf = BaseFont.createFont(BaseFont.COURIER, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+            float glyphWidth = bf.getWidth("WHAT IS THE WIDTH OF THIS STRING?");
+            float width = glyphWidth * 0.001f * 16f;
+            float fontSize = 1000 * width / glyphwidth;
+
+        11.如何限制一行中的字符数?
+        答：BaseFont bf = BaseFont.createFont(BaseFont.COURIER, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+
+            float charWidth = bf.getWidth(" ");
+            if (string1 == null) string1 = "";
+            if (string1.length() > 10) string1 = string1.substring(0, 10);
+            if (string2 == null) string2 = "";
+            if (string1.length() + string2.length() > 100) string2 = string2.substring(0, 100 - string1.length());
+            Paragraph p = new Paragraph(string1 + " " + string2, font);
+            LineSeparator line = new LineSeparator();
+            line.setOffset(-2);
+            p.add(line);
+            document.add(p);
+
+        12.如何计算一个元素的高度?
+        答：float ascent = bf.getAscentPoint("Some String", 12);
+            float descent = bf.getDescentPoint("Some String", 12);
+            float height = ascent - descent;
+
+        13.如何计算/设置字体行距?
+        答：也是使用getAscentPoint和getDescentPoint
+
+        14.为什么我不能设置一个短语的字体?
+        答：短语是块对象的集合，因此一个短语可以包含使用不同字体的不同文本“原子”。使用短语后要添加内容，否则无法显示设置的情况
+
+        15.如何在一个字符串中使用两种不同的颜色?
+        答：拆分字符串就行了。
+            Font dataGreenFont = FontFactory.getFont("Garamond", 10, BaseColor.GREEN);
+            Font dataBlackFont = FontFactory.getFont("Garamond", 10, BaseColor.BLACK);
+            Paragraph p = new Paragraph();
+            p.Add(new Chunk("Developed By : ", dataGreenFont));
+            p.Add(new Chunk("Mr.XXXXX", dataBlackFont));
+            document.add(p);
+
+        16.如何将颜色应用于段落中的字符串?
+        答：相同的块使用的样式是一致的。想要不同的样式，就应该拆分。
+            Font red = new Font(FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.RED);
+            Chunk redText = new Chunk("This text is red. ", red);
+            Font blue = new Font(FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
+            Chunk blueText = new Chunk("This text is blue and bold. ", blue);
+            Font green = new Font(FontFamily.HELVETICA, 12, Font.ITALIC, BaseColor.GREEN);
+            Chunk greenText = new Chunk("This text is green and italic. ", green);
+            Paragraph p1 = new Paragraph(redText);
+            document.add(p1);
+            Paragraph p2 = new Paragraph();
+            p2.add(blueText);
+            p2.add(greenText);
+            document.add(p2);
+
+        17.如何引入自定义字体权重?
+        答：Chunk bold = new Chunk("Bold", font);
+            bold.SetTextRenderMode(PdfContentByte.TEXT_RENDER_MODE_FILL_STROKE, 0.5f,GrayColor.GRAYBLACK);
+
+        18.如何在一个单词中加粗一个字母?
+        答：写特定的逻辑，没有专门的API。
+            private Chunk returnCorrectColor(char letter) {
+                if (letter == 'b'){
+                    return B;
+                }else if(letter == 'g'){
+                    return G;
+                }
+                return new Chunk(String.valueOf(letter), RED_NORMAL);
+            }
+
+            public static final Font RED_NORMAL = new Font(FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.RED);
+            public static final Font BLUE_BOLD = new Font(FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
+            public static final Font GREEN_ITALIC = new Font(FontFamily.HELVETICA, 12, Font.ITALIC, BaseColor.GREEN);
+            public static final Chunk B = new Chunk("b", BLUE_BOLD);
+            public static final Chunk G = new Chunk("g", GREEN_ITALIC);
+
+            Paragraph p = new Paragraph();
+            String s = "all text is written in red, except the letters b and g; "+ "they are written in blue and green.";
+            for (int i = 0; i < s.length(); i++) {
+                p.add(returnCorrectColor(s.charAt(i)));
+            }
+
+        19.如何引入上标?
+        答：可以通过将字体设置为更小进行连接操作
+
+        20.如何在不使用setTextRise()的情况下允许PDF中的Unicode下标符号?
+        答：BaseFont bf = BaseFont.createFont(FONT, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            Font f = new Font(bf, 10);
+            Paragraph p = new Paragraph("H\u2082SO\u2074", f);
+            document.add(p);
+
+        21.如何显示印度卢比符号?
+        答：有时候，双字节字符可能被编译器解释为两个单字节字符
+            BaseFont bf = BaseFont.CreateFont("c:/windows/fonts/arial.ttf",BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            Font font = new Font(bf, 12);
+            Chunk chunkRupee = new Chunk(" \u20B9 5410", font3);
+
+        22.为什么卢比的符号没有显示出来?
+        答：使用的字体没有该字形，或者是编码不对
+            public static final String DEST = "results/fonts/rupee.pdf";
+            public static final String FONT1 = "resources/fonts/PlayfairDisplay-Regular.ttf";
+            public static final String FONT2 = "resources/fonts/PT_Sans-Web-Regular.ttf";
+            public static final String FONT3 = "resources/fonts/FreeSans.ttf";
+            public static final String RUPEE = "The Rupee character \u20B9 and the Rupee symbol \u20A8";
+            public void createPdf(String dest) throws IOException, DocumentException {
+                Document document = new Document();
+                PdfWriter.getInstance(document, new FileOutputStream(DEST));
+                document.open();
+                Font f1 = FontFactory.getFont(FONT1, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, 12);
+                Font f2 = FontFactory.getFont(FONT2, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, 12);
+                Font f3 = FontFactory.getFont(FONT3, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, 12);
+                Font f4 = FontFactory.getFont(FONT3, BaseFont.WINANSI, BaseFont.EMBEDDED, 12);
+                document.add(new Paragraph(RUPEE, f1));
+                document.add(new Paragraph(RUPEE, f2));
+                document.add(new Paragraph(RUPEE, f3));
+                document.add(new Paragraph(RUPEE, f4));
+                document.close();
+            }
+
+        23.如何使用系统字体在iTextSharp与VB.net?
+        答：BaseFont = BaseFont.createFont("c:\windows\fonts\arial.ttf", BaseFo\ nt.IDENTITY_H, BaseFont.EMBEDDED)
+            font = New Font(arial, 16)
+            document.Add(New Paragraph("Hello World, Arial.", font))
+
+        24.使用iText时，是否需要Windows字体许可证?
+        答：有免费的，有收费的，有副本等。可以查看字体的授权属性判断
+
+        25.如何从数组中获取字体?
+        答：可以。BaseFont bf = BaseFont.createFont("myFont", BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, fBytes, null);
+                 Font font = new Font(bf, 12);
+
+    第4章：图像（15个问题）
+        1.如何将多个图像添加到一个PDF?
+        答：public void createPdf(String dest) throws IOException, DocumentException {
+                Image img = Image.getInstance(IMAGES[0]);
+                Document document = new Document(img);
+                PdfWriter.getInstance(document, new FileOutputStream(dest));
+                document.open();
+                for (String image : IMAGES) {
+                    img = Image.getInstance(image);
+                    document.setPageSize(img);
+                    document.newPage();
+                    img.setAbsolutePosition(0, 0);
+                    document.add(img);
+                }
+                document.close();
+           }
+
+        2.如何获得PDF格式的图像DPI ?
+        答：要计算DPI，需要像素数和以英寸为单位的距离。
+            X=wPx / wInch
+            Y=hPx / hInch
+
+        3.为什么不按顺序添加图像?
+        答：如果页面空间不足以填放图像，itext将推迟添加图像
+            writer.setStrictImageSequence(true);  //严格按照顺序
+
+        4.如何向图像添加文本?
+        答：如何判断文本还剩下多少垂直空间。
+            float width = img.getScaledWidth();
+            float height = img.getScaledHeight();
+            PdfTemplate template = cb.createTemplate(width, height);
+            template.addImage(img, width, 0, 0, height, 0, 0);
+            ColumnText.showTextAligned(template, Element.ALIGN_CENTER,new Phrase(watermark, FONT), width / 2, height / 2, 30);
+            return Image.getInstance(template);
+
+        5.如何在图像上画线?
+        答：和添加水印类似。
+            float width = img.getScaledWidth();
+            float height = img.getScaledHeight();
+            PdfTemplate template = cb.createTemplate(width, height);
+            template.addImage(img, width, 0, 0, height, 0, 0);
+            template.saveState();
+            template.setColorStroke(BaseColor.GREEN);
+            template.setLineWidth(3);
+            template.moveTo(width * .25f, height * .25f);
+            template.lineTo(width * .75f, height * .75f);
+            template.moveTo(width * .25f, height * .75f);
+            template.lineTo(width * .25f, height * .25f);
+            template.stroke();
+            template.setColorStroke(BaseColor.WHITE);
+            template.ellipse(0, 0, width, height);
+            template.stroke();
+            template.restoreState();
+
+        6.如何保存PDF格式的高分辨率图像?
+        答：pdf文档本身没有分辨率。
+            Image img = iTextSharp.text.Image.GetInstance(toSaveImage,System.Drawing.Imaging.ImageFormat.Tiff);
+            Rectangle pagesize = new Rectangle(img.ScaledWidth, img.ScaledHeight);
+            Document document = new Document(pagesize);
+            img.SetAbsolutePosition(0, 0);
+            document.Add(img);
+
+        7.如何添加多级过滤的JPEG图像(DCTDecode和FlateDecode)?
+        答：Image img = Image.getInstance("some.jpg");
+            img.setCompressionLevel(PdfStream.BEST_COMPRESSION);
+
+        8.导入TIFF文件时如何避免异常?
+        答：可能该文件有问题。打给你使用该文件时，可以设定为忽略异常。recoverFromImageError=true
+
+        9.如何跨多个页面显示大尺寸的图像?
+        答：不同的坐标设置。
+            Image image = Image.getInstance(IMAGE);
+            float width = image.getScaledWidth();
+            float height = image.getScaledHeight();
+
+            Rectangle page = new Rectangle(width / 2, height / 2);
+
+            Document document = new Document(page);
+            PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(dest));
+            document.open();
+            PdfContentByte canvas = writer.getDirectContentUnder();
+            canvas.addImage(image, width, 0, 0, height, 0, -height / 2);
+            document.newPage();
+            canvas.addImage(image, width, 0, 0, height, 0, 0);
+            document.newPage();
+            canvas.addImage(image, width, 0, 0, height, -width / 2, - height / 2);
+            document.newPage();
+            canvas.addImage(image, width, 0, 0, height, -width / 2, 0);
+            document.close();
+
+        10.如何给一个图像圆角?
+        答：圆角的效果是通过使角透明来模拟的。
+            Image img = Image.GetInstance(some_path_to_an_image);
+            float w = img.ScaledWidth;
+            float h = img.ScaledHeight;
+            PdfTemplate t = writer.DirectContent.CreateTemplate(w, h);
+            t.Ellipse(0, 0, w, h);
+            t.Clip();
+            t.NewPath();
+            t.AddImage(img, w, 0, 0, h, 0, -600);
+            Image clipped = Image.GetInstance(t);
+
+        11.如何将彩色图像转换为黑白?
+        答：BufferedImage bi = image.getBufferedImage();
+            BufferedImage newBi = new BufferedImage(bi.getWidth(), bi.getHeight(), BufferedImage.TYPE_USHORT_GRAY);
+            newBi.getGraphics().drawImage(bi, 0, 0, null);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(newBi, "png", baos);
+            Image.getInstance(baos.toByteArray());
+
+        12.如何在itext中使图像成为合格的掩码候选?
+        答：将一个图像作为另一个图像面具。图像掩码必须是单色或灰度
+            Document document = new Document(PageSize.A4.rotate());
+            PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(dest)); document.open();
+            Image image = Image.getInstance(IMAGE);
+            Image mask = makeBlackAndWhitePng(MASK);
+            mask.makeMask();
+            image.setImageMask(mask);
+            image.scaleAbsolute(PageSize.A4.rotate());
+            image.setAbsolutePosition(0, 0);
+            document.add(image);
+            document.close();
+
+        13.如何使用Image.getInstance()创建唯一的图像?
+        答：Image black = Image.getInstance(1, 1, 4, 8, new byte[] { (byte)0, (byte)0, (byte)0, (byte)255 });
+            black.scaleAbsolute(30, 30);
+            document.add(black);
+            document.close();
+
+        14.如何生成二维条码矢量图像?
+        答：PdfContentByte cb = writer.getDirectContent();
+            Image img = createBarcode(cb, "This is a 2D barcode", 1, 1);
+            document.add(new Paragraph(String.format("This barcode measures %s by %s user units",img.getScaledWidth(), img.getScaledHeight())));
+            document.add(img);
+
+            public Image createBarcode(PdfContentByte cb, String text, float mh, float mw) throws BadElementException {
+                BarcodePDF417 pf = new BarcodePDF417();
+                pf.setText("BarcodePDF417 barcode");
+                Rectangle size = pf.getBarcodeSize();
+                PdfTemplate template = cb.createTemplate(mw * size.getWidth(), mh * size.getHeight());
+                pf.placeBarcode(template, BaseColor.BLACK, mh, mw);
+                return Image.getInstance(template);
+            }
+
+        15.如何通过改变不透明度将背景图像转换为水印?
+        答：PdfContentByte canvas = writer.getDirectContentUnder();
+            Image image = Image.getInstance(IMAGE);
+            image.SetAbsolutePosition(0, 0);
+            canvas.SaveState();
+            PdfGState state = new PdfGState();
+            state.setFillOpacity(0.6f);
+            canvas.setGState(state);
+            canvas.addImage(image);
+            canvas.restoreState();
+
+    第5章：文本绝对定位（13个问题）
+        1.如何在页面的特定位置编写Zapfdingbats字符?
+        答：Font font = new Font(Font.FontFamily.ZAPFDINGBATS, 12);
+            Phrase phrase = new Phrase(zapfstring, font);
+            PdfContentByte canvas = writer.DirectContent;
+            ColumnText.ShowTextAligned(canvas, Element.ALIGN_CENTER, phrase, 200, 500, 0);
+
+        2.如何在绝对位置添加内容时减少冗余代码?
+        答：将重复代码封装成方法。
+
+        3.如何截断边框内的文本?
+        答：int status = ColumnText.START_COLUMN;
+            ColumnText ct = new ColumnText(cb);
+            ct.setSimpleColumn(rectangle);
+            status = ct.go();
+
+        4.如何在第二页上继续有序列表?
+        答：可以设置列表的开始序号。
+            PdfReader reader = new PdfReader(src);
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            List list = new List(List.ORDERED);
+            for (int i = 0; i < 10; i++) {
+                    list.add("...");
+            }
+            ColumnText ct = new ColumnText(stamper.getOverContent(1));
+            ct.addElement(list);
+            Rectangle rect = new Rectangle(250, 400, 500, 806);
+            ct.setSimpleColumn(rect);
+            int status = ct.go();
+            if (ColumnText.hasMoreText(status)) {
+                ct.setCanvas(stamper.getOverContent(2));
+                ct.setSimpleColumn(rect);
+                ct.go();
+            }
+            stamper.close();
+
+        5.为什么ColumnText忽略水平对齐?
+        答：文本模式和复合模式。ct.Alignment = Element.ALIGN_RIGHT将在文本模式生效
+            同样的语句在复合模式将会失效
+
+        6.如何将字符串放入矩形中?
+        答：矩形不足时，放入的字符串丢失。
+            解决办法：1.添加更大的矩形
+                     2.减少内容或者缩小字体
+            ColumnText ct = new ColumnText(cb);
+            ct.setSimpleColumn(rect);
+            int status = ct.go();
+            while (ColumnText.hasMoreText(status)) {
+                document.newPage();
+                ct.setSimpleColumn(rect);
+                status = ct.go();
+            }
+
+        7.为什么使用ColumnText会导致“文档没有页面”异常?
+        答：默认的字体大小和添加的内容不匹配
+            column.setSimpleColumn(rect);
+            column.addElement(paragraph);
+
+        8.如何将一个页面分成N个部分，这样我们就可以用不同的源来填充每个部分?
+        答：public static final String[] LANGUAGES = { "la", "en", "fr" };
+            public static final Rectangle[] RECTANGLES = {
+                new Rectangle(36, 581, 559, 806),
+                new Rectangle(36, 308.5f, 559, 533.5f),
+                new Rectangle(36, 36, 559, 261)
+            };
+
+            PdfContentByte cb = writer.getDirectContent();
+            ColumnText[] columns = new ColumnText[3];
+            for (int section = 1; section <= 3; section++) {
+                for (int la = 0; la < 3; la++) {
+                    columns[la] = createColumn(cb, section, LANGUAGES[la], RECTANGLES[la]);
+                }
+                while (addColumns(columns)) {
+                    document.newPage();
+                    for (int la = 0; la < 3; la++) {
+                        columns[la].setSimpleColumn(RECTANGLES[la]);
+                    }
+                }
+                document.newPage();
+            }
+
+            public ColumnText createColumn(PdfContentByte cb, int i, String la, Rectangle rect) throws IOException {
+                ColumnText ct = new ColumnText(cb);
+                ct.setSimpleColumn(rect);
+                Phrase p = createPhrase(String.format("resources/text/liber1_%s_%s.txt", i, la));
+                ct.addText(p);
+                return ct;
+            }
+
+            public Phrase createPhrase(String path) throws IOException {
+                Phrase p = new Phrase();
+                BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(path), "UTF8"));
+                String str;
+                while ((str = in.readLine()) != null) {
+                    p.add(str);
+                }
+                in.close();
+                return p;
+            }
+
+            public boolean addColumns(ColumnText[] columns) throws DocumentException {
+                int status = ColumnText.NO_MORE_TEXT;
+                for (ColumnText column : columns) {
+                    if (ColumnText.hasMoreText(column.go()))
+                        status = ColumnText.NO_MORE_COLUMN;
+                }
+                return ColumnText.hasMoreText(status);
+            }
+
+        9.如何旋转一行文本?
+        答：ColumnText.showTextAligned(template,Element.ALIGN_CENTER, new Phrase(text), x, y, rotation);
+
+        10.如何旋转一个段落?
+        答：PdfContentByte canvas = pdfWriter.getDirectContent();
+            PdfTemplate textTemplate = canvas.createTemplate(imgWidth, imgHeight);
+            ColumnText columnText = new ColumnText(textTemplate);
+            columnText.setSimpleColumn(0, 0, imgWidth, imgHeight);
+            columnText.addElement(paragraph);
+            columnText.go();
+
+            Image textImg = Image.getInstance(textTemplate);
+            textImg.setInterpolation(true); textImg.scaleAbsolute(imgWidth, imgHeight);
+            textImg.setRotationDegrees((float) -textComp.getRotation());
+            textImg.setAbsolutePosition(imgXPos, imgYPos);
+
+            pdfDocument.add(textImg);
+
+        11.如何围绕多行文本绘制矩形?
+        答：在一个矩形中添加多行文字
+            cb.rectangle(120, 500, 130, 280);
+            cb.stroke();
+
+            ct = new ColumnText(cb);
+            ct.setSimpleColumn(300f, 500f, 430f, 780f);
+            ct.addElement(p);
+            ct.go();
+
+            float endPos = ct.getYLine() - 5;
+            cb.rectangle(300, endPos, 130, 780 - endPos);
+            cb.stroke();
+
+        12.是什么原因导致iText创建的页面出现语法错误?
+        答：pdf中不能有非法的嵌套文本块
+
+        13.如何调整列文本中第一行的位置?
+        答：Phrase p = new Phrase("This text is added at the top of the column.");
+        ColumnText ct = new ColumnText(cb);
+            ct.setSimpleColumn(rect);
+            ct.setUseAscender(true);
+            ct.addText(p);
+            ct.go();
+
+    第6章：线条和形状的绝对定位（5个问题）
+        1.如何向PDF页面添加边框?
+        答：Rectangle rect= new Rectangle(36,108);
+            rect.setBorder(Rectangle.BOX);
+            rect.setBorderWidth(2);
+            document.add(rect);
+
+        2.如何使用笛卡儿网格创建PDF ?
+        答：循环遍历画网格
+            Rectangle pagesize = PageSize.LETTER;
+            PdfContentByte canvas = writer.getDirectContent();
+            for (float x = 0; x < pagesize.getWidth(); ) {
+                for (float y = 0; y < pagesize.getHeight(); ) {
+                    canvas.circle(x, y, 1f);
+                    y += 72f;
+                }
+                x += 72f;
+            }
+            canvas.fill();
+
+        3.为什么单元格背景颜色会影响其他线条的颜色?
+        答：cb.Stroke(); //画线操作
+            每次画画时，需要确定画笔的颜色是否是自己需要的颜色。
+            cb.SaveState();
+            cb.SetColorStroke(GrayColor.GRAYBLACK);
+            cb.MoveTo(0, 562);
+            cb.LineTo(pdfDoc.PageSize.Width, 562);
+            cb.MoveTo(0, 561);
+            cb.LineTo(pdfDoc.PageSize.Width, 561);
+            cb.Stroke();
+            cb.RestoreState();
+
+        4.如何将参数设置回默认值?
+        答：设置状态保存。所在修改只在 SaveState() and RestoreState() 之间有效果
+            pdfContentByte.SaveState();
+            pdfContentByte.SetCharacterSpacing(1);
+            pdfContentByte.SetRGBColorFill(66, 00, 00);
+            pdfContentByte.SetLineWidth((float)0.5);
+            pdfContentByte.SetTextRenderingMode(PdfContentByte.TEXT_RENDER_MODE_FILL_STROKE);
+            pdfContentByte.RestoreState();
+
+        5.如何向自定义形状添加阴影模式?
+        答：PdfShading axial = PdfShading.simpleAxial(writer, x, y,x + side, y, BaseColor.PINK, BaseColor.BLUE);
+            PdfShadingPattern shading = new PdfShadingPattern(axial);
+            canvas.setShadingFill(shading);
+
+    第7章：表格（26个问题）
+        1.如何在PdfPCell中对文本进行右对齐?
+        答：一定要区分文本模式和复合模式
+            pcell.AddElement触发复合模式，会忽略单元格级别对齐
+            解决办法：在创建单元格时，构造函数传入对齐方式
+
+        2.如何在一个单元格中使用多个字体?
+        答：AddCell()方法中传入一个Phrase对象或者PdfCell对象才行。直接传字符串不行
+            Phrase phrase = new Phrase();
+            phrase.Add(new Chunk("Some BOLD text", new Font(Font.FontFamily.TIMES_ROMAN, 12, Font.BOLD)));
+            phrase.Add(new Chunk(", some normal text", new Font()));
+            table.AddCell(phrase);
+
+        3.如何改变单列表的宽度?
+        答：PdfPTable table = new PdfPTable(3);
+            table.setWidths(new int[]{2, 1, 1});
+
+        4.如何引入行空间?
+        答：PdfPTable table = new PdfPTable(3);
+            PdfPCell cell;
+            cell = new PdfPCell(new Phrase("Cell with colspan 3"));
+            cell.Colspan = 3;
+            table.AddCell(cell);
+            cell = new PdfPCell(new Phrase("Cell with rowspan 2"));
+            cell.Rowspan = 2;
+            table.AddCell(cell);
+            table.AddCell("row 1; cell 1");
+            table.AddCell("row 1; cell 2");
+            table.AddCell("row 2; cell 1");
+            table.AddCell("row 2; cell 2");
+
+        5.如何在表格单元格中维护段落的缩进?
+        答：Paragraph right = new Paragraph("");
+            right.setIndentationLeft(20);  //核心
+            PdfPCell rightCell = new PdfPCell();
+            rightCell.addElement(right);
+            table.addCell(rightCell);
+            document.add(table);
+
+        6.什么是PdfPTable.DefaultCell属性用处?
+        答：创建PdfCell的方法有addCell()方法。addCell()可以直接传入字符串参数。内部实现是默认大的PdfCell创建。getDefaultCell()方法获得默认单元格
+
+        7.如何在iTextSharp中绘制无边界表?
+        答：边框是单元格级别而不是表级别。要删除表格边框，则需要删除每个单元格的边框
+            cell.setBorder(Rectangle.NO_BORDER);
+            table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+
+        8.为什么getDefaultCell().setBorder(PdfPCell.NO_BORDER)没有任何效果?
+        答：代码有误。代码应该这样写：
+            PdfPCell cell = new PdfPCell(new Phrase("Menge", tfont));
+            cell.setBorder(Rectangle.NO_BORDER);
+            table.addCell(cell);
+
+            table.addCell(new Phrase("MwSt", tfont));
+
+        9.如何在PdfPCells中定义间距?
+        答：PdfPCell cell = new PdfPCell();
+            Paragraph p;
+            p = new Paragraph(16, "paragraph 1: leading 16"); cell.addElement(p);
+            p = new Paragraph(32, "paragraph 2: leading 32"); cell.addElement(p);
+            p = new Paragraph(10, "paragraph 3: leading 10"); cell.addElement(p);
+            p = new Paragraph(18, "paragraph 4: leading 18"); cell.addElement(p);
+            p = new Paragraph(40, "paragraph 5: leading 40"); cell.addElement(p);
+
+        10.如何将CSV文件转换为具有重复标题行的表?
+        答：public void createPdf(String dest) throws IOException, DocumentException {
+                Document document = new Document(PageSize.A4.rotate());
+                PdfWriter.getInstance(document, new FileOutputStream(dest));
+                document.open();
+                PdfPTable table = new PdfPTable(9);
+                table.setWidthPercentage(100);
+                table.setWidths(new int[]{4, 1, 3, 4, 3, 3, 3, 3, 1});
+                BufferedReader br = new BufferedReader(new FileReader(DATA));
+                String line = br.readLine();
+                process(table, line, new Font(FontFamily.HELVETICA, 16, Font.BOLD));
+                table.setHeaderRows(1);
+
+                while ((line = br.readLine()) != null) {
+                    process(table, line, new Font(FontFamily.HELVETICA, 12));
+                }
+                br.close();
+                document.add(table);
+                document.close();
+            }
+
+            public void process(PdfPTable table, String line, Font font) {
+                StringTokenizer tokenizer = new StringTokenizer(line, ";");
+                while (tokenizer.hasMoreTokens()) {
+                    table.addCell(new Phrase(tokenizer.nextToken(), font));
+                }
+            }
+
+        11.如何基于二维数组创建表?
+        答： PdfPTable table = new PdfPTable(8);
+            table.setWidthPercentage(100);
+            List<List<String>> dataset = getData();
+            for (List<String> record : dataset) {
+                for (String field : record) {
+                    table.addCell(field);
+                }
+            }
+
+        12.如何在不扩展内部表的情况下嵌套表?
+        答：PdfPCell cell = new PdfPCell();
+            cell.addElement(innerTable);
+            outerTable.addCell(cell);
+            cell.VerticalAlignment = Element.ALIGN_BOTTOM;
+
+        13.如何添加被文本包围的内部表?
+        答：final PdfPTable table2 = new PdfPTable(1);
+            table2.setHorizontalAlignment(Element.ALIGN_LEFT);
+            table2.getDefaultCell().setBorderColor(BaseColor.RED);
+            table2.getDefaultCell().setBorderWidth(1);
+            table2.addCell("Goodbye World");
+
+            final PdfPTable table1 = new PdfPTable(1);
+            table1.setHorizontalAlignment(Element.ALIGN_LEFT);
+            table1.setWidthPercentage(100);
+
+            PdfPCell cell = new PdfPCell();
+            cell.setBorderColor(BaseColor.BLACK);
+            cell.setBorderWidth(1);
+            cell.addElement(new Chunk("Hello World"));
+            cell.addElement(table2);
+            cell.addElement(new Chunk("Hello World"));
+            table1.addCell(cell);
+            document.add(table1);
+
+        14.如何调整图像大小，以适应一个PdfPCell?
+        答：img[3].WidthPercentage = 50;
+
+        15.如何在类似矩阵的结构中显示条形码?
+        答：PdfPTable table = new PdfPTable(4); table.setWidthPercentage(100);
+            for (int i = 0; i < 12; i++) {
+                table.addCell(createBarcode(writer, String.format("%08d", i)));
+            }
+
+            public static PdfPCell createBarcode(PdfWriter writer, String code) throws DocumentException, IOException {
+                BarcodeEAN barcode = new BarcodeEAN();
+                barcode.setCodeType(Barcode.EAN8);
+                barcode.setCode(code);
+                PdfPCell cell = new PdfPCell(barcode.createImageWithBarcode(writer.getDirectContent(), BaseColor.BLACK, BaseColor.GRAY), true);
+                cell.setPadding(10);
+                return cell;
+            }
+
+        16.如何在多个页面上分割一行?
+        答：表行不会被分割。只能修改展现内容
+            PdfPTable table = getTable(...);
+            table.setSplitLate(false);
+
+        17.PdfPCell的高度如何与字体大小相关?
+        答：没有明确关系。关于距离有几个概念：padding，leading,ascender和descender
+
+        18.如何将表格添加到最后一页的底部?
+        答：需要定义表格的绝对宽度
+            datatable.setTotalWidth(document.right(document.rightMargin())- document.left(document.leftMargin()));
+            datatable.writeSelectedRows(0, -1,document.left(document.leftMargin()),datatable.getTotalHeight() + document.bottom(document.bottomMargin()),writer.getDirectContent());
+
+        19.setMinimumSize()和setFixedSize()如何交互?
+        答：同时使用以setFixedSize为主，页面是固定高度。定义不停的固定高度，以最大值为准。
+
+        20.如何获得文本的渲染尺寸?
+        答：使用ColumnText类渲染单元格内容，可以测量字符宽度
+            BaseFont bf = BaseFont.createFont();
+            Font font = new Font(bf, 12);
+            float availableWidth = position.getWidth();
+            int contentLength = content.length();
+            int leftChar = 0;
+            int rightChar = contentLength - 1;
+            availableWidth -= bf.getWidthPoint("...", 12);
+            while (leftChar < contentLength && rightChar != leftChar) {
+                availableWidth -= bf.getWidthPoint(content.charAt(leftChar), 12);
+                if (availableWidth > 0)
+                    leftChar++;
+                else
+                    break;
+                availableWidth -= bf.getWidthPoint(content.charAt(rightChar), 12);
+                if (availableWidth > 0)
+                    rightChar--;
+                else
+                    break;
+            }
+            String newContent =content.substring(0, leftChar) + "..." + content.substring(rightChar);
+            PdfContentByte canvas = canvases[PdfPTable.TEXTCANVAS];
+            ColumnText ct = new ColumnText(canvas);
+            ct.setSimpleColumn(position);
+            ct.addElement(new Paragraph(newContent, font));
+            ct.go();
+
+        21.如何告诉iText如何剪辑文本以适应单元格?
+        答：使用PdfTemplate类进行剪接
+            float offset = (position.getHeight() - spaceneeded) / 2;
+            System.out.println(String.format("The difference is %s pt; we'll need an offset of %s pt.",-2f * offset, offset));
+            PdfTemplate tmp = canvas.createTemplate(
+            position.getWidth(), position.getHeight());
+            ct = new ColumnText(tmp);
+            ct.setSimpleColumn(0, offset, position.getWidth(), offset + spaceneeded);
+            ct.addElement(content);
+            ct.go();
+            canvas.addTemplate(tmp, position.getLeft(), position.getBottom());
+
+        22.如何调整PdfPTable的大小以适应页面?
+        答：table.setTotalWidth(width);
+            table.setLockedWidth(true);
+            //内容过大时，可以缩放元素
+            img.scaleToFit(PageSize.A4.getWidth(), PageSize.A4.getHeight());
+
+        23.如何优雅的打印超多行超多列的表格?
+        答：将表添加到PdfTemplate对象中，然后剪切PdfTemplate，将其添加到不同的页面
+            PdfTemplate clip;
+            for (int j = 0; j < 1500; j += 500) {
+                for (int i = 1300; i > 0; i -= 650) {
+                    clip = canvas.createTemplate(500, 650);
+                    clip.addTemplate(tableTemplate, -j, 650 - i);
+                    canvas.addTemplate(clip, 36, 156);
+                    document.newPage();
+                }
+            }
+
+        24.如何为嵌套表调用分页符?
+        答：需要拆分单元格
+            table.setSplitLate(false);
+
+        25.如何使页脚坚持到每个pdf页面的底部?
+        答：PdfPTable类的两个属性extendLastRows=true；extendFinalRow=true;
+
+        26.如何在下一页/续页中添加续页下一页的表格?
+        答：PdfPTable table = new PdfPTable(5);
+            table.setWidthPercentage(100);
+            PdfPCell cell = new PdfPCell(new Phrase("Table XYZ (Continued)"));
+            cell.setColspan(5);
+            table.addCell(cell);
+            table.setHeaderRows(1);
+            table.setSkipFirstHeader(true);
+            for (int i = 0; i < 350; i++) {
+                table.addCell(String.valueOf(i+1));
+            }
+
+    第8章：表格事件（8个问题）
+        1.如何使用虚线作为单元格边框?
+        答：可以使用表事件或者单元格事件
+            class DottedCells implements PdfPTableEvent {
+                @Override
+                public void tableLayout(PdfPTable table, float[][] widths, float[] heights, int headerRows, int rowStart, PdfContentByte[] canvases) {
+                    PdfContentByte canvas = canvases[PdfPTable.LINECANVAS];
+                    canvas.setLineDash(3f, 3f);
+                    float llx = widths[0][0];
+                    float urx = widths[0][widths[0].length -1];
+                    for (int i = 0; i < heights.length; i++) {
+                        canvas.moveTo(llx, heights[i]);
+                        canvas.lineTo(urx, heights[i]);
+                    }
+                    for (int i = 0; i < widths.length; i++) {
+                        for (int j = 0; j < widths[i].length; j++) {
+                            canvas.moveTo(widths[i][j], heights[i]);
+                            canvas.lineTo(widths[i][j], heights[i+1]);
+                        }
+                    }
+                    canvas.stroke();
+                }
+            }
+
+
+            class DottedCell implements PdfPCellEvent {
+                @Override
+                public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
+                    PdfContentByte canvas = canvases[PdfPTable.LINECANVAS];
+                    canvas.setLineDash(3f, 3f);
+                    canvas.rectangle(position.getLeft(), position.getBottom(),position.getWidth(), position.getHeight());
+                    canvas.stroke();
+                }
+            }
+
+        2.如何创建一个圆角表?
+        答：使用单元格事件
+            table.DefaultCell.Border = PdfPCell.NO_BORDER;
+            table.DefaultCell.CellEvent = new RoundedBorder();
+
+            class RoundedBorder : IPdfPCellEvent {
+                public void CellLayout(PdfPCell cell, Rectangle rect, PdfContentByte[] canvas){
+                    PdfContentByte cb = canvas[PdfPTable.BACKGROUNDCANVAS];
+                    cb.RoundRectangle(rect.Left + 1.5f,rect.Bottom + 1.5f,rect.Width - 3,rect.Height - 3, 4);
+                    cb.Stroke();
+                }
+            }
+
+        3.如何引入带有背景颜色的圆形单元格?
+        答：class CellBackground implements PdfPCellEvent {
+                public void cellLayout(PdfPCell cell, Rectangle rect,PdfContentByte[] canvas) {
+                  PdfContentByte cb = canvas[PdfPTable.BACKGROUNDCANVAS];
+                  cb.roundRectangle(rect.getLeft() + 1.5f, rect.getBottom() + 1.5f, rect.getWidth() - 3,rect.getHeight() - 3, 4);
+                  cb.setCMYKColorFill(0x00, 0x00, 0x00, 0x00);
+                  cb.fill();
+                }
+           }
+
+        4.如何在iText的PdfPCell中设置背景图像?
+        答：使用单元格事件
+            class ImageBackgroundEvent implements PdfPCellEvent {
+                protected Image image;
+                public ImageBackgroundEvent(Image image) {
+                    this.image = image;
+                }
+                public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
+                    try {
+                        PdfContentByte cb = canvases[PdfPTable.BACKGROUNDCANVAS];
+                        image.scaleAbsolute(position);
+                        image.setAbsolutePosition(position.getLeft(), position.getBottom());
+                        cb.addImage(image);
+                    } catch (DocumentException e) {
+                        throw new ExceptionConverter(e);
+                    }
+                }
+            }
+
+        5.如何在同一单元格中获取文本和图像?
+        答：使用单元格事件
+            private class MyEvent : IPdfPCellEvent {
+                string number;
+                public MyEvent(string number) {
+                    this.number = number;
+                }
+                public void CellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
+                    ColumnText.ShowTextAligned( canvases[PdfPTable.TEXTCANVAS], Element.ALIGN_LEFT,
+                                                new Phrase(number),
+                                                position.Left + 2,
+                                                position.Top - 16, 0);
+                }
+            }
+
+        6.是否可以将多个布局事件附加到PdfPCell?
+        答：可以。
+            public void setCellEvent(PdfPCellEvent cellEvent) {
+                if (cellEvent == null) {
+                    this.cellEvent = null;
+                } else if (this.cellEvent == null) {
+                    this.cellEvent = cellEvent;
+                } else if (this.cellEvent instanceof PdfPCellEventForwarder) {
+                    ((PdfPCellEventForwarder) this.cellEvent).addCellEvent(cellEvent);
+                } else {
+                    PdfPCellEventForwarder forward = new PdfPCellEventForwarder();
+                    forward.addCellEvent(this.cellEvent);
+                    forward.addCellEvent(cellEvent);
+                    this.cellEvent = forward;
+                }
+            }
+
+        7.如何在PdfPTable上精确定位图像?
+        答：使用表事件
+            public class ImageContent implements PdfPTableEvent {
+                protected Image content;
+                public ImageContent(Image content) {
+                    this.content = content;
+                }
+                public void tableLayout(PdfPTable table, float[][] widths, float[] heights, int headerRows, int rowStart, PdfContentByte[] canvases) {
+                    try {
+                        PdfContentByte canvas = canvases[PdfPTable.TEXTCANVAS];
+                        float x = widths[3][1] + 10;
+                        float y = heights[3] - 10 - content.getScaledHeight();
+                        content.setAbsolutePosition(x, y);
+                        canvas.addImage(content);
+                    } catch (DocumentException e) {
+                        throw new ExceptionConverter(e);
+                    }
+                }
+            }
+
+        8.为什么我的单元格事件没有被触发?
+        答：addCell()方法的单元格参数是final，在将单元格添加到PdfPTable后更改单元格不会产生任何影响
+            解决办法：PdfPRow row = table.getRow(0);
+                     PdfPCell cell = row.getCells()[1];
+
+    第9章：页面事件（16个问题）
+        1.如何添加文本作为页眉或页脚?
+        答：指定坐标插入文字即可。
+            class MyFooter extends PdfPageEventHelper {
+              Font ffont = new Font(Font.FontFamily.UNDEFINED, 5, Font.ITALIC);
+              public void onEndPage(PdfWriter writer, Document document) {
+                  PdfContentByte cb = writer.getDirectContent();
+                  Phrase header = new Phrase("this is a header", ffont);
+                  Phrase footer = new Phrase("this is a footer", ffont);
+                  ColumnText.showTextAligned(cb, Element.ALIGN_CENTER,header,
+                          (document.right() - document.left()) / 2 + document.leftMargin(),
+                          document.top() + 10, 0);
+                  ColumnText.showTextAligned(cb, Element.ALIGN_CENTER,
+                                              footer,
+                                              (document.right() - document.left()) / 2 + document.leftMargin(),
+                                              document.bottom() - 10, 0);
+              }
+            }
+
+        2.如何将矩形添加到文档的每个页面?
+        答：writer.setPageEvent(myPageEventInstance);
+
+            //页面事件
+            public void onEndPage(PdfWriter writer, Document document) {
+                PdfContentByte cb = writer.getDirectContent();
+                cb.saveState();
+                cb.setColorStroke(new CMYKColor(1f, 0f, 0f, 0f));
+                cb.setColorFill(new CMYKColor(1f, 0f, 0f, 0f));
+                cb.rectangle(20,10,10,820);
+                cb.fill();
+                cb.restoreState();
+            }
+
+        3.如何将图像添加到PDF的所有页面?
+        答：使用页面事件
+            protected class MyEvent : PdfPageEventHelper {
+                Image image;
+                public override void OnOpenDocument(PdfWriter writer, Document document) {
+                    image = Image.GetInstance(Server.MapPath("~/images/draft.png"));
+                    image.SetAbsolutePosition(12, 300);
+                }
+                public override void OnEndPage(PdfWriter writer, Document document) {
+                    writer.DirectContent.AddImage(image);
+                }
+            }
+
+        4.如何为我所有的页面设置一个固定的背景图像?
+        答：使用页面事件
+            class ImageBackgroundHelper : PdfPageEventHelper {
+                private Image img;
+                public ImageBackgroundHelper(Image img) {
+                    this.img = img;
+                }
+
+                public override void OnEndPage(PdfWriter writer, Document document) {
+                    writer.DirectContentUnder.AddImage(img);
+                }
+            }
+
+        5.为什么我得到一个System.StackOverflowException在OnEndPage()事件处理程序中?
+        答：禁止在页面事件中使用document.Add()。如果想要添加内容，使用writer.DirectContent
+
+        6.如何引入多个PdfPageEventHelper实例?
+        答：页面事件是可以累计的。
+            writer.setPageEvent(watermarkevent);
+            writer.setPageEvent(headerevent);
+            writer.setPageEvent(footerevent);
+
+        7.如何检查事件并删除它?
+        答：PdfWriter.getPageEvent()
+            //删除事件
+            writer.setPageEvent(null);
+
+        8.如何在标题中向左右添加文本?
+        答：使用页面事件
+            public void onEndPage(PdfWriter writer, Document document) {
+                Rectangle rect = writer.getBoxSize("art");
+                switch(writer.getPageNumber() % 2) {
+                  case 0:
+                          ColumnText.showTextAligned(writer.getDirectContent(),
+                              Element.ALIGN_RIGHT, header[0],
+                              rect.getRight(), rect.getTop(), 0);
+                        break;
+                  case 1:
+                          ColumnText.showTextAligned(writer.getDirectContent(),
+                              Element.ALIGN_LEFT, header[1],
+                              rect.getLeft(), rect.getTop(), 0);
+                  break;
+                }
+                ColumnText.showTextAligned(writer.getDirectContent(), Element.ALIGN_CENTER, new Phrase(String.format("page %d", pagenumber)), (rect.getLeft() + rect.getRight()) / 2, rect.getBottom() - 18, 0);
+            }
+
+        9.如何添加表作为标题?
+        答：不要在OnStartPage事件中添加内容。表格的宽度最好使用具体的数值
+
+        10.如何创建一个2行的表，用它作为页脚?
+        答：PdfPTable table = new PdfPTable(1);
+            table.setTotalWidth(523);
+            PdfPCell cell = new PdfPCell(new Phrase("This is a test document"));
+            cell.setBackgroundColor(BaseColor.ORANGE);
+            table.addCell(cell);
+            cell = new PdfPCell(new Phrase("This is a copyright notice"));
+            cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
+            table.addCell(cell);
+
+            footer.writeSelectedRows(0, -1, 36, 64, writer.getDirectContent());
+
+        11.如何使用itextsharp生成PDF格式的动态标题报告?
+        答：使用页面事件
+            public class Header extends PdfPageEventHelper {
+                protected Phrase header;
+                public void setHeader(Phrase header) {
+                    this.header = header;
+                }
+                @Override
+                public void onEndPage(PdfWriter writer, Document document) {
+                    PdfContentByte canvas = writer.getDirectContentUnder();
+                    ColumnText.showTextAligned(canvas, Element.ALIGN_RIGHT, header, 559, 806, 0);
+                }
+            }
+
+        12.如何在PDF/a级文件的页眉中添加页码?
+        答：页脚不是真实内容的一部分，因此需要标记为工件。
+            PdfContentByte canvas = writer.getDirectContent();
+            canvas.beginMarkedContentSequence(PdfName.ARTIFACT);
+            table.writeSelectedRows(0, -1, 36, 30, canvas);
+            canvas.endMarkedContentSequence();
+
+        13.如何在创建PDF文档时旋转页面?
+        答：内容旋转而不是单单页面旋转。使用页面事件。
+            public class RotateEvent extends PdfPageEventHelper {
+                public void onStartPage(PdfWriter writer, Document document) {
+                    writer.addPageDictEntry(PdfName.ROTATE, PdfPage.SEASCAPE);
+                }
+            }
+
+            PdfWriter writer = PdfWriter.getInstance(document, os);
+            writer.setPageEvent(new RotateEvent());
+
+        14.如何每25个单词画一条线?
+        答：public class WordCounter extends PdfPageEventHelper {
+                public int count = 0;
+                @Override
+                public void onGenericTag(PdfWriter writer, Document document, Rectangle rect, String text) {
+                        count++;
+                        if (count % 25 == 0) {
+                              PdfContentByte canvas = writer.getDirectContent();
+                              canvas.saveState();
+                              canvas.setLineDash(5, 5);
+                              canvas.moveTo(document.left(), rect.getBottom());
+                              canvas.lineTo(rect.getRight(), rect.getBottom());
+                              canvas.lineTo(rect.getRight(), rect.getTop());
+                              canvas.lineTo(document.right(), rect.getTop());
+                              canvas.stroke();
+                              canvas.restoreState();
+                        }
+                }
+           }
+
+           writer.setPageEvent(new WordCounter());
+           ...
+           chunk.setGenericTag("");
+
+        15.如何在段落中添加边框?
+        答：无法绘制。但是可以创建事件，在两个位置绘制矩形
+            class ParagraphBorder extends PdfPageEventHelper {
+                public boolean active = false;
+                public void setActive(boolean active) {
+                    this.active = active;
+                }
+                public float offset = 5;
+                public float startPosition;
+                @Override
+                public void onParagraph(PdfWriter writer, Document document, float paragraphPosition) {
+                    this.startPosition = paragraphPosition;
+                }
+                @Override
+                public void onParagraphEnd(PdfWriter writer, Document document, float paragraphPosition) {
+                    if (active) {
+                        PdfContentByte cb = writer.getDirectContentUnder();
+                        cb.rectangle(document.left(), paragraphPosition - offset,document.right() - document.left(),startPosition - paragraphPosition);
+                        cb.stroke();
+                    }
+                }
+            }
+
+        16.如何改变页面的颜色?
+        答：使用页面事件
+            public class Background extends PdfPageEventHelper {
+                @Override
+                public void onEndPage(PdfWriter writer, Document document) {
+                    int pagenumber = writer.getPageNumber();
+                    if (pagenumber % 2 == 1 && pagenumber != 1)
+                        return;
+                    PdfContentByte canvas = writer.getDirectContentUnder();
+                    Rectangle rect = document.getPageSize();
+                    canvas.setColorFill(pagenumber < 3 ? BaseColor.BLUE : BaseColor.LIGHT_GRAY);
+                    canvas.rectangle(rect.getLeft(), rect.getBottom(),rect.getWidth(), rect.getHeight());
+                    canvas.fill();
+                }
+            }
+
+    第10章：解析XML和XHtml（15个问题）
+        1.为什么将XML转换为PDF如此困难?
+        答：因为需要很多的配置文件，比如XSL:FO,XHTML等
+
+        2.如何调整页面高度到内容高度?
+        答：在将内容添加到页面后，不能更改页面大小。
+            Rectangle pagesize = new Rectangle(width, max - y);
+            Document document = new Document(pagesize, 0, 0, 0, 0);
+            PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(file));
+            document.open();
+            ct = new ColumnText(writer.getDirectContent());
+            ct.setSimpleColumn(pagesize);
+            for (Element e : el) {
+                ct.addElement(e);
+            }
+            ct.go();
+
+        3.使用XML Worker时如何设置行间距?
+        答：使用css样式
+
+        4.如何添加外部CSS同时生成PDF?
+        答：ByteArrayInputStream bis = new ByteArrayInputStream(htmlSource.toString().getBytes());
+            ByteArrayInputStream cis = new ByteArrayInputStream(cssSource.toString().getBytes());
+            XMLWorkerHelper.getInstance().parseXHtml(writer, document, bis, cis);
+
+            CSSResolver cssResolver = new StyleAttrCSSResolver();
+            CssFile cssFile = XMLWorkerHelper.getCSS(new ByteArrayInputStream(CSS.getBytes()\ ));
+            cssResolver.addCss(cssFile);
+            HtmlPipelineContext htmlContext = new HtmlPipelineContext(null); htmlContext.setTagFactory(Tags.getHtmlTagProcessorFactory());
+            PdfWriterPipeline pdf = new PdfWriterPipeline(document, writer);
+            HtmlPipeline html = new HtmlPipeline(htmlContext, pdf);
+            CssResolverPipeline css = new CssResolverPipeline(cssResolver, html);
+            XMLWorker worker = new XMLWorker(css, true);
+            XMLParser p = new XMLParser(worker);
+            p.parse(new ByteArrayInputStream(sb.toString().getBytes()));
+
+        5.如何做HTML到XML的转换生成关闭标签?
+        答：将html转化为xhtml
+            File html = new File(path);
+            byte[] xhtml = Jsoup.parse(html, "US-ASCII").html().getBytes();
+            File dir = new File("results/xml");
+            dir.mkdirs();
+            FileOutputStream fos = new FileOutputStream(new File(dir, html.getName()));
+            fos.write(xhtml);
+            fos.close();
+
+        6.如何使一个特定的子字符串粗体时，转换HTML到PDF?
+        答：public void createPdf(String file) throws IOException, DocumentException {
+              Document document = new Document();
+              PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(file));
+              document.open();
+              XMLWorkerHelper.getInstance().parseXHtml(writer, document, new FileInputStream(HTML));
+              document.close();
+           }
+
+        7.如何将多个HTML文件解析为一个PDF
+        答：方法1：循环操作。reader = new PdfReader(parseHtml(html));
+                         copy.addDocument(reader);
+           方法2:将html转化为iText ElementList。
+                String html = Utilities.readFileToString(htmlfile);
+                ElementList list = XMLWorkerHelper.parseToElementList(html, css);
+                for (Element e : list) {
+                    document.add(e);
+                }
+
+        8.如何向表单元格添加富文本框(HTML) ?
+        答：使用XMLWorkerHelper.parseToElementList
+            PdfPTable table = new PdfPTable(2);
+            table.addCell("Some rich text:");
+            PdfPCell cell = new PdfPCell();
+            for (Element e : XMLWorkerHelper.parseToElementList(HTML, CSS)) {
+                cell.addElement(e);
+            }
+            table.addCell(cell);
+            document.add(table);
+
+        9.如何获得特定的html表内容写在PDF?
+        答：将和html和css同时渲染
+           CSSResolver cssResolver = new StyleAttrCSSResolver();
+           CssFile cssFile = XMLWorkerHelper.getCSS(new ByteArrayInputStream(CSS.getBytes()));
+           cssResolver.addCss(cssFile);
+           HtmlPipelineContext htmlContext = new HtmlPipelineContext(null);
+           htmlContext.setTagFactory(Tags.getHtmlTagProcessorFactory());
+           ElementList elements = new ElementList();
+           ElementHandlerPipeline pdf = new ElementHandlerPipeline(elements, null);
+           HtmlPipeline html = new HtmlPipeline(htmlContext, pdf);
+           CssResolverPipeline css = new CssResolverPipeline(cssResolver, html);
+           XMLWorker worker = new XMLWorker(css, true);
+           XMLParser p = new XMLParser(worker);
+           p.parse(new ByteArrayInputStream(sb.toString().getBytes()));
+
+        10.为什么CSS和RowSpan不能工作?
+        答：你的代码有误。
+            1.没有正确的css，没有转换为xhtml
+            2.htmlworker不支持css，css可以在xmlworker
+            3.版本旧了
+
+        11.为什么XMLWorker解析很慢?
+        答：因为类库中做了很多的额外操作。比如可以通过指定字体位置优化速度
+            XMLWorkerFontProvider fontProvider = new XMLWorkerFontProvider(XMLWorkerFontProvider.DONTLOOKFORFONTS);
+            fontProvider.register("resources/fonts/Cardo-Regular.ttf");
+
+        12.如何使用iText将越南文本导出为PDF ?
+        答：首先需要支持的字体
+            XMLWorkerFontProvider fontProvider = new XMLWorkerFontProvider(XMLWorkerFontProvider.DONTLOOKFORFONTS);
+            fontProvider.register("resources/fonts/cfmingeb.ttf", "MS Mincho");
+
+            CSSResolver cssResolver = new StyleAttrCSSResolver();
+            CssFile cssFile = XMLWorkerHelper.getCSS(new ByteArrayInputStream("body {font-family:tsc fming s tt}".getBytes()));
+            cssResolver.addCss(cssFile);
+
+        13.某些HTML实体(箭头)不以PDF格式呈现？
+        答：有些特殊符号，有些确实不行
+            public void createPdf(String file) throws IOException, DocumentException {
+                Document document = new Document();
+                PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(file));
+                document.open();
+                String str = "<html><head></head>" +
+                              "<body style=\"font-size:12.0pt; font-family:Arial\">" +
+                          "<p>Special symbols: " +
+                                  "&larr;  &darr; &harr; &uarr; &rarr; &euro; &copy;</p>" +
+                          "</body></html>";
+                XMLWorkerHelper worker = XMLWorkerHelper.getInstance();
+                InputStream is = new ByteArrayInputStream(str.getBytes());
+                worker.parseXHtml(writer, document, is);
+                document.close();
+            }
+
+        14.在将HTML转换为PDF时，如何设置希伯来语的从右到左方向?
+        答：添加完正确的字体即可。
+            XMLWorkerFontProvider fontProvider = new XMLWorkerFontProvider(XMLWorkerFontProvider.DONTLOOKFORFONTS);
+            fontProvider.register("resources/fonts/NotoSansHebrew-Regular.ttf");
+
+            <div dir="rtl">
+
+        15.如何将阿拉伯HTML转换为PDF?
+        答：style="font-family: Noto Naskh Arabic"
+            //注册字体
+            XMLWorkerFontProvider fontProvider = new XMLWorkerFontProvider(XMLWorkerFontProvider.DONTLOOKFORFONTS);
+            fontProvider.register("resources/fonts/NotoNaskhArabic-Regular.ttf");
+            //阿拉伯语从右往左写
+            PdfPCell cell = new PdfPCell();
+            cell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+            //html中的字体
+            <td dir="rtl" style="font-family: Noto Naskh Arabic">￿￿￿￿￿￿ ￿￿￿￿￿</td>
+
+    第11章：使用iText检查PDF（13个问题）----核心是PdfReader
+        1.为什么我得到一个“InvalidPdfException: PDF头签名未找到”?
+        答：可能的原因有不是%PDF开头的，这不是一个pdf文件，另外就是文件的长度为0
+
+        2.如何获得PDF页面的宽度和高度?
+        答：Rectangle mediabox = reader.GetPageSize(page);
+            int rotation = reader.GetPageRotation(page);
+            Rectangle pagesize = reader.GetPageSizeWithRotation(page);
+            Rectangle cropbox = reader.GetCropBox(page);
+
+        3.为什么PDF的页面大小总是相同的，不管它是横向的还是纵向的?
+        答：你的代码有误，因该使用PdfReader
+            getPageSize()
+            getPageSizeWithRotation()
+
+        4.如何从PDF文件中获取UserUnit ?
+        答：PdfDictionary pageDict = reader.GetPageN(i);
+            PdfNumber userUnit = pageDict.GetAsNumber(PdfName.USERUNIT);
+
+        5.我怎么读罗马页码?
+        答：public void listPageLabels(String src, String dest) throws IOException { // no PDF, just a text file
+              PrintStream out = new PrintStream(new FileOutputStream(dest));
+              PdfReader reader = new PdfReader(src);
+              String[] labels = PdfPageLabels.getPageLabels(reader);
+              for (int i = 0; i < labels.length; i++) {
+                out.println(labels[i]);
+              }
+              out.flush();
+              out.close();
+              reader.close();
+            }
+
+        6.如果我有一个对象的间接引用，我如何得到它?
+        答：PdfDictinary d = array.GetAsDict(0);
+            PdfArray a = array.GetAsArray(1);
+            PdfObject o = array.GetDirectObject(2);
+
+        7.如何读取用未知随机值创建的pdf文件所有者密码?
+        答：PdfReader.unethicalreading = true;
+            上述代码会忽略文档密码
+
+        8.如何从注释中获取值?
+        答：使用注释字典对象
+            PdfReader reader = new PdfReader("your.pdf");
+            for (int i = 1; i <= reader.NumberOfPages; i++) {
+                PdfArray array = reader.GetPageN(i).GetAsArray(PdfName.ANNOTS);
+                if (array == null) continue;
+                for (int j = 0; j < array.Size; j++) {
+                      PdfDictionary annot = array.GetAsDict(j);
+                      PdfString text = annot.GetAsString(PdfName.CONTENTS);
+                      ...
+                }
+            }
+
+        9.如何找到字段的边框颜色?
+        答：AcroFields.Item item = acroFields.getFieldItem(fldName);
+            PdfDictionary merged = item.getMerged(0);
+            PdfDictionary mk = merged.getAsDict(PdfName.MK);
+            PdfArray bc = mk.getAsArray(PdfName.BC);
+
+        10.如何阅读书签标题?
+        答：需要使用递归。get("Kids")获取子书签
+            public void inspectPdf(String filename) throws IOException, DocumentException {
+                PdfReader reader = new PdfReader(filename);
+                List<HashMap<String,Object>> bookmarks = SimpleBookmark.getBookmark(reader);
+                for (int i = 0; i < bookmarks.size(); i++){
+                    showTitle(bookmarks.get(i));
+                }
+                reader.close();
+            }
+            public void showTitle(HashMap<String, Object> bm) {
+                System.out.println((String)bm.get("Title"));
+                List<HashMap<String,Object>> kids =(List<HashMap<String,Object>>)bm.get("Kids");
+                if (kids != null) {
+                    for (int i = 0; i < kids.size(); i++) {
+                        showTitle(kids.get(i));
+                    }
+                }
+            }
+
+        11.如何阅读书签?
+        答：PdfReader reader = new PdfReader(src);
+            List<HashMap<String, Object>> list = SimpleBookmark.getBookmark(reader);
+            SimpleBookmark.exportToXML(list,new FileOutputStream(dest), "ISO8859-1", true);
+            reader.close();
+
+            PdfReader reader = new PdfReader(src);
+            HashMap<String,String> map = SimpleNamedDestination.getNamedDestination(reader,false);
+            SimpleNamedDestination.exportToXML(map, new FileOutputStream(dest),"ISO8859-1", true);
+            reader.close();
+
+        12.如何在PDF文件中找到内部链接?
+        答：PdfDictionary PageDictionary = R.GetPageN(page);
+            PdfArray Annots = PageDictionary.GetAsArray(PdfName.ANNOTS);
+            if ((Annots == null) || (Annots.Length == 0)) {
+                Console.WriteLine("nothing");
+            }
+
+            if (Annots != null) {
+                foreach (PdfObject A in Annots.ArrayList) {
+                    PdfDictionary AnnotationDictionary =(PdfDictionary)PdfReader.GetPdfObject(A);
+                    if (!AnnotationDictionary.Get(PdfName.SUBTYPE).Equals(PdfName.LINK))
+                        continue;
+                    if (AnnotationDictionary.Get(PdfName.A) == null)
+                        continue;
+                    PdfDictionary AnnotationAction =AnnotationDictionary.GetAsDict(PdfName.A);
+                    if (AnnotationAction.Get(PdfName.S).Equals(PdfName.URI)) {
+                      PdfString Destination = AnnotationAction.GetAsString(PdfName.URI);
+                      string url1 = Destination.ToString();
+                    }
+                }
+            }
+
+        13.如何提取嵌入的流?
+        答：public void parse(String src, String dest) throws IOException {
+                PdfReader reader = new PdfReader(src);
+                PdfObject obj;
+                for (int i = 1; i <= reader.getXrefSize(); i++) {
+                    obj = reader.getPdfObject(i);
+                    if (obj != null && obj.isStream()) {
+                        PRStream stream = (PRStream)obj;
+                        byte[] b;
+                        try {
+                            b = PdfReader.getStreamBytes(stream);
+                        }catch(UnsupportedPdfException e) {
+                            b = PdfReader.getStreamBytesRaw(stream);
+                        }
+                        FileOutputStream fos = new FileOutputStream(String.format(dest, i));
+                        fos.write(b);
+                        fos.flush();
+                        fos.close();
+                    }
+                }
+           }
+
+    第12章：操纵现有的pdf文档（31个问题）
+        1.如何在不创建新PDF的情况下更新PDF?
+        答：不能同时读写一个文件。可以创建新文件，然后替换原始文件
+
+        2.如何向PDF文件添加图像水印?
+        答：添加水印的时候一定要选择正确的位置。否则文件大小增加却看不到水印
+            Rectangle pagesize = reader.getCropBox(pageIndex);
+            if (pagesize == null)
+                pagesize = reader.getMediaBox(pageIndex);
+            img.SetAbsolutePosition(
+                pagesize.GetLeft(),
+                pagesize.GetBottom());
+
+        3.如何添加水印的网页与不透明的图像?
+        答：PdfReader reader = new PdfReader(src);
+            int n = reader.getNumberOfPages();
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            PdfContentByte under = stamper.getUnderContent(1);
+
+            Font f = new Font(FontFamily.HELVETICA, 15);
+            Phrase p = new Phrase("This watermark is added UNDER the existing content", f);
+            ColumnText.showTextAligned(under, Element.ALIGN_CENTER, p, 297, 550, 0);
+
+            PdfContentByte over = stamper.getOverContent(1);
+            p = new Phrase("This watermark is added ON TOP OF the existing content", f);
+            ColumnText.showTextAligned(over, Element.ALIGN_CENTER, p, 297, 500, 0);
+            p = new Phrase("This TRANSPARENT watermark is added ON TOP OF the existing content", f);
+            over.saveState();
+
+            PdfGState gs1 = new PdfGState();
+            gs1.setFillOpacity(0.5f);
+            over.setGState(gs1);
+            ColumnText.showTextAligned(over, Element.ALIGN_CENTER, p, 297, 450, 0); over.restoreState();
+            stamper.close();
+            reader.close();
+
+        4.如何使用文字或图像进行水印pdf文件?
+        答：PdfGState gs1 = new PdfGState();
+            gs1.setFillOpacity(0.5f);
+            over = stamper.getOverContent(i);
+            over.saveState();
+            over.setGState(gs1);
+
+        5.如何扩展PDF的页面大小来添加水印?
+        答：PdfContentByte over = stamper.getOverContent(i);
+            over.saveState();
+            over.setColorFill(new GrayColor(0.5f));
+            over.rectangle(llx - 36, lly, 36, ury - llx);
+            over.fill();
+            over.restoreState();
+
+        6.为什么PdfStamper创建一个0字节的文件?
+        答：你的代码有误。
+            1.没有添加结尾：stamp.close()
+            2.没有添加内容
+
+        7.如何在现有的java PDF中添加空白页?
+        答：PdfReader reader = new PdfReader(src);
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            stamper.insertPage(reader.getNumberOfPages() + 1,reader.getPageSizeWithRotation(1));
+            stamper.close();
+            reader.close();
+
+        8.使用PdfSmartCopy在iText中连接多个pdf时添加空白页
+        答：copy.addPage(PageSize.A4, 0);
+           copy.addPage(reader.getPageSize(1), reader.getPageRotation(1));
+
+        9.如何定位文本相对于页面?
+        答：关键是坐标系要准确。crop.getRight(72f), crop.getBottom() + crop.getHeight() / 2
+
+        10.如何裁剪现有PDF文件的页面?
+        答：调整该页面的坐标或者增加一个新的页面
+            pageDict.put(PdfName.CROPBOX, new PdfArray(new float[]{llx, lly, urx, ury}));
+
+        11.如何将页面旋转90度?
+        答： PdfReader reader = new PdfReader(src);
+            int n = reader.getNumberOfPages();
+            PdfDictionary page;
+            PdfNumber rotate;
+            for (int p = 1; p <= n; p++) {
+                page = reader.getPageN(p);
+                rotate = page.getAsNumber(PdfName.ROTATE);
+                if (rotate == null) {
+                    page.put(PdfName.ROTATE, new PdfNumber(90));
+                }else {
+                    page.put(PdfName.ROTATE, new PdfNumber((rotate.intValue() + 90) % 360));
+                }
+            }
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            stamper.close();
+            reader.close();
+
+        12.如何裁剪一部分PDF文件?
+        答：PdfReader reader = new PdfReader(src);
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            int n = reader.getNumberOfPages();
+            PdfDictionary page;
+            PdfArray media;
+            for (int p = 1; p <= n; p++) {
+                page = reader.getPageN(p);
+                media = page.getAsArray(PdfName.CROPBOX);
+                if (media == null) {
+                    media = page.getAsArray(PdfName.MEDIABOX);
+                }
+                float llx = media.getAsNumber(0).floatValue() + 200;
+                float lly = media.getAsNumber(1).floatValue() + 200;
+                float w = media.getAsNumber(2).floatValue()- media.getAsNumber(0).floatValue() - 400;
+                float h = media.getAsNumber(3).floatValue()- media.getAsNumber(1).floatValue() - 400;
+                String command = String.format("\nq %.2f %.2f %.2f %.2f re W n\nq\n",llx, lly, w, h);
+                stamper.getUnderContent(p).setLiteral(command);   //核心
+                stamper.getOverContent(p).setLiteral("\nQ\nQ\n");
+            }
+            stamper.close();
+            reader.close();
+
+        13.如何在现有PDF中旋转和缩放页面?
+        答：页面对西那个是一个键值对Map,当需要任何操作的时候，填入键值对，渲染时进行处理
+            想要恢复什么操作，将该键值对删除即可。
+            PdfReader reader = new PdfReader(src);
+            int n = reader.getNumberOfPages();
+            PdfDictionary page;
+            for (int p = 1; p <= n; p++) {
+                page = reader.getPageN(p);
+                if (page.getAsNumber(PdfName.USERUNIT) == null)
+                    page.put(PdfName.USERUNIT, new PdfNumber(2.5f));    //缩放
+                page.remove(PdfName.ROTATE);
+            }
+            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
+            stamper.close();
+            reader.close();
+
+        14.如何缩小现有PDF中的页面?
+        答：在缩小的时候，同时不影响旋转操作才行。
+            crop.add(new PdfNumber(media.getAsNumber(2).floatValue() / 2));
+            crop.add(new PdfNumber(media.getAsNumber(3).floatValue() / 2));
+            page.put(PdfName.MEDIABOX, crop);
+            page.put(PdfName.CROPBOX, crop);
+
+            //或者stamper
+            float offsetX = (reader.getPageSize(p).getWidth() * (1 - percentage)) / 2;
+            float offsetY = (reader.getPageSize(p).getHeight() * (1 - percentage)) / 2;
+            stamper.getUnderContent(p).setLiteral(String.format("\nq %s 0 0 %s %s %s cm\nq\n",percentage, percentage, offsetX, offsetY));
+            stamper.getOverContent(p).setLiteral("\nQ\nQ\n");
+
+        15.如何修正PDF页面的方向以便缩放?
+        答：使用页面事件。当想要缩放页面时，将矩形的长宽进行缩小
+            public class ScaleEvent extends PdfPageEventHelper {
+                protected float scale = 1;
+                protected PdfDictionary pageDict;
+                public ScaleEvent(float scale) {
+                    this.scale = scale;
+                }
+                public void setPageDict(PdfDictionary pageDict) {
+                    this.pageDict = pageDict;
+                }
+                @Override
+                public void onStartPage(PdfWriter writer, Document document) {
+                    writer.addPageDictEntry(PdfName.ROTATE, pageDict.getAsNumber(PdfName.ROTATE));
+                    writer.addPageDictEntry(PdfName.MEDIABOX, scaleDown(pageDict.getAsArray(PdfName.MEDIABOX), scale));
+                    writer.addPageDictEntry(PdfName.CROPBOX, scaleDown(pageDict.getAsArray(PdfName.CROPBOX), scale));
+                }
+            }
+            /Rotate 表示旋转
+            /MediaBox 表示页面的全部大小
+            /CropBox 表示页面的可见大小
+
+        16.如何将一个pdf作为图片放入另一个pdf文件中?
+        答：
+
+        17.如何正确合并文档?
+        答：
+
+        18.如何向现有PDF文档添加封面页?
+        答：
+
+        19.为什么在某些情况下，连接/合并pdf的函数会导致问题?
+        答：
+
+        20.如何从ByteArayOutputStreams合并pdf文件?
+        答：
+
+        21.如何合并pdf文件和添加书签?
+        答：
+
+        22.如何在合并文档时创建TOC ?
+        答：
+
+        23.如何在现有PDF文件中重新排序页面?
+        答：
+
+        24.如何重新排列PDF文件的页面?
+        答：
+
+        25.如何设置现有PDF的OCG状态?
+        答：
+
+        26.如何更改可选内容组的顺序?
+        答：
+
+        27.如何创建一个具有字体信息的PDF，并嵌入实际的字体，同时合并成一个单一的PDF文件?
+        答：
+
+        28.如何使用所有者密码解密PDF文档?
+        答：
+
+        29.如何将XMP元数据添加到现有PDF的每个页面?
+        答：
+
+        30.如何在现有PDF中移动矩形内的内容?
+        答：
+
+        31.如何从流加载PDF并添加文件附件?
+        答：
+
+    第13章：交互表单（35个问题）
+        1.如何以编程方式填写pdf文件?(AcroForm技术)
+        答：
+        2.如何以编程方式填写pdf文件?(动态XFA)
+        答：
+        3.移除XFA安全吗?
+        答：
+        4.如何使用iTextSharp将XFA PDF表单压平?
+        答：
+        5.如何告诉iText哪些字段要先平化?
+        答：
+        6.如何将不同文件中的表单合并到一个PDF中?
+        答：
+        7.如何将.xfdf文件保存为.pdf文件?
+        答：
+        8.如何编辑嵌入浏览器的PDF并将其直接保存到服务器?
+        答：
+        9.如何从java servlet向acrobatreader发送“成功”响应?
+        答：
+        10.为什么会出现“不再使用扩展功能”的错误?
+        答：
+        11.如何使用iText填写XFA表单而不违反使用权限?
+        答：
+        12.如何处理文本字段的默认字体中缺少的字符?
+        答：
+        13.如何确保复选框被打印出来?
+        答：
+        14.如何勾选复选框?
+        答：
+        15.如何在多个pdfpcell之间分布单选字段的单选按钮?
+        答：
+        16.如何找出哪些字段是必需的?
+        答：
+        17.如何使字段不是必需的?
+        答：
+        18.如何获得字段中的字符数?
+        答：
+        19.如何对齐acrofield ?
+        答：
+        20.如何更改AcroForm字段的文本颜色?
+        答：
+        21.如何获得AcroForm字段的颜色属性?
+        答：
+        22.如何求一个场的绝对位置和维数?
+        答：
+        23.如何移动AcroForm字段?
+        答：
+        24.如何在第二页上继续字段输出?
+        答：
+        25.如何在表单上添加表(或者插入新页面)?
+        答：
+        26.如何向AcroForm字段添加图像?
+        答：
+        27.如何格式化一个字段的百分比?
+        答：
+        28.如何添加隐藏文本字段?
+        答：
+        29.如何通过PDF将文件发送到服务器?
+        答：
+        30.如何向现有pdf模板添加文本字段?
+        答：
+        31.如何向PDF添加新的AcroForm字段?
+        答：
+        32.如何在文本字段中的文本部分下划线?
+        答：
+        33.为什么我的文档中的acrofield是空的?
+        答：
+        34.如何创建具有双字节字符文本的pushbuttonfield ?
+        答：
+        35.当使用AcroForm技术提交PDF表单时，如何定义数据编码?
+        答：
+    第14章：行动和注释（23个问题）
+        1.如何创建层次化书签?
+        答：
+        2.如何在ColumnText中添加章节的标题?
+        答：
+        3.如何创建到特定页码的链接?
+        答：
+        4.如何用iText插入一个“链接矩形”?
+        答：
+        5.如何添加带有指向PDF的指针的地图?
+        答：
+        6.如何创建一个可点击的多边形或路径?
+        答：
+        7.如何在现有PDF中插入到另一个带有iTextSharp的页面的超链接?
+        答：
+        8.如何将可打印或不可打印的位图戳添加到PDF中?
+        答：
+        9.如何创建一个弹出窗口来显示图像和文本?
+        答：
+        10.如何在现有PDF上盖章图像并创建锚?
+        答：
+        11.如何设置现有PDF文档的BaseUrl ?
+        答：
+        12.如何使用iTextSharp将缩放级别设置为pdf ?
+        答：
+        13.如何更改注释的属性?
+        答：
+        14.如何创建链接来启动外部程序?
+        答：
+        15.如何将文件附加到PDF?
+        答：
+        16.如何使用iText删除PDF中的附件?
+        答：
+        17.如何创建JavaScript操作来打开附件面板?
+        答：
+        18.如何将onMouseOver javaScript操作添加到TextField?
+        答：
+        19.如何为一个PushbuttonField定义多个操作?
+        答：
+        20.如何添加“In Reply to”注释?
+        答：
+        21.如何获得作者的“免费文本”注释?
+        答：
+        22.如何更改作者姓名以供评论?
+        答：
+        23.如何更改圆注释的颜色?
+        答：
+    第15章：从pdf文件中提取文本（10个问题）
+        1.如何从PDF中删除文本?
+        答：
+        2.如何创建和应用编校?
+        答：
+        3.我的PDF字体名称中的额外字符是什么?
+        答：
+        4.如何从PDF中提取文本和锚定信息?
+        答：
+        5.如何从一个特定的位置阅读文本?
+        答：
+        6.应用位置提取策略后如何使用文本提取策略?
+        答：
+        7.为什么我不能从PDF中正确提取使用Type3字体添加的文本?
+        答：
+        8.如何获得图像的坐标?
+        答：
+        9.如何检查字体是否粗体?
+        答：
+        10.为什么我从英文PDF页面中提取的文本出现了乱码?
+        答：
+    第16章：关于iText的一般问题（18个问题）
+        1.单元测试和自动化测试问题?
+        答：
+        2.如何设置初始视图属性?
+        答：
+        3.为什么我得到一个“无法找到PdfGraphics2D”错误?
+        答：
+        4.为什么我不能编译iText源代码?
+        答：
+        5.为什么我得到一个BouncyCastle NoClassDefFoundError?
+        答：
+        6.如何改变字与字之间的间距?
+        答：
+        7.如何使用自定义属性从PDF中添加/删除/检索信息?
+        答：
+        8.如何创建未压缩的PDF文件?
+        答：
+        9.如何检测PDF是否在Java中压缩了xref表?
+        答：
+        10.如何提高iTextSharp测量的精度?
+        答：
+        11.如何防止PDF中的页面大小调整?
+        答：
+        12.如何连字符文本?
+        答：
+        13.如何获得当前页面计数?
+        答：
+        14.itextsharp何时将内容刷新为PDF文件?
+        答：
+        15.如何将PdfStamper转换为字节数组?
+        答：
+        16.如果一个文件名已经存在，如何创建一个新的PDF文件?
+        答：
+        17.如何在不将文件存储在服务器端的情况下将PDF提供给浏览器?
+        答：
+        18.为什么在JSP中已经为这个响应调用了“getOutputStream()”错误?
+        答：
+    第17章：法律问题（6个问题）
+        1.Lowagie和iText有什么不同?
+        答：
+        2.iText 2.1.7或更早的版本能否用于商业用途?
+        答：
+        3.我可以在不遵守AGPL许可的情况下使用iText吗?
+        答：
+        4.iText Java库是免费的还是需要付费的?
+        答：
+        5.我可以把iText和我的非商业软件捆绑在一起吗?
+        答：
+        6.布鲁诺·洛瓦基什么时候表现得像个“混蛋”?
+        答：

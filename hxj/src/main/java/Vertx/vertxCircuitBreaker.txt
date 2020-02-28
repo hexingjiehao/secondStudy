@@ -1,0 +1,86 @@
+1.学习Vert.x Circuit Breaker(熔断器)： { 类比于try-catch }
+    1.文档地址：https://vertx.io/docs/vertx-circuit-breaker/java/
+    2.依赖：<dependency>
+              <groupId>io.vertx</groupId>
+              <artifactId>vertx-circuit-breaker</artifactId>
+              <version>3.8.2</version>
+           </dependency>
+    3.使用circuit breaker:
+        CircuitBreaker breaker = CircuitBreaker.create("my-circuit-breaker", vertx,
+            new CircuitBreakerOptions()
+                .setMaxFailures(5) //最大失败次数，超过则打开熔断器
+                .setTimeout(2000) //设置失败超时时间
+                .setFallbackOnFailure(true) //是否回调
+                .setResetTimeout(10000) // 打开熔断器后再次尝试的时间
+        );
+        breaker.execute(future -> {
+          //执行操作，如果失败，则增加失败次数
+        }).setHandler(ar -> {
+          //得到操作结果
+        });
+    4.具体举例：{对可能存在问题的操作放到circuit中执行。类比于try-catch}
+        //一个参数
+        breaker.<String>execute(future -> {
+          vertx.createHttpClient().getNow(8080, "localhost", "/", response -> {
+            if (response.statusCode() != 200) {
+              future.fail("HTTP error");
+            } else {
+              response
+                  .exceptionHandler(future::fail)
+                  .bodyHandler(buffer -> {
+                    future.complete(buffer.toString());
+                  });
+            }
+          });
+        }).setHandler(ar -> {
+        });
+
+        //两个参数
+        breaker.executeWithFallback(future -> {
+              vertx.createHttpClient().getNow(8080, "localhost", "/", response -> {
+                if (response.statusCode() != 200) {
+                  future.fail("HTTP error");
+                } else {
+                  response
+                      .exceptionHandler(future::fail)
+                      .bodyHandler(buffer -> {
+                        future.complete(buffer.toString());
+                      });
+                }
+              });
+            }, v -> {
+              // 熔断器打开后， 应该执行的操作
+              return "Hello";
+            })
+            .setHandler(ar -> {
+              // Do something with the result
+            });
+
+        //不管熔断器中执行什么操作,如果执行失败，熔断器都返回相同结果
+        CircuitBreaker breaker = CircuitBreaker.create("my-circuit-breaker", vertx,
+            new CircuitBreakerOptions()
+                .setMaxFailures(5)
+                .setTimeout(2000)
+        ).fallback(v -> {
+          return "hello";
+        });
+    5.重试次数：熔断器状态为关闭时，方能重试
+        设置maxRetries=2；表示初始化尝试1次，重试2次
+        可以设置重试策略，每次重试的时间间隔等。默认时间间隔为0
+        CircuitBreaker breaker = CircuitBreaker.create("my-circuit-breaker", vertx,
+          new CircuitBreakerOptions().setMaxFailures(5).setMaxRetries(5).setTimeout(2000)
+        ).openHandler(v -> {
+          System.out.println("Circuit opened");
+        }).closeHandler(v -> {
+          System.out.println("Circuit closed");
+        }).retryPolicy(retryCount -> retryCount * 100L);
+    6.熔断器的状态：
+        开-半开-闭:3中壮体啊都可以设置操作
+        openhandler--halfopenhandler--closehandler
+    7.熔断器的消息机制：{ notifications }
+        setNotificationAddress 的默认值为 vertx.circuit-breaker
+        消息内容：new Json{"state":"", "name":"", "failures":"", "node":""}
+    8.hystrix仪表盘：
+        熔断器状态的改变会发送消息，然后注册在vert.x上的hystrix仪表盘会接受状态消息并展示
+        router.get("/hystrix-metrics").handler(HystrixMetricHandler.create(vertx));
+

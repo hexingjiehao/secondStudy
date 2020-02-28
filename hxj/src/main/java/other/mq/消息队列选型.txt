@@ -1,0 +1,73 @@
+1.消息队列的选型方案
+    第一梯队: KafKa ~ Disque ~ NSQ
+    第二梯队: RocketMQ ~ RabbitMQ
+    第三梯队: 其他,zeroMq只是一个lib
+
+    考虑的因素：
+        1.开源免费、社区活跃度
+        2.API完善
+        3.功能需求：
+            request-reply模式：是否可用于用于处理同步请求
+            PUBLISH-SUBSCRIBE模型：是否支持订阅模式
+        4.性能需求：
+            高并发/吞吐量：单位时间处理消息的速度：(万级,,十万级...)--erlang语言较好的处理高并发，类似于底层的c++语言等。
+            消息延迟：每条消息处理的延迟时间：(微秒级,毫秒级)
+            可靠性和易用性：学习成本如何，能稳定运行吗
+            持久化消息比较：消息是否能存储到硬盘上
+
+2.常用的消息队列中间件：
+    ActiveMQ：诞生自Java生态
+    RabbitMQ：基于erlang实现，语言无关，诞生自金融领域。
+    Kafka：诞生自Hadoop生态，在大数据的支持方面最佳。
+
+3.rabbitmq的框架深度学习：
+    1.基本对象：(基于异步的消息处理)
+        ConnectionFactory:  生产工厂
+        Connection: socket链接，它封装了socket协议相关部分逻辑
+        Channel:    业务操作集中于此。包括定义Queue、定义Exchange、绑定Queue与Exchange、发布消息等。
+        Message acknowledgment: 消费者发送回执给队列，否则队列不删除消息，造成消息堆积。
+        Message durability：消息持久化。宕机后消息存储到硬盘
+        Prefetch count：一个队列多个消费者的情况下,做到尽可能高效的处理消息，谁做完了再给它一个消息。
+        Exchange：交换机，生产者将消息给交换机，通过路由，传到指定的队列
+            Exchange Types: 路由规则
+                fanout： 1vN
+                direct: 精确匹配
+                topic： 模糊匹配
+                headers： 消息内容匹配
+
+            routing key：交换机路由消息给队列的策略
+            Binding/Binding key：通过路由策略绑定交换机和队列
+        Queue: 内部对象用于存储消息。多个消费者订阅同一个队列，那么队列消息被分摊了。
+
+    2.支持rpc协议来同步消息：(类似于session和cookie)
+        RabbitMQ中实现RPC 的机制是：
+            client发请求，在消息的属性（MessageProperties）中设置两个值replyTo（一个Queue名称）和correlationId（此次请求的标识号）
+            server接受并处理消息
+            server生成一条应答消息到replyTo指定的Queue ，同时带上correlationId 属性
+            client之前已订阅replyTo指定的Queue，从中收到服务器的应答消息后，根据其中的correlationId 属性分析哪条请求被执行了，根据执行结果进行后续业务处理
+
+    3.消息队列实现延迟任务：(各种情况下导致的消息未及时处理，就叫延迟消息)
+        应用场景：物联网系统经常会遇到向终端下发命令，如果命令一段时间没有应答，就需要设置成超时。
+                 订单下单之后30分钟后，如果用户没有付钱，则系统自动取消订单。
+        常用解决办法：定期轮询数据库，设置状态，但是数据量大时特别耗资源。
+                    优先级队列,基于优先级队列的JDK延迟队列,时间轮等方式
+                    rabbitmq的消息的TTL和死信Exchange
+        概念：
+            消息TTL(Time to Live): RabbitMQ可以对队列和消息分别设置存活时间,超过了这个时间，我们认为这个消息就死了，称之为死信。
+                                   如果队列设置了，消息也设置了，那么会取小的
+                         配置方法：设置expiration字段或者x-message-ttl属性来设置时间
+                                  byte[] messageBodyBytes = "Hello, world!".getBytes();
+                                  AMQP.BasicProperties properties = new AMQP.BasicProperties();
+                                  properties.setExpiration("60000");
+                                  channel.basicPublish("my-exchange", "routing-key", properties, messageBodyBytes);
+                      配置后的结果：消息超时后，它就再也不会被消费者消费了，它被其他消息顶替。它不会被删除和释放，它会被统计到队列的消息数中
+            Dead Letter Exchanges: 就是一个交换机，是垃圾桶。队列设置了垃圾桶，消息过期了会把消息丢到垃圾桶。
+                                   消息在下列情况下会进死信路由，而不是队列，一个路由可以对应很多队列。
+                                   1.一个消息被Consumer拒收了，并且reject方法的参数里requeue是false。并且不会被再次放在队列里
+                                   2.消息的TTL到了，消息过期了。
+                                   3.队列的长度限制满了。排在前面的消息会被丢弃或者扔到死信路由上
+            操作步骤：1.设置一个正常队列，设置死信路由
+                     2.设置一个队列，绑定死信路由。
+                     3.设置并发送过期消息。channel.basicPublish("queue1", "queue1", new AMQP.BasicProperties.Builder().expiration(String.valueOf(i * 1000)).build(),messsage);
+            注意事项：只有当过期的消息到了队列的顶端（队首），才会被真正的丢弃或者进入死信队列。
+                     即使一个消息比在同一队列中的其他消息提前过期，提前过期的也不会优先进入死信队列，它们还是按照入库的顺序让消费者消费。

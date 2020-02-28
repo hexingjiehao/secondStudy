@@ -1,0 +1,46 @@
+<script lanage="javascript">
+
+    document.onclick = function (event) {
+            var number=10;
+            for(var i= 0;i<number;i++){
+                document.getElementById(i).src="skin.png";
+            }
+    };
+
+    function tenEvenSmoke() {
+        var number=10;
+        var div = document.createElement("div");
+        var array=new Array();
+
+        var imgRes=new Array();
+        imgRes.push("guanyu.gif");imgRes.push("guanyu.png");
+        imgRes.push("1.gif");imgRes.push("2.gif");imgRes.push("3.gif");imgRes.push("4.gif");
+        imgRes.push("5.gif");imgRes.push("6.png");imgRes.push("7.gif");imgRes.push("8.png");
+        imgRes.push("9.png");imgRes.push("10.png");imgRes.push("11.png");imgRes.push("12.png");
+        imgRes.push("13.png");imgRes.push("14.png");imgRes.push("15.png");imgRes.push("16.png");
+        imgRes.push("17.png");imgRes.push("18.png");imgRes.push("19.png");
+
+        var numArr=new Array();
+        //生成10张随机图片
+        for(var i= 0,j= 0;i<number;i++){
+            var randNum=parseInt(Math.random()*(20-0+1)+0,10);
+            document.getElementById(i).src=imgRes[randNum];
+        }
+        
+        //阻止事件冒泡
+        event.stopPropagation();
+    }
+</script>
+<button style="font-size: 100% ;width: 436px; height: 50px; background: gold" onclick="tenEvenSmoke()">10连抽</button>
+<div style="height: 12px"></div>
+<img id="0" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="1" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="2" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="3" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="4" width="18%" height="250px" src="skin.png"/>
+<div></div>
+<img id="5" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="6" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="7" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="8" width="18%" height="250px" src="skin.png"/><input style="width: 1%;border-color: transparent" />
+<img id="9" width="18%" height="250px" src="skin.png"/>

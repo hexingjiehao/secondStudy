@@ -1,0 +1,179 @@
+1.脚本语言javascript的学习：
+    1.定义：
+        可用到前端和后台的脚本语言。目前主要应用于前端和后台数据交互。
+        它不同于其他编程语言需要编译，它是逐行执行的。
+        JavaScript基于prototype，而不是基于类的。但是是面向对象的
+    2.应用场景：
+        浏览器支持javascript引擎,javascript可以嵌入html页面。
+    3.功能效果：
+        写入html输出：(清空页面，往上面覆盖一层html标签)
+            document.write("<p>...</p>");
+        对事件做出反应:
+            onclick=JavaScript
+            可以在脚本中分配事件：
+                <script>
+                    document.getElementById("myBtn").onclick=function(){displayDate()};
+                </script>
+        改变html的内容(value)：
+            document.getElementById(id).innerHTML=new HTML
+        改变html的属性(比如图像)：
+            document.getElementById(id).attribute=new value
+        改变html的样式(style)：
+            ocument.getElementById(id).style.property=new style
+        增加或减少元素结点：
+            增加结点：
+                var para=document.createElement("p");
+                var node=document.createTextNode("这是新段落。");
+                para.appendChild(node);
+            减少结点：
+                var parent=document.getElementById("div1");
+                var child=document.getElementById("p1");
+                parent.removeChild(child);
+        验证输入
+    4.语法格式：<script></script>,位置在<body>和<head>部分。
+             可以在<head/>中引入外部文件<script src="???.js"></script>。该外部文件不包含<script>标签
+
+    5.语言的学习周期：
+        1.变量：弱类型脚本语言。使用var声明，默认值是undefined。
+            数据类型：(动态类型，同一个变量可以用做多个类型)。
+                字符串(单双引号皆可)
+                数字类型(可以带小数点)：都是64位
+                布尔类型：
+                    创建true对象：
+                        var myBoolean=new Boolean(1);
+                        var myBoolean=new Boolean(true);
+                        var myBoolean=new Boolean("true");
+                        var myBoolean=new Boolean("false");
+                        var myBoolean=new Boolean("Bill Gates");
+                    创建false对象：
+                        var myBoolean=new Boolean();
+                        var myBoolean=new Boolean(0);
+                        var myBoolean=new Boolean(null);
+                        var myBoolean=new Boolean("");
+                        var myBoolean=new Boolean(false);
+                        var myBoolean=new Boolean(NaN);
+                数组：var cars=new Array("Audi","BMW","Volvo");
+                对象：有属性和方法。可以通过.操作为对象添加属性/或者进行赋值查询操作
+                    创建方法：
+                        直接new:
+                            1.var person={firstname:"Bill", lastname:"Gates", id:5566};
+                            2.var child=new Object();
+                                child.firstname="Bill";
+                                child.lastname="Gates";
+                                child.age=56;
+                                child.eyecolor="blue";
+                        使用构造器函数：
+                            function person(firstname,lastname,age,eyecolor)
+                            {
+                                this.firstname=firstname;
+                                this.lastname=lastname;
+                                this.age=age;
+                                this.eyecolor=eyecolor;
+                            }
+                            var p=new people("Bill","Gates",56,"blue");
+                    正则表达式对象：
+                        var patt1=new RegExp(".....");
+                        patt1.test("...."):判断字符串中是否出现匹配模式的值,返回true/false
+                        patt1.exec("...."):检索指定模式值，找到则返回。否则返回null
+                        patt1.compile("....")：修改匹配模式
+                Undefined：表示变量不含有值
+                Null:清空变量
+            为变量声明类型：
+                var carname=new String;
+                var x=      new Number;
+                var y=      new Boolean;
+                var cars=   new Array;
+                var person= new Object;
+        2.函数：(事件驱动/被调用时)执行的可重复使用的代码块。
+             function methd(args1,arg2...){
+                方法内变量的生存期和java一样
+
+                业务逻辑...
+                return "hello";
+             }
+        3.运算符：常用四则运算符/条件运算符和java相同
+            ==等于：
+            ===全等：（值和变量类型）
+            for/in循环遍历对象：for(x in person){...}
+            break/continue:可以跳到指定标签位置
+        4.表单验证：(对HTML表单中的这些输入数据进行验证)
+            是否必填：
+                function validate_required(field,alerttxt){
+                    with (field){
+                        if (value==null||value==""){
+                            alert(alerttxt);return false
+                        }else{
+                            return true
+                        }
+                    }
+                }
+            邮件格式：
+                function validate_email(field,alerttxt){
+                    with (field){
+                        apos=value.indexOf("@")
+                        dotpos=value.lastIndexOf(".")
+                        if (apos<1||dotpos-apos<2) {
+                            alert(alerttxt);return false
+                        }else{
+                            return true
+                        }
+                    }
+                }
+            日期格式：
+            是否在数据域 (numeric field)中输入了文本：
+        5.Javascript中用到的HTML的DOM对象：
+            定义：document：root：<head>
+                                    <title>:标题值
+                                    ......
+                                 <body>
+                                    <a>：标签值
+                                        href:属性
+                                    <h1>：标签值
+                                    ......
+            查找DOM对象中标签元素的方法：
+                id法：document.getElementById("...");
+                标签类型名法：x.getElementsByTagName(".....");
+                (不推荐)标签的class法：x.getElementsByClassName("......")
+        6.javascript的浏览器对象模型(BOM): 使JavaScript有能力与浏览器“对话”
+            Window对象: (大管家),自动包含全局对象(比如document)，全局函数
+                window.open():打开新窗口
+                window.close():关闭当前窗口
+                window.moveTo():移动当前窗口
+                window.resizeTo():调整当前窗口的尺寸
+            Screen对象：调整用户屏幕高宽
+                screen.availWidth：可用的屏幕宽度
+                screen.availHeight：可用的屏幕高度
+            Location对象：window.location对象用于获得当前页面的地址 (URL)，并把浏览器重定向到新的页面。
+                location.hostname：返回web主机的域名
+                location.pathname：返回当前页面的路径和文件名
+                location.port：返回web主机的端口（80或443）
+                location.protocol：返回所使用的web协议（http://或https://）
+            History对象：历史记录,翻页操作
+                history.back():与在浏览器点击后退按钮相同
+                history.forward():与在浏览器中点击按钮向前相同
+            Navigator对象：包含有关访问者浏览器的信息
+                navigator.appCodeName
+                navigator.appName
+                navigator.appVersion
+                navigator.cookieEnabled
+                navigator.platform
+                navigator.userAgent
+                navigator.systemLanguage
+            PopupAlet对象(消息框对象)：
+                警告框：alert("文本")
+                确认框：confirm("文本")
+                提示框：prompt("文本","默认值")
+            Timing对象：计时器对象
+                开始定时：var t=setTimeout("alert('5 seconds!')",5000)
+                取消定时：t=setTimeout("timedCount()",1000)
+            Cookies对象：浏览器端识别用户
+                种类：
+                    名字cookie: 场景比如，欢迎用户再次到来
+                    密码cookie：场景比如，记住密码
+                    日期cookie：场景比如，你的上次登录时间
+                代码使用：document.cookie= (xxx=yyy)
+                         document.cookie.indexOf(xxx + "=")
+    6.js的封装库：
+        引用方式：<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+        jquery--Prototype--MooTools--Dojo--Yahoo! YUI--React--VUE--AngularJS
+

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<remote-store>
+    <socket-timeout>60000</socket-timeout>
+    <tcp-no-delay>true</tcp-no-delay>
+    <hotrod-wrapping>false</hotrod-wrapping>
+    <raw-values>false</raw-values>
+    <balancing-strategy>org.infinispan.client.hotrod.impl.transport.tcp.RoundRobinBalancingStrategy</balancing-strategy>
+    <connect-timeout>60000</connect-timeout>
+    <force-return-values>false</force-return-values>
+    <key-size-estimate>64</key-size-estimate>
+    <marshaller></marshaller>
+    <protocol-version>2.9</protocol-version>
+    <cache></cache>
+    <transport-factory></transport-factory>
+    <value-size-estimate value="512">
+        <remote-server></remote-server>
+        <connection-pool>
+            <exhausted-action></exhausted-action>
+            <max-active>-1</max-active>
+            <max-idle>-1</max-idle>
+            <max-total>-1</max-total>
+            <min-idle-time>-1</min-idle-time>
+            <eviction-interval>120000</eviction-interval>
+            <min-evictable-idle-time>1800000</min-evictable-idle-time>
+            <test-idle>true</test-idle>
+        </connection-pool>
+        <async-executor>
+            <factory>
+                <property>
+                    <name></name>
+                    <value></value>
+                </property>
+            </factory>
+        </async-executor>
+        <security>
+            <authentication>
+                <server-name>
+                    <plain>
+                        <username></username>
+                        <password></password>
+                    </plain>
+                    <digest>
+                        <username></username>
+                        <password></password>
+                        <realm></realm>
+                    </digest>
+                    <external></external>
+                </server-name>
+            </authentication>
+            <encryption>
+                <protocol></protocol>
+                <sni-hostname>
+                    <keystore>
+                        <certificate-password></certificate-password>
+                        <key-alias></key-alias>
+                        <filename></filename>
+                        <password></password>
+                        <type></type>
+                    </keystore>
+                    <truststore>
+                        <filename></filename>
+                        <password></password>
+                        <type>JKS</type>
+                    </truststore>
+                </sni-hostname>
+            </encryption>
+        </security>
+    </value-size-estimate>
+
+
+    <shared>false</shared>
+    <transactional>false</transactional>
+    <preload>false</preload>
+    <fetch-state>false</fetch-state>
+    <purge>false</purge>
+    <singleton>false</singleton>
+    <read-only>false</read-only>
+    <max-batch-size value="100">
+        <write-behind>
+            <modification-queue-size>1024</modification-queue-size>
+            <thread-pool-size>1</thread-pool-size>
+            <fail-silently>false</fail-silently>
+        </write-behind>
+        <property>
+            <name></name>
+            <value></value>
+        </property>
+    </max-batch-size>
+
+</remote-store>

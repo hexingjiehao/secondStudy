@@ -1,0 +1,113 @@
+1.学习spring 5 webflux框架的webclient。
+    资源导入：<dependency>
+                 <groupId>org.springframework.boot</groupId>
+                 <artifactId>spring-boot-starter-webflux</artifactId>
+             </dependency>
+    使用WebClient消费远程API：
+        1.创建Webclient客户端：
+            方法1：WebClient webClient = WebClient.create();
+            方法2：WebClient webClient = WebClient.create("https://api.github.com");
+            方法3：WebClient webClient = WebClient.builder()
+                        .baseUrl("https://api.github.com")
+                        .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/vnd.github.v3+json")
+                        .defaultHeader(HttpHeaders.USER_AGENT, "Spring 5 WebClient")
+                        .build();
+        2.使用WebClient发出请求并检索响应:webClient.get()
+                                           .uri("/user/repos")
+                                           .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                           .retrieve()
+                                           .bodyToFlux(GithubRepo.class);
+        3.使用exchange()方法来检索响应：webClient.get()
+                                          .uri("/user/repos")
+                                          .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                          .exchange()
+                                          .flatMapMany(clientResponse -> clientResponse.bodyToFlux(GithubRepo.class));
+        4.在请求URI中使用参数: webClient.get()
+                                  .uri("/user/repos?sort={sortField}&direction={sortDirection}", "updated", "desc")
+                                  .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                  .retrieve()
+                                  .bodyToFlux(GithubRepo.class)
+        5.使用URIBuilder构造请求URI：webClient.get()
+                                          .uri(uriBuilder -> uriBuilder.path("/user/repos")
+                                                  .queryParam("sort", "updated")
+                                                  .queryParam("direction", "desc")
+                                                  .build())
+                                          .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                          .retrieve()
+                                          .bodyToFlux(GithubRepo.class);
+        6.在WebClient请求中传递Request Body: webClient.post()
+                                                   .uri("/user/repos")
+                                                   .body(Mono.just(createRepoRequest), RepoRequest.class)
+                                                   .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                                   .retrieve()
+                                                   .bodyToMono(GithubRepo.class);
+
+                                           webClient.post()
+                                                       .uri("/user/repos")
+                                                       .syncBody(createRepoRequest)
+                                                       .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                                       .retrieve()
+                                                       .bodyToMono(GithubRepo.class);
+
+                                           webClient.post()
+                                                       .uri("/user/repos")
+                                                       .body(BodyInserters.fromObject(createRepoRequest))
+                                                       .header("Authorization", "Basic " + Base64Utils.encodeToString((username + ":" + token).getBytes(UTF_8)))
+                                                       .retrieve()
+                                                       .bodyToMono(GithubRepo.class);
+        7.添加过滤器功能:
+            添加基本认证：WebClient webClient = WebClient.builder()
+                           .baseUrl(GITHUB_API_BASE_URL)
+                           .defaultHeader(HttpHeaders.CONTENT_TYPE, GITHUB_V3_MIME_TYPE)
+                           .filter(ExchangeFilterFunctions.basicAuthentication(username, token))
+                           .build();
+            记录所有请求：WebClient webClient = WebClient.builder()
+                           .baseUrl(GITHUB_API_BASE_URL)
+                           .defaultHeader(HttpHeaders.CONTENT_TYPE, GITHUB_V3_MIME_TYPE)
+                           .filter(ExchangeFilterFunctions.basicAuthentication(username, token))
+                           .filter(logRequest())
+                           .build();
+
+                        (clientRequest, next) -> {
+                                logger.info("Request: {} {}", clientRequest.method(), clientRequest.url());
+                                clientRequest.headers()
+                                        .forEach((name, values) -> values.forEach(value -> logger.info("{}={}", name, value)));
+                                return next.exchange(clientRequest);
+                        };
+            使用ofRequestProcessor()和ofResponseProcessor()工厂方法来创建过滤器：
+                ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+                        logger.info("Request: {} {}", clientRequest.method(), clientRequest.url());
+                        clientRequest.headers().forEach((name, values) -> values.forEach(value -> logger.info("{}={}", name, value)));
+                        return Mono.just(clientRequest);
+                });
+
+                ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+                        logger.info("Response Status {}", clientResponse.statusCode());
+                        return Mono.just(clientResponse);
+                });
+        8.处理WebClient错误:webClient.get()
+                                    .uri("/user/repos?sort={sortField}&direction={sortDirection}", "updated", "desc")
+                                    .retrieve()
+                                    .onStatus(HttpStatus::is4xxClientError, clientResponse ->
+                                        Mono.error(new MyCustomClientException())
+                                    )
+                                    .onStatus(HttpStatus::is5xxServerError, clientResponse ->
+                                        Mono.error(new MyCustomServerException())
+                                    )
+                                    .bodyToFlux(GithubRepo.class);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

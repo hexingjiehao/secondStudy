@@ -1,0 +1,431 @@
+1.开始学习Testcontainers语法
+    1.综述：
+        官网：https://www.testcontainers.org
+        定义：Testcontainers是一个支持JUnit测试的Java库，它提供了公共数据库、Selenium web浏览器或任何其他可以在Docker容器中运行的轻量级、一次性实例。
+        特点：1.使数据访问层集成测试更容易
+             2.使应用集成测试更容易
+             3.使UI/验收测试更容易
+        maven依赖：<dependency>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>testcontainers</artifactId>
+                    <version>1.11.3</version>
+                    <scope>test</scope>
+                  </dependency>
+    2.具体的代码案例
+        2.1 JUnit 4和Testcontainers的组合使用教程：
+            1.前提条件：一个依赖redis的项目，RedisBackedCache类存储redis数据
+            2.导入依赖：<dependency>
+                       <groupId>org.testcontainers</groupId>
+                       <artifactId>testcontainers</artifactId>
+                       <version>1.11.3</version>
+                       <scope>test</scope>
+                      </dependency>
+            3.让Testcontainers在测试期间运行一个Redis容器
+                @Rule
+                public GenericContainer redis = new GenericContainer<>("redis:5.0.3-alpine").withExposedPorts(6379);
+            4.确保我们的代码能够访问容器
+                setUp(){
+                    String address = redis.getContainerIpAddress();
+                    Integer port = redis.getFirstMappedPort();
+
+                    RedisBackedCache underTest = new RedisBackedCache(address, port);
+                }
+            5.运行测试
+                public class RedisBackedCacheIntTest {
+                    @Rule
+                    public GenericContainer redis = new GenericContainer<>("redis:5.0.3-alpine").withExposedPorts(6379);
+                    @Before
+                    public void setUp() {
+                        String address = redis.getContainerIpAddress();
+                        Integer port = redis.getFirstMappedPort();
+                        System.out.println(address);
+                        System.out.println(port);
+                    }
+                    @Test
+                    public void testSimplePutAndGet() {
+                        System.out.println("访问docker容器测试成功");
+                    }
+                }
+        2.2 Spock和Testcontainers的组合使用教程：
+            大部分和上面相同，区别如下：
+            @org.testcontainers.spock.Testcontainers
+            class RedisBackedCacheIntTest extends Specification {
+                private RedisBackedCache underTest
+
+                public GenericContainer redis = new GenericContainer<>("redis:5.0.3-alpine").withExposedPorts(6379)
+
+                void setup() {
+                    String address = redis.containerIpAddress
+                    Integer port = redis.firstMappedPort
+                    underTest = new RedisBackedCache(address, port)
+                }
+
+                void testSimplePutAndGet() {
+                    setup:
+                    underTest.put("test", "example")
+
+                    when:
+                    String retrieved = underTest.get("test")
+
+                    then:
+                    retrieved == "example"
+                }
+            }
+    3.教程步骤：
+        3.1 创建容器
+            @ClassRule
+            public static GenericContainer alpine =new GenericContainer("alpine:3.2")
+                        .withExposedPorts(80)
+                        .withEnv("MAGIC_NUMBER", "42")
+                        .withCommand("/bin/sh", "-c", "while true; do echo \"$MAGIC_NUMBER\" | nc -l -p 80; done");
+            ⚠️：使用@classRule注释的类会在任意测试启动之前执行，并在最后进行销毁
+
+        3.2 与容器联网和通信--暴露容器端口到主机
+            public GenericContainer container = new GenericContainer("orientdb:3.0.13").withExposedPorts(2424, 2480).withLogConsumer(new Slf4jLogConsumer(log));
+            Integer firstMappedPort = container.getMappedPort(2424);    //获取外网端口
+            Integer secondMappedPort = container.getMappedPort(2480);   //获取外网端口
+            Integer firstMappedPort = container.getFirstMappedPort();   //运用与只公开一个端口的容器
+
+            String ipAddress = container.getContainerIpAddress();   //获取外部主机ip
+            String address =container.getContainerIpAddress() + ":" + container.getMappedPort(2424);
+
+            //将本地主机的端口暴露给容器👀👀👀
+            Testcontainers.exposeHostPorts(localServerPort);
+            final String rootUrl =String.format("http://host.testcontainers.internal:%d/", localServerPort);
+            final RemoteWebDriver webDriver = browser.getWebDriver();
+            webDriver.get(rootUrl);
+
+            //创建自定义网络
+            try (
+                Network network = Network.newNetwork();
+                GenericContainer foo = new GenericContainer()
+                        .withNetwork(network)
+                        .withNetworkAliases("foo")
+                        .withCommand("/bin/sh", "-c", "while true ; do printf 'HTTP/1.1 200 OK\\n\\nyay' | nc -l -p 8080; done");
+                GenericContainer bar = new GenericContainer()
+                        .withNetwork(network)
+                        .withCommand("top")
+            ) {
+                foo.start();
+                bar.start();
+                String response = bar.execInContainer("wget", "-O", "-", "http://foo:8080").getStdout();
+                assertEquals("received response", "yay", response);
+            }
+
+        3.3 执行命令--容器启动前/中
+            public GenericContainer redisWithCustomPort = new GenericContainer("redis:5.0").withCommand("redis-server --port 7777")
+            //运行时容器执行命令
+            container.execInContainer("touch", "/somefile.txt");
+            Container.ExecResult lsResult = container.execInContainer("ls", "-al", "/");
+            String stdout = lsResult.getStdout();
+            int exitCode = lsResult.getExitCode();
+            assertTrue(stdout.contains("somefile.txt"));
+            assertTrue(exitCode == 0);
+            //设置环境变量
+            new GenericContainer(...).withEnv("API_TOKEN", "foo")
+
+        3.4 文件和volumes
+            new GenericContainer(...).withClasspathResourceMapping("redis.conf","/etc/redis.conf",BindMode.READ_ONLY)
+
+        3.5 容器的等待策略和启动策略
+            默认情况下，TestContainers在容器第一次映射网络端口进行监听时等待60秒
+            HTTP状态码等待策略：
+                public GenericContainer nginxWithHttpWait = new GenericContainer("nginx:1.9.4")
+                    .withExposedPorts(80)
+                    .waitingFor(Wait.forHttp("/")
+                                    .usingTls()
+                                    .forStatusCode(200)
+                                    .forStatusCode(301)
+                                    .forStatusCodeMatching(it -> it >= 200 && it < 300 || it == 401));     //类似于服务的活性探针
+            健康检查等待策略：
+                Wait.forHealthcheck()
+            日志输出等待策略：
+                public GenericContainer containerWithLogWait = new GenericContainer("redis:5.0.3")
+                    .withExposedPorts(6379)
+                    .waitingFor(
+                        Wait.forLogMessage(".*Ready to accept connections.*\\n", 1)
+                    );
+        3.6 访问容器日志
+            final String logs = container.getLogs();
+
+            Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(LOGGER);
+            container.followOutput(logConsumer);
+
+            ToStringConsumer toStringConsumer = new ToStringConsumer();
+            container.followOutput(toStringConsumer, OutputType.STDOUT);
+            String utf8String = toStringConsumer.toUtf8String();
+            String otherString = toStringConsumer.toString(CharSet.forName("ISO-8859-1"));
+
+            WaitingConsumer consumer = new WaitingConsumer();
+            container.followOutput(consumer, STDOUT);
+            consumer.waitUntil(frame -> frame.getUtf8String().contains("STARTED"), 30, TimeUnit.SECONDS);
+
+            WaitingConsumer waitingConsumer = new WaitingConsumer();
+            ToStringConsumer toStringConsumer = new ToStringConsumer();
+            Consumer<OutputFrame> composedConsumer = toStringConsumer.andThen(waitingConsumer);
+            container.followOutput(composedConsumer);
+            waitingConsumer.waitUntil(frame -> frame.getUtf8String().contains("STARTED"), 30, TimeUnit.SECONDS);
+            String utf8String = toStringConsumer.toUtf8String();
+
+        3.7 创建Dockerfile并创建image
+            使用字符串，文件，类资源创建Dockerfile：
+                @Rule
+                public GenericContainer dslContainer = new GenericContainer(
+                    new ImageFromDockerfile()
+                            .withFileFromString("folder/someFile.txt", "hello")
+                            .withFileFromClasspath("test.txt", "mappable-resource/test-resource.txt")
+                            .withFileFromClasspath("Dockerfile", "mappable-dockerfile/Dockerfile"))
+                new ImageFromDockerfile().withFileFromPath(".", RESOURCE_PATH)
+            Dockerfile定义语法：
+                new GenericContainer(new ImageFromDockerfile().withDockerfileFromBuilder(builder ->builder
+                                                .from("alpine:3.2")
+                                                .run("apk add --update nginx")
+                                                .cmd("nginx", "-g", "daemon off;")
+                                                .build())
+                                    ).withExposedPorts(80);
+            ⚠️：jvm删除后，临时镜像将删除，除非给临时镜像一个名字和一个不删除的标志
+            使用指定的Dockerfile创建镜像：.withDockerfilePath("./Name-Of-Other-Dockerfile").withBuildArg("varname", "value")
+
+        3.8 高级选项
+            添加容器标签：
+                public GenericContainer containerWithLabel = new GenericContainer("alpine:3.6").withLabel("key", "value");
+
+                private Map<String, String> mapOfLabels = new HashMap<>();
+                mapOfLabels.put("key1", "value1");
+                public GenericContainer containerWithMultipleLabels = new GenericContainer("alpine:3.6").withLabels(mapOfLabels);
+            自定义容器属性：
+                @Rule
+                public GenericContainer theCache = new GenericContainer<>("redis:3.0.2").withCreateContainerCmdModifier(cmd -> cmd.withHostName("the-cache"));
+                @Rule
+                public GenericContainer memoryLimitedRedis = new GenericContainer<>("redis:3.0.2")
+                        .withCreateContainerCmdModifier(cmd -> cmd.withMemory((long) 8 * 1024 * 1024))
+                        .withCreateContainerCmdModifier(cmd -> cmd.withMemorySwap((long) 12 * 1024 * 1024));
+    5. 测试框架集成
+        5.1 JUnit 4：
+            使用@Rule/@ClassRule
+                @Rule
+                public MySQLContainer mysql = new MySQLContainer();
+            使用@BeforeClass/@Before/@AfterClass/@After
+
+        5.2 Jupiter /JUnit 5
+            使用@Testcontainers和@Container
+            @Testcontainers
+            class MyTestcontainersTests {
+                @Container
+                private static final MySQLContainer MY_SQL_CONTAINER = new MySQLContainer();
+                @Container
+                private PostgreSQLContainer postgresqlContainer = new PostgreSQLContainer()
+                        .withDatabaseName("foo")
+                        .withUsername("foo")
+                        .withPassword("secret");
+                @Test
+                void test() {
+                    assertTrue(MY_SQL_CONTAINER.isRunning());
+                    assertTrue(postgresqlContainer.isRunning());
+                }
+            }
+            maven依赖：
+                <dependency>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>junit-jupiter</artifactId>
+                    <version>1.11.3</version>
+                    <scope>test</scope>
+                </dependency>
+
+        5.3 Spock
+            maven依赖：<dependency>
+                        <groupId>org.testcontainers</groupId>
+                        <artifactId>spock</artifactId>
+                        <version>1.11.3</version>
+                        <scope>test</scope>
+                    </dependency>
+            测试案例：
+                @Testcontainers
+                class DatabaseTest extends Specification {
+                    @Shared
+                    PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer()
+                            .withDatabaseName("foo")
+                            .withUsername("foo")
+                            .withPassword("secret")
+
+                    def "database is accessible"() {
+
+                        given: "a jdbc connection"
+                        HikariConfig hikariConfig = new HikariConfig()
+                        hikariConfig.setJdbcUrl(postgreSQLContainer.jdbcUrl)
+                        hikariConfig.setUsername("foo")
+                        hikariConfig.setPassword("secret")
+                        HikariDataSource ds = new HikariDataSource(hikariConfig)
+
+                        when: "querying the database"
+                        Statement statement = ds.getConnection().createStatement()
+                        statement.execute("SELECT 1")
+                        ResultSet resultSet = statement.getResultSet()
+                        resultSet.next()
+
+                        then: "result is returned"
+                        int resultSetInt = resultSet.getInt(1)
+                        resultSetInt == 1
+                    }
+                }
+
+        5.4 手动容器生命周期控制
+            try (GenericContainer container = new GenericContainer("imagename")) {
+                container.start();
+            }
+            单例容器：使用继承
+                abstract class AbstractContainerBaseTest {
+                    static final MySQLContainer MY_SQL_CONTAINER;
+                    static {
+                        MY_SQL_CONTAINER = new MySQLContainer();
+                        MY_SQL_CONTAINER.start();
+                    }
+                }
+                class FirstTest extends AbstractContainerBaseTest {
+                    @Test
+                    void someTestMethod() {
+                        String url = MY_SQL_CONTAINER.getJdbcUrl();
+                    }
+                }
+    6. 系统需求
+        6.1 推荐的日志配置：logback-test.xml
+            <configuration>
+              <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+                  <encoder>
+                      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n</pattern>
+                  </encoder>
+              </appender>
+
+              <root level="info">
+                  <appender-ref ref="STDOUT"/>
+              </root>
+
+              <logger name="org.testcontainers" level="INFO"/>
+              <logger name="com.github.dockerjava" level="WARN"/>
+            </configuration>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

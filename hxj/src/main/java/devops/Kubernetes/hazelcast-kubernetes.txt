@@ -1,0 +1,122 @@
+1.学习Hazelcast发现插件在Kubernetes
+    1.嵌入模式依赖：
+        dependency>
+          <groupId>com.hazelcast</groupId>
+          <artifactId>hazelcast-kubernetes</artifactId>
+          <version>${hazelcast-kubernetes-version}</version>
+        </dependency>
+    2.Kubernetes API 服务发现模式
+        本质：每一个节点通过Rest调用来发现pod的ip地址
+        需要进行授权的集群角色绑定：rbac.yaml
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: ClusterRoleBinding
+            metadata:
+              name: default-cluster
+            roleRef:
+              apiGroup: rbac.authorization.k8s.io
+              kind: ClusterRole
+              name: view
+            subjects:
+            - kind: ServiceAccount
+              name: default
+              namespace: default
+        创建Serviec对象:
+            kind: Service
+            metadata:
+              name: SERVICE-NAME
+            spec:
+              type: LoadBalancer
+              selector:
+                app: APP-NAME
+              ports:
+              - name: hazelcast
+                port: 5701
+        创建Hazelcast配置：hazelcast.xml
+            文件格式：
+                <hazelcast>
+                  <network>
+                    <join>
+                      <multicast enabled="false"/>
+                      <kubernetes enabled="true">
+                        <namespace>MY-KUBERNETES-NAMESPACE</namespace>
+                        <service-name>MY-SERVICE-NAME</service-name>
+                      </kubernetes>
+                    </join>
+                  </network>
+                </hazelcast>
+            java格式：
+                config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+                config.getNetworkConfig().getJoin().getKubernetesConfig().setEnabled(true)
+                      .setProperty("namespace", "MY-KUBERNETES-NAMESPACE")
+                      .setProperty("service-name", "MY-SERVICE-NAME");
+    3.DNS Lookup 服务发现模式🌿🌿🌿🌿🌿
+        创建headless类型的Service
+            kind: Service
+            metadata:
+              name: SERVICE-NAME
+            spec:
+              type: ClusterIP
+              clusterIP: None
+              selector:
+                app: APP-NAME
+              ports:
+              - name: hazelcast
+                port: 5701
+        配置Hazelcast文件：
+            文件格式：
+                <hazelcast>
+                  <network>
+                    <join>
+                      <multicast enabled="false"/>
+                      <kubernetes enabled="true">
+                        <service-dns>MY-SERVICE-DNS-NAME</service-dns>
+                      </kubernetes>
+                    </join>
+                  </network>
+                </hazelcast>
+            java格式：
+                config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+                config.getNetworkConfig().getJoin().getKubernetesConfig().setEnabled(true)
+                      .setProperty("service-dns", "MY-SERVICE-DNS-NAME");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

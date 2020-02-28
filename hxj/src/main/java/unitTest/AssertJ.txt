@@ -1,0 +1,134 @@
+学习AssertJ测试语法：
+    概述：基于Java的流畅型断言。主要是链式结构,便于理解。特点是开发工具友好。丰富并且容易使用，可扩展，社区驱动的。
+         官网是http://joel-costigliola.github.io/assertj/。
+         最新版本：3.11.1。可以自动将JUnit断言转换为AssertJ断言。类的断言自动生成器。
+         原本是great Fest断言库的分支，现在great Fest不再维护了。但是AssertJ自立门户，永久开放。
+         全部是各种数据类型的断言支持。集成了多种仓库。
+         作者没有一台mac电脑。
+    代码仓库：https://github.com/joel-costigliola/assertj-examples/tree/master/assertions-examples/src/test/java/org/assertj/examples
+            运行方法是mvn install。
+    代码API文档：http://joel-costigliola.github.io/assertj/core/api/index.html
+    教程文档：http://joel-costigliola.github.io/assertj/assertj-core-quick-start.html
+        定义：AssertJ core是一个Java库，提供流畅接口来编写断言。能够被其他测试框架集成。
+        版本支持： AssertJ 3.x: java8+。增加异常断言的lambda表达式。
+                 AssertJ 2.x: java7+
+                 AssertJ 1.x: java6+
+        描述断言失败后的信息：使用as()方法。assertThat(1).as("check %s's", "input value").isEqualTo(2);
+        在数组迭代时组合过滤器和断言：contains*()
+            assertThat( value ).filteredOn( character -> character.getName().contains("o") )
+                                           .containsOnly("1", "2", "3", "4");
+        过滤条件对象：Condition<T>。接口的match方法实现。
+            常用的方法：is() / isNot()
+                      has() / doesNotHave()
+                      are() / areNot()
+                      areAtLeast() / haveAtLeast()
+                      areMost() / havaAtMost()
+                      areExactly() / havaExactly()
+        检查对象集合的指定类型：比如指定某个属性。使用方法extracting()抽取。
+            可以抽取多个属性，使用tuple()方法来整合一个记录。
+        收集软断言的所有错误信息：SoftAssertions softly = new SoftAssertions();
+                              多个softly.assertThat()+softly.assertAll();
+            集成其他测试框架：可以不用手动调用softly.assertAll()，框架会自动调用。区别就是创建对象的类型。
+            短断言单独执行，不会中断程序的继续执行。
+        文件内容的字符串断言：断言文件对象exists().isFile().isRelative()
+                           contentOf(...)/ startsWith("The Truth").contains("Is Out").endsWith("There")
+        异常断言测试：Java8以上支持。assertThatThrownBy()
+        自定义比较策略断言：比如对象比较器。usingComparator()
+                         比如数据比较器。usingElementComparator()
+            内置的对象比较策略： isEqualToComparingFieldByField： 对象的逐个字段比较
+                              isEqualToComparingOnlyGivenFields
+                              isEqualToIgnoringGivenFields
+                              isEqualToIgnoringNullFields
+                              isEqualToComparingFieldByFieldRecursively
+        自定义断言类：继承AbstractAssert。可以使用断言类生成器。它是一个maven插件。
+            命令行操作：下载jar包 --> 使用jar包中的脚本生成断言类：?.sh xx.java
+        转换JUnit断言到AssertJ断言：插件Assertions2Assertj。脚本文件：convert-junit-assertions-to-assertj-on-osx.sh
+            junit: assertEquals(expected, actual);
+            assertj: assertThat(actual).isEqualTo(expected);
+            使用的是作者自己的脚本进行对应测试代码转换：脚本中的转换内容方式有正则表达式。
+        转换TestNG断言到AssertJ断言：
+                    TestNG: assertEquals(expected, actual);
+                    assertj: assertThat(actual).isEqualTo(expected);
+            使用脚本转换/IDEA的结构搜索和替换。脚本是基于sed stream editor and regexps
+            脚本文件convert-testng-assertions-to-assertj.sh
+
+
+    资源依赖：<dependency>
+               <groupId>org.assertj</groupId>
+               <artifactId>assertj-core</artifactId>
+               <version>3.11.1</version>
+               <scope>test</scope>
+            </dependency>
+    使用静态导入jar包：import static org.assertj.core.api.Assertions.*;
+    其他模块教程：区别都不大，只是比较的数据类型不同。比较方法稍微不同。
+        Guava断言：
+            数据类型：Multimap
+                    Multiset
+                    Multiset
+                    Optional
+                    Range
+                    ByteSource
+            资源依赖：<dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-guava</artifactId>
+                       <version>3.2.0</version>
+                       <scope>test</scope>
+                   </dependency>
+        Joda Time断言：
+            数据类型：DateTime
+                     LocalDateTime
+            资源依赖：<dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-joda-time</artifactId>
+                       <version>2.2.0</version>
+                       <scope>test</scope>
+                    </dependency>
+        Database断言：测试数据库中的表数据。
+            资源依赖：<dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-db</artifactId>
+                       <version>1.2.0</version>
+                       <scope>test</scope>
+                    </dependency>
+            代码举例：Table table = new Table(dataSource, "members");
+                     assertThat(table).column("name")
+                                  .value().isEqualTo("Hewson")
+                                  .value().isEqualTo("Evans")
+                                  .value().isEqualTo("Clayton")
+                                  .value().isEqualTo("Mullen");
+        Neo4J断言：对属性结构数据的测试，比如xml,json等。节点
+            资源依赖：<dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-neo4j</artifactId>
+                       <version>2.0.1</version>
+                       <scope>test</scope>
+                    </dependency>
+
+        Swing断言：它是一个Java库，它为功能性Swing UI测试提供了流畅的接口。模拟用户交互,比如点击按钮等。
+                  依赖于实现测试的两个包junit,testing
+            资源依赖：<dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-swing-testng</artifactId>
+                       <version>3.8.0</version>
+                       <scope>test</scope>
+                     </dependency>
+
+                     <dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-swing-junit</artifactId>
+                       <version>3.8.0</version>
+                       <scope>test</scope>
+                     </dependency>
+
+                     <dependency>
+                       <groupId>org.assertj</groupId>
+                       <artifactId>assertj-swing-jide</artifactId>
+                       <version>3.8.0</version>
+                       <scope>test</scope>
+                     </dependency>
+
+
+
+
+
+

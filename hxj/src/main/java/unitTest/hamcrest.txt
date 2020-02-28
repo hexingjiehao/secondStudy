@@ -1,0 +1,52 @@
+学习测试工具hamcrest:
+    1.harmcrest: 可以组合起来以创建灵活的意图表达式的匹配器。官网http://hamcrest.org。
+                         支持的语言有java,Python,Ruby,Objective-C,PHP,Erlang,Swift。诞生于Java
+                         最新版是hamcrest-java-2.1。相应的API文档是http://hamcrest.org/JavaHamcrest/javadoc/2.1/
+                         但是主要使用的版本还是1.3版本。
+                         它是一个编写匹配器对象的框架，允许以声明方式定义匹配规则。局限是UI验证，数据过滤。
+                         关键字assertThat。它可以与不用的单元测试框架集成,比如被JUnit3和JUnit4,还有TestNG使用。
+                         可以和模拟对象框架一起使用，方法是使用适配器匹配二者的比较器。
+                开始教程：
+                    assertThat("...", equalTo("..."));
+                    assertThat("name...", "...", equalTo("..."));
+                常用方法类别：
+                    核心：anything()/describedAs()/is()
+                    逻辑：allOf()/anyOf()/not(),类似于Java的与或非
+                    对象：equalTo()/hasToString()/instanceOf()/isCompatibleType()/notNullValue()/nullValue()/sameInstance()
+                    类：hasProperty()
+                    集合：array()/hasEntry()/hasEntry()/hasValue()/hasItem()/hasItems()/hasItemInArray()
+                    数字：closeTo()/greaterThan()/greaterThanOrEqualTo()/lessThan()/lessThanOrEqualTo()
+                    文本：equalToIgnoringCase()/equalToIgnoringWhiteSpace()/containsString()/endsWith()/startsWith()
+                    糖,修饰：尽量使测试具有可读性。不破坏底层代码，只是上层封装。 assertThat(theBiscuit, equalTo(myBiscuit));
+                                                                         assertThat(theBiscuit, is(equalTo(myBiscuit)));
+                                                                         assertThat(theBiscuit, is(myBiscuit));
+                自定义匹配器：比如自定义1个NaN数字匹配器。需要继承TypeSafeMatcher并重写方法。
+                分布式和依赖配置：最新的版本2.1只有一个jar包,名字是hamcrest-2.1.jar，maven的官网https://search.maven.org
+                                harmcrest版本中的多个jar包在1.3版本之后都没有什么大的更新了
+                    <dependency>
+                        <groupId>org.hamcrest</groupId>
+                        <artifactId>hamcrest</artifactId>
+                        <version>2.1</version>
+                        <scope>test</scope>
+                    </dependency>
+                    如果其他测试工具依赖1.3版本，当升级hamcrest时，需要强制升级对应的测试工具。
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.hamcrest</groupId>
+                            <artifactId>hamcrest</artifactId>
+                            <version>2.1</version>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.hamcrest</groupId>
+                            <artifactId>hamcrest-library</artifactId>
+                            <version>2.1</version>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>junit</groupId>
+                            <artifactId>junit</artifactId>
+                            <version>4.12</version>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>

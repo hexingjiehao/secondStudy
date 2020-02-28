@@ -1,0 +1,85 @@
+1.集合框架由两个顶层接口衍生而出。这两个接口区别如下：
+    Collection：保存一维列表，有数组和链表两种形式。
+    Map：保存二维键值对，分为有序和无序两种形式。
+
+    Collections工具类：包装线程不安全集合成线程安全类。排序，查找替换，同步控制，设置不可变集合(只读)
+    Array类
+
+
+线程安全的集合：
+    HashTable,Vector,Stack。都不推荐使用了。其他的是线程不安全
+    优先使用concurrent包中的类
+    Collections.synchronizedXXX将非同步类变为同步容器类。
+        举例：List<User> users=Collections.synchronizedList(new ArrayList<User>());
+
+
+2.Collection接口：(下面3个接口无序：指的是存入和取出不一致)
+    List接口：(线程不安全)
+        AbstractList抽象类：(ArrayList和 vector使用get(i)方法随机访问,LinkedList使用iterator迭代器随机访问)
+            AbstractSequentialList抽象类：
+                LinkedList类 (对大量数据增删时，效果佳)
+            ArrayList类：(默认数组Object[]的大小为10)
+            Vector类：
+                Stack类 (这个类不建议用了，用ArrayDeque数组双端队列类代替)
+
+    Set接口：(底层是由HashMap,TreeMap实现,只不过所有的value等于null,无序不重复)
+        AbstractSet抽象类：
+            EnumSet类：(位向量存储，内存小性能好，只能是单个枚举类的枚举值，不能添加null,但是可以判断是否有null和remove-null)
+            HashSet类: (查询，添加比 TreeSet高效，由HashMap的key值存储元素，value的值是一个静态对象)
+                LinkedHashSet类：(有序，插入删除比父类慢，但遍历快(链表))
+            TreeSet类：(不重复，红黑树保证顺序,自然排序+Comparable接口,只能添加同一类型对象。compareTo返回0，则两对象相等)
+
+    Queue接口：
+        AbstractQueue抽象类：
+            PriorityQueue类
+
+
+
+
+3.Map接口：(该接口已经完全替代了抽象类Dictionary)
+    AbstractMap抽象类：
+        EnumMap类：(性能最好,有序，key只能是单个枚举类的枚举值)
+        HashMap类：(允许key,value为null)
+            LinkedHashMap类：(有序)
+        WeakHashMap类：(弱引用，当GC对象，对应的key-value自动删除)
+        IdentityHashMap类:(有意违反map规范，允许key,value为null，当key严格相等才相等)
+        TreeMap类：(使用红黑树排序，可通过Comparator设置键值对的排序方法，保证顺序，速度慢)
+        ConcurrentHashMap类
+
+4.Dictionary类
+    HashTable类：(线程安全，古老,key,value不允许null.equals返回true,value相等，如果同时hashcode相等，则key相等。建议用Collections代替)
+        Properties类
+
+
+注意：map的key集中类似set,无序不重复;
+     value集合类似List，可重复,索引取值。
+     除ConcurrentHashMap,都实现了cloneable接口和Serializable接口
+
+
+5.面试常考题：
+    1.Java中ArrayList和LinkedList区别：
+        答:1.ArrayList是实现了基于动态数组的数据结构，LinkedList基于链表的数据结构。
+           2.对于随机访问get和set，ArrayList觉得优于LinkedList，因为LinkedList要移动指针。
+           3.对于新增和删除操作add和remove，LinedList比较占优势，因为ArrayList要移动数据。
+           4.arrayList的扩容操作: (需要时才申请内存,默认为10，逐个++申请内存，2倍申请内存,溢出时抛出异常OutOfMemoryError)
+                private void grow(int var1) {
+                        int var2 = this.elementData.length;
+                        int var3 = var2 + (var2 >> 1);
+                        if(var3 - var1 < 0) {
+                            var3 = var1;
+                        }
+                        if(var3 - 2147483639 > 0) {
+                            var3 = hugeCapacity(var1);
+                        }
+                        this.elementData = Arrays.copyOf(this.elementData, var3);
+                }
+
+6.迭代器(iterator): 容器遍历的游标,屏蔽了底层的数据结构，实现统一的遍历方式
+    迭代器失效的情况： (总之就是保证迭代器不要指向空指针)
+        1.序列式容器(如vector,deque)删除元素，连续内存变化，导致失效。解决方法--重新设置迭代器
+        2.关联容器(如map, set,multimap,multiset)删除元素，导致失效。解决办法--先指针++再删除旧的指针
+
+
+
+
+

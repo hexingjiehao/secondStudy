@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jpa-store>
+    <persistence-unit></persistence-unit>
+    <entity-class></entity-class>
+    <batch-size>${JpaStore.batchSize}</batch-size>
+    <store-metadata>true</store-metadata>
+
+
+    <shared>false</shared>
+    <transactional>false</transactional>
+    <preload>false</preload>
+    <fetch-state>false</fetch-state>
+    <purge>false</purge>
+    <singleton>false</singleton>
+    <read-only>false</read-only>
+    <max-batch-size value="100">
+        <write-behind>
+            <modification-queue-size>1024</modification-queue-size>
+            <thread-pool-size>1</thread-pool-size>
+            <fail-silently>false</fail-silently>
+        </write-behind>
+        <property>
+            <name></name>
+            <value></value>
+        </property>
+    </max-batch-size>
+
+</jpa-store>

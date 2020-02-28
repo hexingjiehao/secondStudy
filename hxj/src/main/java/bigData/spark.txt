@@ -1,0 +1,205 @@
+1.学习Spark知识点：
+    1.概念：是一个用于大规模数据处理的统一分析引擎。是集群计算系统。
+    2.架构：Apache Spark:
+                Spark SQL
+                Spark Streaming
+                MLib(machine learning)
+                Graphx(graph)
+    3.java例子：统计字母的数字🌿🌿🌿🌿🌿
+        import org.apache.spark.sql.SparkSession;
+        import org.apache.spark.sql.Dataset;
+
+        public class SimpleApp {
+          public static void main(String[] args) {
+            String logFile = "YOUR_SPARK_HOME/README.md";
+            SparkSession spark = SparkSession.builder().appName("Simple Application").getOrCreate();
+            Dataset<String> logData = spark.read().textFile(logFile).cache();
+
+            long numAs = logData.filter(s -> s.contains("a")).count();
+            long numBs = logData.filter(s -> s.contains("b")).count();
+
+            System.out.println("Lines with a: " + numAs + ", lines with b: " + numBs);
+
+            spark.stop();
+          }
+        }
+    4.jar包依赖：
+        <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-sql_2.12</artifactId>
+          <version>2.4.4</version>
+          <scope>provided</scope>
+        </dependency>
+    5.使用命令行shell运行：
+        ./bin/run-example SparkPi
+    6.初始化Spark:🌿🌿🌿🌿🌿
+        SparkConf conf = new SparkConf().setAppName(appName).setMaster(master);
+        JavaSparkContext sc = new JavaSparkContext(conf);
+    7.弹性分布式数据集：RDDs🌿🌿🌿🌿🌿
+        RDD是一组可以并行操作的元素的容错集合。一旦创建了分布式数据集(distData),就可以并行地操作它
+        List<Integer> data = Arrays.asList(1, 2, 3, 4, 5);
+        JavaRDD<Integer> distData = sc.parallelize(data);
+        JavaRDD<String> distFile = sc.textFile("data.txt");
+
+        基础代码：
+             JavaRDD<String> lines = sc.textFile("data.txt");
+             JavaRDD<Integer> lineLengths = lines.map(s -> s.length());
+             int totalLength = lineLengths.reduce((a, b) -> a + b);
+             //持久化数据
+             lineLengths.persist(StorageLevel.MEMORY_ONLY());
+        传递函数到Spark:
+            class GetLength implements Function<String, Integer> {
+              public Integer call(String s) { return s.length(); }
+            }
+            class Sum implements Function2<Integer, Integer, Integer> {
+              public Integer call(Integer a, Integer b) { return a + b; }
+            }
+
+            JavaRDD<String> lines = sc.textFile("data.txt");
+            JavaRDD<Integer> lineLengths = lines.map(new GetLength());
+            int totalLength = lineLengths.reduce(new Sum());
+        键值对处理：
+            JavaRDD<String> lines = sc.textFile("data.txt");
+            JavaPairRDD<String, Integer> pairs = lines.mapToPair(s -> new Tuple2(s, 1));
+            JavaPairRDD<String, Integer> counts = pairs.reduceByKey((a, b) -> a + b);
+    8.Spark SQL的学习：【类似于java jdbc的代码学习🌿🌿🌿🌿🌿】
+        启动SparkSession:
+            import org.apache.spark.sql.SparkSession;
+            SparkSession spark = SparkSession
+              .builder()
+              .appName("Java Spark SQL basic example")
+              .config("spark.some.config.option", "some-value")
+              .getOrCreate();
+        创建DataFrames:
+            Dataset<Row> df = spark.read().json("examples/src/main/resources/people.json");
+            df.show();
+        非类型化数据集操作(即DataFrame操作):
+            df.printSchema();
+            df.select("name").show();
+            df.select(col("name"), col("age").plus(1)).show();
+            df.filter(col("age").gt(21)).show();
+            df.groupBy("age").count().show();
+        以编程方式运行SQL查询：
+            df.createOrReplaceTempView("people");
+            Dataset<Row> sqlDF = spark.sql("SELECT * FROM people");
+            sqlDF.show();
+        全局临时视图：
+            df.createGlobalTempView("people");
+            spark.sql("SELECT * FROM global_temp.people").show();
+            spark.newSession().sql("SELECT * FROM global_temp.people").show();
+        创建数据集：数据集使用专门的编码器来序列化对象进行网络传输
+            Encoder<Person> personEncoder = Encoders.bean(Person.class);
+            Dataset<Person> javaBeanDS = spark.createDataset(
+              Collections.singletonList(person),
+              personEncoder
+            );
+            javaBeanDS.show();
+
+            Encoder<Integer> integerEncoder = Encoders.INT();
+            Dataset<Integer> primitiveDS = spark.createDataset(Arrays.asList(1, 2, 3), integerEncoder);
+            Dataset<Integer> transformedDS = primitiveDS.map(
+                (MapFunction<Integer, Integer>) value -> value + 1,
+                integerEncoder);
+            transformedDS.collect();
+
+            String path = "examples/src/main/resources/people.json";
+            Dataset<Person> peopleDS = spark.read().json(path).as(personEncoder);
+            peopleDS.show();
+
+            未完待续......⌛️⌛️⌛️⌛️⌛️
+    9.结构流（Structured Streaming）：🌿🌿🌿🌿🌿
+        结构化流是一个可伸缩的、容错的流处理引擎，构建在Spark SQL引擎上
+        代码举例：
+          SparkSession spark = SparkSession.builder().appName("JavaStructuredNetworkWordCount").getOrCreate();
+          Dataset<Row> lines = spark.readStream().format("socket").option("host", "localhost")
+            .option("port", 9999)
+            .load();
+          Dataset<String> words = lines.as(Encoders.STRING())
+            .flatMap((FlatMapFunction<String, String>) x -> Arrays.asList(x.split(" ")).iterator(), Encoders.STRING());
+          Dataset<Row> wordCounts = words.groupBy("value").count();
+
+          运行封装的实例：
+              $ nc -lk 9999
+              $ ./bin/run-example org.apache.spark.examples.sql.streaming.JavaStructuredNetworkWordCount localhost 9999
+
+          未完待续......⌛️⌛️⌛️⌛️⌛️
+    10.Spark Stream:🌿🌿🌿🌿🌿
+        Spark流是核心Spark API的扩展，支持可伸缩、高吞吐量、容错的实时数据流处理。
+        输入是各种数据源：比如kafka,Flume,HDFS/S3,Kinesis,Twitter
+        处理是各种高级算法：比如map、reduce、join,window
+        输出是各种数据库：比如HDFS,Databases,Dashboards
+        代码举例：
+            SparkConf conf = new SparkConf().setMaster("local[2]").setAppName("NetworkWordCount");
+            JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(1));
+            JavaReceiverInputDStream<String> lines = jssc.socketTextStream("localhost", 9999);
+            JavaDStream<String> words = lines.flatMap(x -> Arrays.asList(x.split(" ")).iterator());
+            JavaPairDStream<String, Integer> pairs = words.mapToPair(s -> new Tuple2<>(s, 1));
+            JavaPairDStream<String, Integer> wordCounts = pairs.reduceByKey((i1, i2) -> i1 + i2);
+            wordCounts.print();
+            jssc.start();
+            jssc.awaitTermination();
+        运行封装的实例：
+            $ nc -lk 9999
+            $ ./bin/run-example streaming.JavaNetworkWordCount localhost 9999
+        依赖jar包：并且是传递依赖
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-streaming_2.12</artifactId>
+                <version>2.4.4</version>
+                <scope>provided</scope>
+            </dependency>
+
+            数据源的传递依赖：
+                spark-streaming-kafka-0-10_2.12
+                spark-streaming-flume_2.12
+                spark-streaming-kinesis-asl_2.12 [Amazon Software License]
+        未完待续......⌛️⌛️⌛️⌛️⌛️
+    11.MLib(机器学习库):🌿🌿🌿🌿🌿
+        分为核心库和基于RDD的库，主要是各种代码操作
+            List<Row> data = Arrays.asList(
+              RowFactory.create(Vectors.sparse(4, new int[]{0, 3}, new double[]{1.0, -2.0})),
+              RowFactory.create(Vectors.dense(4.0, 5.0, 0.0, 3.0)),
+              RowFactory.create(Vectors.dense(6.0, 7.0, 0.0, 8.0)),
+              RowFactory.create(Vectors.sparse(4, new int[]{0, 3}, new double[]{9.0, 1.0}))
+            );
+
+            StructType schema = new StructType(new StructField[]{
+              new StructField("features", new VectorUDT(), false, Metadata.empty()),
+            });
+
+            Dataset<Row> df = spark.createDataFrame(data, schema);
+            Row r1 = Correlation.corr(df, "features").head();
+            System.out.println("Pearson correlation matrix:\n" + r1.get(0).toString());
+
+            Row r2 = Correlation.corr(df, "features", "spearman").head();
+            System.out.println("Spearman correlation matrix:\n" + r2.get(0).toString());
+        未完待续......⌛️⌛️⌛️⌛️⌛️
+    12.GraphX:🌿🌿🌿🌿🌿
+        GraphX是Spark中图形和图形并行计算的新组件。【这是高级功能】
+        jar包依赖：
+            import org.apache.spark._
+            import org.apache.spark.graphx._
+            import org.apache.spark.rdd.RDD
+        未完待续......⌛️⌛️⌛️⌛️⌛️
+    13.SparkR:🌿🌿🌿🌿🌿
+        SparkR是一个R包，提供了一个轻量级前端，通过R语言调用Apache Spark。SparkR还支持使用MLlib的分布式机器学习
+        启动：sparkR.session()
+        未完待续......⌛️⌛️⌛️⌛️⌛️
+    14.部署：🌿🌿🌿🌿🌿
+        启动集群：./sbin/start-master.sh  然后通过http://localhost:8080访问启动的web服务器
+        启动worker连接到master服务器：./sbin/start-slave.sh <master-spark-URL>
+        将应用连接到集群：./bin/spark-class org.apache.spark.deploy.Client kill <master url> <driver ID>
+    15.其他操作：
+         Spark properties配置：【可以动态加载】
+            val conf = new SparkConf().setMaster("local[2]").setAppName("CountingSheep");
+            val sc = new SparkContext(conf);
+
+            val sc = new SparkContext(new SparkConf())  //动态加载
+         监控：
+            ./sbin/start-history-server.sh
+            然后访问：http://<server-url>:18080
+
+
+
+
+

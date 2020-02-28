@@ -1,0 +1,95 @@
+1.学习log4j日志文件的配置：
+    1.官方文档：http://logging.apache.org/log4j/2.x/。最新版本是log4j2。
+    2.主要组件：
+        Loggers(记录器)：只输出级别不低于设定级别的日志信息
+            DEBUG < INFO < WARN < ERROR < FATAL
+
+        Appenders(输出源)：可以设置天数和文件大小产生文件
+            控制台（Console）、文件（Files）
+            常使用的输出类：
+                org.apache.log4j.ConsoleAppender（控制台）
+                org.apache.log4j.FileAppender（文件）
+                org.apache.log4j.DailyRollingFileAppender（每天产生一个日志文件）
+                org.apache.log4j.RollingFileAppender（文件大小到达指定尺寸的时候产生一个新的文件）
+                org.apache.log4j.WriterAppender（将日志信息以流格式发送到任意指定的地方）
+
+        Layouts(布局)：附加输出格式
+            常使用的输出格式类：
+                org.apache.log4j.HTMLLayout（以HTML表格形式布局）
+                org.apache.log4j.PatternLayout（可以灵活地指定布局模式）
+                org.apache.log4j.SimpleLayout（包含日志信息的级别和信息字符串）
+                org.apache.log4j.TTCCLayout（包含日志产生的时间、线程、类别等信息）
+
+
+    2.使用情况：增加依赖包
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.11.2</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.11.2</version>
+          </dependency>
+        </dependencies>
+
+    3.一般的日志名字是：         （存放的位置是resource目录下：）
+                    log4j.xml,
+                    log4j2.xml,
+                    log4j.properties,
+                    log4j2.component.properties。文件内容一般如下：
+        ⚠️️⚠️️⚠️️：<Appenders> 表示输出流：
+                 <Console> 表明将日志内容打印到控制台，并设置内容的格式。
+                 <File> 表明将日志内容打印到指定位置的文件中。
+                 <Loggers> 表示日志对象，可以为对象设置记录级别
+                 <Root> 表示根日志
+
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+          <Appenders>
+            <File name="file" fileName="app.log">
+              <PatternLayout>
+                <Pattern>%d %p %c{1.} [%t] %m %ex%n</Pattern>
+              </PatternLayout>
+            </File>
+            <Console name="STDOUT" target="SYSTEM_OUT">
+              <PatternLayout pattern="%m%n"/>
+            </Console>
+          </Appenders>
+          <Loggers>
+            <Root level="trace">
+              <AppenderRef ref="file" level="DEBUG"/>
+              <AppenderRef ref="STDOUT" level="INFO"/>
+            </Root>
+          </Loggers>
+        </Configuration>
+
+    4.使用Properties来进行配置：
+
+ ### 设置###
+log4j.rootLogger = debug,stdout,D,E
+
+### 输出信息到控制抬 ###
+log4j.appender.stdout = org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Target = System.out
+log4j.appender.stdout.layout = org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern = [%-5p] %d{yyyy-MM-dd HH:mm:ss,SSS} method:%l%n%m%n
+
+### 输出DEBUG 级别以上的日志到=E://logs/error.log ###
+log4j.appender.D = org.apache.log4j.DailyRollingFileAppender
+log4j.appender.D.File = E://logs/log.log
+log4j.appender.D.Append = true
+log4j.appender.D.Threshold = DEBUG
+log4j.appender.D.layout = org.apache.log4j.PatternLayout
+log4j.appender.D.layout.ConversionPattern = %-d{yyyy-MM-dd HH:mm:ss}  [ %t:%r ] - [ %p ]  %m%n
+
+### 输出ERROR 级别以上的日志到=E://logs/error.log ###
+log4j.appender.E = org.apache.log4j.DailyRollingFileAppender
+log4j.appender.E.File =E://logs/error.log
+log4j.appender.E.Append = true
+log4j.appender.E.Threshold = ERROR
+log4j.appender.E.layout = org.apache.log4j.PatternLayout
+log4j.appender.E.layout.ConversionPattern = %-d{yyyy-MM-dd HH:mm:ss}  [ %t:%r ] - [ %p ]  %m%n
+

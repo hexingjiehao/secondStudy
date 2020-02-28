@@ -1,0 +1,232 @@
+1.java运行机制：
+    1.java源文件编译成class文件
+    2.虚拟机的解释器(interpret)会把.class解释成字节码
+    3.把解释后的字节码交由execution engin执行
+    4.execution engin会调用native method(将字节码转换为机器指令执行)
+
+2.jvm相关学习：
+    1.含义：它相当于1个接口，实现由系统决定。就是把class文件变成字节码,然后送到excution engin中执行。它不能具体运算和显示，调用平台的native方法执行
+
+    2.jvm的内存模型：(4个区域,不同的分区采用不同的GC算法)
+        1.方法区：(-XX:PermSize和-XX:MaxPermSize来指定最小值和最大值)
+            存放了要加载的类信息、静态变量、final类型的常量、属性和方法信息
+            使用永久代的技术实现的
+        2.java堆:(3个): (-Xmx:最大堆内存 ,-Xms:初始时堆内存。)
+            年轻代(PSYoungGen)： (-XX:MaxNewSize:最大年轻区内存,-XX:NewSize:初始时年轻区内存)
+                eden: (-XX:SurvivorRatio:新生代中Eden与Survivor的比值。默认值为8。即Eden占新生代空间的8/10，另外两个Survivor各占1/10)
+                from survivor:
+                to survivor:
+            老生代(ParOldGen)：( -XX:NewRatio:老年代与新生代的比例,2=表示老年代占2/3，新生代占1/3)
+            元空间(MetaSpace,java8以后):
+                动态加载大小。存放class文件、静态对象、属性等
+            永久代(PermanentSpace,java8以前)：(-XX:MaxPermSize:最大持久带内存,-XX:PermSize:初始时持久带内存)
+                默认256M。存放class文件、静态对象、属性等
+        3.java栈：(-xss:设置每个线程的堆栈大小(不是个数),执行方法时，会在这里存放1个栈帧，内容包括临时变量，参数，中间结果)
+        4.本地方法栈：(支持native方法的执行,存储了每个native方法调用的状态)
+
+    3.jvm的GC方法：(jvm内存回收，主要是堆区)
+        1.引用计数(Reference Counting)：对象引用数为0者删除。无法处理循环引用
+        2.标记-清除(Mark-Sweep)：(需要暂停应用，产生碎片)
+            1.标记所有引用对象
+            2.遍历堆,回收未标记的对象
+        3.复制(Copying)：(无碎片但需要准备2倍内存空间)
+            1.遍历使用区域，复制正在使用的对象到另一区域,地址连续
+            2.回收之前使用的内存区域
+        4.标记-整理（Mark-Compact)：(避免碎片和空间，但是要应该要暂停应用)
+            1.标记所有引用对象
+            2.遍历堆，回收未标记对象，并压缩标记对象到一块堆并按顺序排放
+
+    4.jvm的堆空间的GC方法：
+        新生代：(对象存活时间短)
+            copying算法：
+                eden区满,gc一下，活下来的到from survisor，此时to survisor为空
+                继续在eden区分配，又满了,gc一下eden区和from survisor区,活下来的到to survisor,此时from survisor为空
+                这样循环,保证活下来的eden+from survisor<to survisor内存
+                等gc次数到阈值或者单个survisor装不下时,将survisor区对象转移到老生代
+            执行机制：
+                A:串行GC(Serial GC): 单线程,新生代空间小,暂停时间要求不高，client级别
+                B:并行回收GC(Parallel Scavenge): 多线程,多CPU,暂停时间短，server级别。用-XX:ParallelGCThreads=4来指定线程数
+                C:并行GC(ParNew):
+        老生代：(对象存活时间长)
+            mark算法：(对未标记对象空间要么压缩,要么重新分配内存)
+            执行机制：
+                a:串行GC(Serial MSC):
+                b:并行GC(parallel MSC):
+                c:并发GC(ConeMarkSweepGC MSC):
+
+    5.jvm堆空间回收整体机制的组合：
+        -XX:+UseSerialGC：=A
+        -XX:+UseParallelGC(又写作-XX:+UseParallelOldGC) ：=B
+        -XX:+UseConeMarkSweepGC：=c
+        -XX:+UseParNewGC：=C
+        -XX:+UseConeMarkSweepGC && -XX:+UseParNewGC：=cA
+        不支持：AaBb,CaAa
+
+
+    6.jvm堆内存生命周期：(分区分阶段回收堆内存)
+        幽默：
+            我是一个普通的java对象，我出生在Eden区，在Eden区我还看到和我长的很像的小兄弟，我们在Eden区中玩了挺长时间。
+            有一天Eden区中的人实在是太多了，我就被迫去了Survivor区的“To”区，自从去了Survivor区，我就开始漂泊了，因为Survivor的两个区总是交换名字，所以我总是搬家，搬到To Survivor居住，搬来搬去，居无定所。
+            直到我18岁的时候，爸爸说我成人了，该去社会上闯闯了。于是我就去了年老代那边，年老代里，人很多，并且年龄都挺大的，我在这里也认识了很多人。在年老代里，我生活了20年(每次GC加一岁)，然后被回收。
+        总结：
+            java对象在eden区分配内存,期间不断GC仍然存活,直到内存满
+            eden区满了,部分存活对象转移到survisor区，两个区来回切换,长时间停留。期间经历多次GC任然存活
+            转移到老生代区，GC超过20次，内存最终被回收
+
+    7.jvm的启动流程：(虚拟机的启动入口位于share/tools/launcher/java.c的main)
+        1.配置JVM装载环境：
+            JVM.dll文件查找:
+                获取jre的路径
+                读取jre路径下的jvm.cfg文件，jvm.cfg文件中有关于cpu系统和jvm.dll类型map关系
+                获取当前jvm的类型,在jvm.cfg文件中找到对应的jvm.dll文件
+            JVM.dll文件的装载:(初始化jvm)
+                LoadLibrary方法装载JVM.dll动态连接库；
+                jvm.dll函数的重新绑定函数指针上：
+                    InvocationFunctions变量->CreateJavaVM =JNI_CreateJavaVM
+                    InvocationFunctions变量->GetDefaultJavaVMInitArgs=JNI_GetDefaultJavaVMInitArgs
+            解析部分参数：
+                保存参数到JavaVMOption结构体
+                对-Xss参数进行特殊处理，并设置threadStackSize
+        2.解析虚拟机参数：(-X开头的参数总共有5个)
+            参数处理：(对匹配的JavaVMOption三个常用的参数处理)
+                1.-Xmn：设置新生代的大小NewSize和MaxNewSize；
+                2.-Xms：设置堆的初始值InitialHeapSize，也是堆的最小值；
+                3.-Xmx：设置堆的最大值MaxHeapSize；
+            参数验证：(验证jvm启动参数中配置GC的合理性)
+                设置两个GC(垃圾设计器)参数的值：
+                    GC种类：
+                        SerialGC：序列化垃圾收集器
+                        ParallelGC：并行垃圾收集器
+                        ConcMarkSweepGC：并发收集器,多并发低暂停的收集器。使用标记-清楚算法回收堆内存
+                        ParNewGC：新的并行垃圾收集器,SerialGC的多线程加强版
+                        G1:最新的分区GC收集器。堆内存分成很多块，每次GC记住区域，不用每次都全堆扫描。
+                           年轻代和老年代同时gc。使用copying算法
+                        ZGC:java11的实验阶段，目前最高效
+                    注意事项：
+                        -XX:+UseSerialGC和-XX:+UseParallelGC不兼容抛异常
+                        -XX:+UseConcMarkSweepGC和-XX:+UseParNewGC可以兼容
+        3.设置线程栈大小：(-Xss设置的就是线程栈,确保一定设置了线程栈的值)
+            如果启动参数未设置-Xss，即threadStackSize为0,那么根据不同系统，设置ThreadStackSize的值
+        4.执行Javamain方法：(启动新线程执行javamain函数)
+            新建JVM实例: (调用JVM.dll函数JNI_CreateJavaVM)
+            加载主类的class：(可能用到了类加载机制)
+                jar方法：
+                    1.调用GetMainClassName方法找到META-INF/MANIFEST.MF文件指定的Main-Class的主类名；
+                    2.调用LoadClass方法加载主类的class文件；
+                class方法：
+                    1.调用NewPlatformString方法创建类名的String对象；
+                    2.调用LoadClass方法加载主类的class文件；
+            查找main方法:
+                GetStaticMethodID()查找名字是main的静态方法。(实现是JVM.dll的函数jni_GetStaticMethodID)
+            执行main方法：
+                1.重新创建参数数组
+                2.CallStaticVoidMethod(...)执行:
+                    其中参数mainID是main方法的入口地址。
+                    实现是JVM.dll中的jni_CallStaticVoidMethodV函数
+                    JavaCalls::call做最终调用执行
+
+    8.jvm的类加载：
+        class加载过程：
+            加载:生成class对象,作为该类方法区的数据入口
+            连接：:
+                验证: 保证class对象字节流符合jvm的安全
+                准备: 在方法区为类变量(static)分配空间
+                解析:
+                    符号引用：与jvm无关，就是1个符号
+                    直接引用：指向目标的指针,次目标定在内存中
+            初始化:
+                执行类构造器<client>方法的过程。执行类变量的赋值操作和静态语句块中的语句
+        加载器：(一切从BootStrap开始加载,逐个下降到自定义加载器...加载成功为止，寻找就反过来)
+            Bootstrap ClassLoader:
+                负责加载$JAVA_HOME中jre/lib/rt.jar里所有的class，由C++实现，不是ClassLoader子类
+            Extension ClassLoader:
+                负责加载java平台中扩展功能的一些jar包，包括$JAVA_HOME中jre/lib/*.jar或-Djava.ext.dirs指定目录下的jar包
+            App ClassLoader:
+                负责记载classpath中指定的jar包及目录中class
+            Custom ClassLoader:
+                属于应用程序根据自身需要自定义的ClassLoader，如tomcat、jboss都会根据j2ee规范自行实现ClassLoader加载过程中会先检查类是否被已加载，
+                检查顺序是自底向上，从Custom ClassLoader到BootStrap ClassLoader逐层检查，只要某个classloader已加载就视为已加载此类，保证此类只所有ClassLoader加载一次。
+                而加载的顺序是自顶向下，也就是由上层来逐层尝试加载此类。
+
+    9.jvm常见配置：
+        堆设置：
+            -Xms:初始堆大小
+            -Xmx:最大堆大小
+            -XX:NewSize=n:设置年轻代大小
+            -XX:NewRatio=n:设置年轻代和年老代的比值。如:为3，表示年轻代与年老代比值为1：3，年轻代占整个年轻代年老代和的1/4
+            -XX:SurvivorRatio=n:年轻代中Eden区与两个Survivor区的比值。注意Survivor区有两个。如：3，表示Eden：Survivor=3：2，一个Survivor区占整个年轻代的1/5
+            -XX:MaxPermSize=n:设置持久代大小
+        收集器设置：
+            -XX:+UseSerialGC:设置串行收集器=A
+            -XX:+UseParallelGC:设置并行收集器=B
+            -XX:+UseParalledlOldGC:设置并行年老代收集器=b
+            -XX:+UseConcMarkSweepGC:设置并发收集器=c
+        垃圾回收统计信息:
+            -XX:+PrintGC :打印GC信息
+            -XX:+PrintGCDetails ：打印GC细节
+            -XX:+PrintGCTimeStamps ：打印GC时间戳
+            -Xloggc:filename :打印日志到文件
+        并行收集器设置：
+            -XX:ParallelGCThreads=n:设置并行收集器收集时使用的CPU数。并行收集线程数。
+            -XX:MaxGCPauseMillis=n:设置并行收集最大暂停时间
+            -XX:GCTimeRatio=n:设置垃圾回收时间占程序运行时间的百分比。公式为1/(1+n)
+        并发收集器设置：
+            -XX:+CMSIncrementalMode:设置为增量模式。适用于单CPU情况。
+            -XX:ParallelGCThreads=n:设置并发收集器年轻代收集方式为并行收集时，使用的CPU数。并行收集线程数。
+
+    10.jvm的内存调优：
+        1.原则：
+            尽量让对象在新生代被GC
+            不要创建过大的对象及数组避免直接在旧生代创建对象，最终快速引发Full GC
+        2.调优手段：
+            1.控制堆内存的各个部分的比例和GC策略
+            2.一般说来新生代占整个堆1/3比较合适
+            3.通过-XX:MaxTenuringThreshold=n来控制新生代存活时间,尽量让对象在新生代被回收
+            4.设置线程栈的大小,保证线程数的经验值在3000~5000左右
+        3.工具 ：JConsole和Java VisualVM
+        3.目的：(减少CPU的占用率)
+            减少GC的频率
+            减少Full GC的次数：(即老生代GC很多次之后的全部GC)
+        4.Full GC产生的原因：
+            旧生代空间不足：分配内存不足，导致满了频繁GC,最终引发FUll GC
+            永久代空间不足：
+            System.gc()被显示调用：手动出发GC不好
+        5.设置不当的后果：
+            1.新生代设置过小：
+                新生代GC次数非常频繁，增大系统消耗；
+                导致大对象直接进入旧生代，占据了旧生代剩余空间，诱发Full GC
+            2.新生代设置过大：
+                导致旧生代过小（堆总量一定），从而诱发Full GC；
+                新生代GC耗时大幅度增加
+            3.新生代的Survivor设置过小：
+                对象从eden直接到达旧生代,降低了在新生代的存活时间
+            4.新声代的Survivor设置过大：
+                eden过小，增加了GC频率
+        6.jvm默认的GC策略：
+            吞吐量优先：(设置-XX:GCTimeRatio=n)
+            暂停时间优先：(设置-XX:MaxGCPauseRatio=n)
+                尽量保证每次GC造成的应用停止时间都在指定的数值范围内完成
+        7.典型设置:
+            堆设置：
+                java -Xmx3550m -Xms3550m -Xmn2g -Xss128k：
+                java -Xmx3550m -Xms3550m -Xss128k -XX:NewRatio=4 -XX:SurvivorRatio=4 -XX:MaxPermSize=16m -XX:MaxTenuringThreshold=0：
+            垃圾回收器设置：
+                吞吐量优先的并行收集器：
+                    java -Xmx3800m -Xms3800m -Xmn2g -Xss128k -XX:+UseParallelGC -XX:ParallelGCThreads=20
+                        上述配置下，年轻代使用并发收集，而年老代仍旧使用串行收集
+                    java -Xmx3550m -Xms3550m -Xmn2g -Xss128k -XX:+UseParallelGC -XX:ParallelGCThreads=20 -XX:+UseParallelOldGC
+                    java -Xmx3550m -Xms3550m -Xmn2g -Xss128k -XX:+UseParallelGC  -XX:MaxGCPauseMillis=100
+                    java -Xmx3550m -Xms3550m -Xmn2g -Xss128k -XX:+UseParallelGC  -XX:MaxGCPauseMillis=100 -XX:+UseAdaptiveSizePolicy
+                响应时间优先的并发收集器：
+                    java -Xmx3550m -Xms3550m -Xmn2g -Xss128k -XX:ParallelGCThreads=20 -XX:+UseParNewGC -XX:+UseConcMarkSweepGC
+                    java -Xmx3550m -Xms3550m -Xmn2g -Xss128k -XX:+UseConcMarkSweepGC -XX:CMSFullGCsBeforeCompaction=5 -XX:+UseCMSCompactAtFullCollection
+        8.调优总结：
+            年轻代大小选择：
+                响应时间优先的应用：尽可能设大
+                吞吐量优先的应用：尽可能的设置大
+            年老代大小选择：
+                响应时间优先的应用：年老代使用并发收集器,大小需要考虑时间效应
+                吞吐量优先的应用：较小的年老代
+            年老代较小堆的碎片问题：(尽可能压缩)
+                -XX:+UseCMSCompactAtFullCollection：使用并发收集器时，开启对年老代的压缩。
+                -XX:CMSFullGCsBeforeCompaction=0：上面配置开启的情况下，这里设置多少次Full GC后，对年老代进行压缩

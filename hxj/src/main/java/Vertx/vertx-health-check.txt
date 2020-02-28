@@ -1,0 +1,178 @@
+1.学习vertx-health-check的语法：
+    1. 概念：它是一个用于检查应用程序状态的组件。可以单独使用，也可以和vertx web或者eventbus组合使用。
+    2. 使用依赖：<dependency>
+                 <groupId>io.vertx</groupId>
+                 <artifactId>vertx-health-check</artifactId>
+                 <version>3.8.0</version>
+               </dependency>
+    3. 创建health check对象
+        HealthChecks hc = HealthChecks.create(vertx);
+        hc.register("my-procedure", future -> future.complete(Status.OK()));
+        //设置超时毫秒，超时则返回失败
+        hc.register("my-procedure", 2000, future -> future.complete(Status.OK()));
+    4. 注册vert.x web句柄
+        HealthCheckHandler healthCheckHandler1 = HealthCheckHandler.create(vertx);
+        HealthCheckHandler healthCheckHandler2 = HealthCheckHandler.createWithHealthChecks(HealthChecks.create(vertx));
+
+        //在确定路由绑定关系时进行健康检查--经常去访问该路由是否正常返回
+        Router router = Router.router(vertx);
+        router.get("/health*").handler(healthCheckHandler1);
+        router.get("/ping*").handler(healthCheckHandler2);
+
+        HealthCheckHandler healthCheckHandler = HealthCheckHandler.create(vertx);
+        healthCheckHandler.register("my-procedure-name", future -> {
+            //成功
+          future.complete(Status.OK());
+            //失败
+          future.complete(Status.KO());
+        });
+
+        //标准格式
+        healthCheckHandler.register("my-procedure-name-with-timeout", 2000, future -> {
+          future.complete(Status.OK());
+          future.complete(Status.KO());
+        });
+        router.get("/health").handler(healthCheckHandler);
+
+    5. 使用Procedures--本质是一个检查健康状况的函数
+            如果future标记失败，check当作KO
+            如果future成功完成，但是没有Status，check当作OK
+            如果future成功完成，而且Status标记OK，check当作OK
+            如果future成功完成，但是Status标记KO，check当作KO
+
+        基本步骤：
+            5.1 创建对象
+            5.2 注册句柄函数
+            5.3 绑定路由
+            HealthCheckHandler healthCheckHandler = HealthCheckHandler.create(vertx);
+            healthCheckHandler.register("my-procedure-name", future -> {
+              future.complete(Status.OK(new JsonObject().put("available-memory", "2mb")));
+            });
+            healthCheckHandler.register("my-second-procedure-name", future -> {
+              future.complete(Status.KO(new JsonObject().put("load", 99)));
+            });
+            router.get("/health").handler(healthCheckHandler);
+
+        以/进行分组：
+            HealthCheckHandler healthCheckHandler = HealthCheckHandler.create(vertx);
+            healthCheckHandler.register("a-group/my-procedure-name", future -> {
+              //....
+            });
+            healthCheckHandler.register("a-group/a-second-group/my-second-procedure-name", future -> {
+              //....
+            });
+            router.get("/health").handler(healthCheckHandler);
+
+    6. http响应和json输出
+        如果没有注册任何过程，则响应是204 - no CONTENT，表示系统已经启动，但是没有执行任何过程。响应不包含有效负载。
+        响应码：200 = 一切正常
+               503 = 至少一个procedure有不健康的状态
+               500 = procedure已经抛出错误信息
+        具体的响应结果：在data部分显示出错的信息
+                      {
+                        "checks" : [
+                        {
+                          "id" : "A",
+                          "status" : "UP"
+                        },
+                        {
+                          "id" : "B",
+                          "status" : "DOWN",
+                          "data" : {
+                            "some-data" : "some-value"
+                          }
+                        }
+                        ],
+                        "outcome" : "DOWN"
+                      }
+
+                    {
+                    "checks" : [
+                    {
+                      "id" : "my-group",
+                      "status" : "UP",
+                      "checks" : [
+                      {
+                        "id" : "check-2",
+                        "status" : "UP",
+                      },
+                      {
+                        "id" : "check-1",
+                        "status" : "UP"
+                      }]
+                    }],
+                    "outcome" : "UP"
+                    }
+    7. Procedures的例子
+        JDBC：  handler.register("database",future -> jdbcClient.getConnection(connection -> {
+                   if (connection.failed()) {
+                     future.fail(connection.cause());
+                   } else {
+                     connection.result().close();
+                     future.complete(Status.OK());
+                   }
+                 }));
+        服务可用性：
+            handler.register("my-service",future -> HttpEndpoint.getClient(discovery,(rec) -> "my-service".equals(rec.getName()),client -> {
+                  if (client.failed()) {
+                    future.fail(client.cause());
+                  } else {
+                    client.result().close();
+                    future.complete(Status.OK());
+                  }
+                }));
+        Event bus：🌿🌿🌿🌿🌿
+            handler.register("receiver",future ->
+                vertx.eventBus().send("health", "ping", response -> {
+                  if (response.succeeded()) {
+                    future.complete(Status.OK());
+                  } else {
+                    future.complete(Status.KO());
+                  }
+                })
+            );
+    8. 在event bus上暴露health checks：
+        vertx.eventBus().consumer("health", message -> healthChecks.invoke(message::reply));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

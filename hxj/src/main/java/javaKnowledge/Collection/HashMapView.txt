@@ -1,0 +1,79 @@
+1.数据结构复习：
+    名词概念：哈希=散列
+
+    哈希表(散列表，杂凑表)：给定哈希函数和处理冲突的方法，将一组关键字映射到有限连续的地址集。
+    哈希函数：常用的除留余数法 H(key)=key MOD p
+    冲突：H(key1)=H(key2),key1!=key2
+    处理冲突：
+        开放定址法：
+            线性探测再散列：  H(key) +- 1,2,3,4...
+            二次探测再散列：  H(key) +- 1的平方,-1的平方,2的平方，-2的平方...
+            伪随机探测再散列: H(key) +- f(1),f(2)...    [f()是一个函数]
+        再哈希法：H1(key)冲突，然后H2(key),H3(key)....
+        链地址法：将冲突的记录形成单链表
+        建立公共溢出区：将冲突记录存入溢出区
+
+
+     装填因子：a=n/m ,n个记录,m个地址空间
+
+
+2.HashMap的数据结构
+    int DEFAULT_INITIAL_CAPACITY = 16;  [默认的初始地址数]
+    float DEFAULT_LOAD_FACTOR = 0.75F;  [默认的初始状态因子，也就是16*0.75=12，当记录超过12个时,地址扩容成32]
+    transient HashMap.Node<K, V>[] table; [链表的数据结构,类似c语言的结构体]
+    ......
+    static class Node<K, V> implements Entry<K, V> {
+            final int hash;
+            final K key;
+            V value;
+            HashMap.Node<K, V> next;
+    }
+
+    put(key,value)的原理：(>>>优先级大于^的优先级)
+        0.hash函数实现，参数的hash取值，是32位，然后（高16bit不变，低16bit和高16bit做了一个异或）；
+        1.将key进行hash计算得到hash值，数组中存储的都是hash值，具体对应的地址时[ (arr.leng-1) & hash ] ,这是位与运算符
+        2.如果遇到冲突的hash,则添加链表，接下来比较key值.
+        3.key值的比较,最终使用的是==,地址比较。如果key值也相等，那么就把结构体重新赋值到对应的链表节点
+        4.如果key值不相等，向下遍历节点，逐个节点比较，当节点为null时，new新的节点在链表后面
+        5.扩容的时候后，需要重新进行映射，原理应该是新new一个2倍数组，链表的整体平移,链表会倒置.
+
+        当hash值相同的冲突节点大于阈值(默认8)会使用平衡树代替链表
+
+    get(key)的原理：
+        1.传入key，计算hash值，然后在hash表中中比较hash值，找到地址后，再看看链表的key是否相等，
+        2.key相等的方法，最终是==,地址比较
+        3.逐个节点比较，找到返回value或者失败返回null
+
+    transient关键字：标记的成员变量不参与序列化过程。当对象存储时，它的值不需要维持。
+
+HashMap解决并发的安全问题：
+    Map map=Collections.synchronizedMap(new HashMap());  [new了一个map的静态实现类,使用synchronized锁final变量mutex,mutex的赋值是静态类this]
+    ConcurrentHashMap:  [在找到地址后,比较key时，使用synchronized包裹方法体]
+    HashTable:  [synchronized来保证线程]
+
+注意：放入map的对象最好重写hashcode和equals方法，因为他们默认比较的是==地址
+
+3个线程安全集合的效率问题
+Test started for: class java.util.Hashtable
+2500K entried added/retrieved in 4208 ms
+2500K entried added/retrieved in 2655 ms
+2500K entried added/retrieved in 2628 ms
+2500K entried added/retrieved in 2463 ms
+2500K entried added/retrieved in 2186 ms
+For class java.util.Hashtable the average time is 2828 ms
+
+Test started for: class java.util.Collections$SynchronizedMap
+2500K entried added/retrieved in 5057 ms
+2500K entried added/retrieved in 2251 ms
+2500K entried added/retrieved in 2240 ms
+2500K entried added/retrieved in 2319 ms
+2500K entried added/retrieved in 2141 ms
+For class java.util.Collections$SynchronizedMap the average time is 2801 ms
+
+Test started for: class java.util.concurrent.ConcurrentHashMap
+2500K entried added/retrieved in 1899 ms
+2500K entried added/retrieved in 4450 ms
+2500K entried added/retrieved in 1338 ms
+2500K entried added/retrieved in 1203 ms
+2500K entried added/retrieved in 1157 ms
+For class java.util.concurrent.ConcurrentHashMap the average time is 2009 ms

@@ -1,0 +1,24 @@
+学习JaCoco--java的代码覆盖率检查库：
+    概述：最新版本0.8.2。官网https://www.eclemma.org/jacoco/trunk/index.html
+         官方项目的地址：https://github.com/jacoco/jacoco
+         构建条件：maven3.3.9以上，Java8以上
+         代码的API文档：https://www.eclemma.org/jacoco/trunk/doc/api/index.html
+    核心的jar包：jacocoagent.jar
+                jacocoant.jar
+                jacococli.jar
+                org.jacoco.agent-0.8.3.201901230100.jar
+                org.jacoco.ant-0.8.3.201901230100.jar
+                org.jacoco.core-0.8.3.201901230100.jar
+                org.jacoco.report-0.8.3.201901230100.jar
+    原理机制：覆盖率计数器。
+        指令：最小的计数单元
+        分支：计算一个方法里面的总分支数，确定执行和不执行的分支数量。
+        圈复杂度：计算处类，包，组的复杂度。
+        行：该行的至少一个指令被执行
+        方法：该方法的至少一个指令被执行
+        类：至少有一个方法被执行
+
+    使用教程：
+        1.idea自带代码覆盖率工具，点击运行方法with Coverage就可以了
+        2.使用Jacoco的jar包，maven文件中：org.jacoco.agent/org.jacoco.core/org.jacoco.report
+          然后使用maven install。会在target目录下生成文件夹。

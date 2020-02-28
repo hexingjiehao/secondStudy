@@ -1,0 +1,14 @@
+<script lanage="javascript">
+    function upgrade(flag) {
+        if(flag){
+            document.getElementById("skin").src = "guanyu.gif";
+        }else{
+            document.getElementById("skin").src = "guanyu.png";
+        }
+    }
+</script>
+<img id="skin" src="guanyu.png"/>
+<div style="height: 12px"></div>
+<button style="font-size: 100% ;width: 436px; height: 50px; background: gold" onclick="upgrade(true)">升级为动态</button>
+<div style="height: 12px"></div>
+<button style="font-size: 100% ;width: 436px; height: 50px; background: lightsteelblue" onclick="upgrade(false)">转化为静态</button>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rest-store>
+    <append-cache-name-to-path>false</append-cache-name-to-path>
+    <path>/</path>
+    <key-to-string-mapper>org.infinispan.persistence.keymappers.WrappedByteArrayOrPrimitiveMapper</key-to-string-mapper>
+    <raw-values></raw-values>
+    <max-content-length value="10485760">
+        <remote-server></remote-server>
+        <connection-pool>
+            <buffer-size>8192</buffer-size>
+            <connection-timeout>60000</connection-timeout>
+            <max-connections-per-host>4</max-connections-per-host>
+            <max-total-connections>20</max-total-connections>
+            <socket-timeout>60000</socket-timeout>
+            <tcp-no-delay>true</tcp-no-delay>
+        </connection-pool>
+    </max-content-length>
+
+
+    <shared>false</shared>
+    <transactional>false</transactional>
+    <preload>false</preload>
+    <fetch-state>false</fetch-state>
+    <purge>false</purge>
+    <singleton>false</singleton>
+    <read-only>false</read-only>
+    <max-batch-size value="100">
+        <write-behind>
+            <modification-queue-size>1024</modification-queue-size>
+            <thread-pool-size>1</thread-pool-size>
+            <fail-silently>false</fail-silently>
+        </write-behind>
+        <property>
+            <name></name>
+            <value></value>
+        </property>
+    </max-batch-size>
+
+</rest-store>

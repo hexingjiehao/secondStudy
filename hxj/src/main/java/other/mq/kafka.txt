@@ -1,0 +1,15 @@
+1.学习kafka。简单学习
+    官网地址：http://kafka.apache.org。远端仓库github：https://github.com/apache/kafka
+    最新版本：2.0.x
+    基本概念：它是消息中间件，是一个队列，自动持久化到硬盘，rabbitmq只会在内存中存储，一旦关闭则消息丢失。
+        producer：生产者，就是它来生产“鸡蛋”的。
+        consumer：消费者，生出的“鸡蛋”它来消费。
+        topic：你把它理解为标签，生产者每生产出来一个鸡蛋就贴上一个标签（topic），消费者可不是谁生产的“鸡蛋”都吃的，这样不同的生产者生产出来的“鸡蛋”，消费者就可以选择性的“吃”了。
+        broker：就是篮子了。
+    文档说明：
+        1.命令行上进行生产和消费等操作。
+        2.常用的API：Producer API
+                    Consumer API
+                    Streams API
+                    Connect API
+                    AdminClient API

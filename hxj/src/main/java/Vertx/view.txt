@@ -1,0 +1,574 @@
+学习vert.x语法：(默认是使用java版本)
+    1.概要：eclipse Vert.x是一个工具，能够在Java虚拟机上构建响应式应用。
+         它是基于事件驱动并且非阻塞式的。它是多语言支持的。
+         最新版本是3.6.2
+         获取方式：官网下载zip/.tar.gz
+                     From NPM：
+                        npm install vertx3-min
+                        npm install vertx3-full
+                     From Docker：
+                        docker run -i -t vertx/vertx3-exec
+                     From SDKMan：
+                        sdk install vertx
+                     From Homebrew：
+                        brew install vert.x
+         快速创建项目：http://start.vertx.io
+    2.教程文档：
+        1. hello world项目和出版书
+        2. 常用的功能：核心 / web / 数据访问 / 响应式 / 微服务 / IoT / 验证和授权
+                     集成 / 事件总线桥 / 开发维护 / 测试 / 集群 / 服务 / 云 / 先进的
+        3. 核心功能: java版本代码API的地址：https://vertx.io/docs/apidocs/
+                    java版本手册地址：https://vertx.io/docs/vertx-core/java/
+            1.功能点：写TCP客户端和服务器
+                     写HTTP客户端和服务器，包括WebSockets
+                     Event Bus(事件总线)
+                     共享数据(本地map和集群分布式map)
+                     周期性和延迟作用
+                     部署和取消部署Verticles
+                     数据报套接字
+                     域名解析客户端
+                     文件系统访问
+                     高可用性
+                     本地传输
+                     集群
+            2.资源依赖：dependencies {
+                        compile 'io.vertx:vertx-core:3.6.2'
+                       }
+            3.创建Vertx对象：它是控制中心。可以设置选项。
+                Vertx vertx = Vertx.vertx();
+                Vertx vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(40));
+            4.方法的fluent风格：request.response().putHeader("Content-Type", "text/plain").write("some text").end();
+            5.事件驱动，回调式句柄：vertx.setPeriodic(1000, id -> {
+                                   System.out.println("timer fired!");
+                                 });
+            6.Vert.x的API：它是非阻塞式的。
+            7.响应器和多重响应器模式：Vert.x传递事件到句柄，使用一个event loop的线程。
+                                  每一个Vertx实例维持几个event loop, nodejs只有一个event loop。
+                注意：不能自己阻塞event loop。禁止的操作有：线程睡眠，等待锁或者信号监视器，做长时间的数据库操作，做复杂的计算，死循环
+            8.运行阻塞代码：JDBC的API是同步的，vertx不能使用它异步。解决办法是executeBlocking() 或者 workVerticle,它有工作池。
+                vertx.executeBlocking(future -> {
+                  String result = someAPI.blockingMethod("hello");
+                  future.complete(result);
+                }, res -> {
+                  System.out.println("The result is: " + res.result());
+                });
+
+                WorkerExecutor executor = vertx.createSharedWorkerExecutor("my-worker-pool");
+                executor.executeBlocking(future -> {
+                  String result = someAPI.blockingMethod("hello");
+                  future.complete(result);
+                }, res -> {
+                  System.out.println("The result is: " + res.result());
+                });
+                executor.close();
+            9.多个异步任务的公共处理：使用Future<T> ,被服务器监听是否完成。
+                CompositeFuture.all(future...).setHandler(ar -> {
+                  if (ar.succeeded()) {
+
+                  } else {
+
+                  }
+                });
+                多个future之间的执行顺序。compose()
+            10.Verticle的概念：通过继承AbstractVerticle可以自定义Verticle。
+                不打破黄金规则的自定义开始/结束方法：核心是Future参数和future.complete()方法
+                public class MyVerticle extends AbstractVerticle {
+                 private HttpServer server;
+                 public void start(Future<Void> startFuture) {
+                   server = vertx.createHttpServer().requestHandler(req -> {
+                     req.response()
+                       .putHeader("content-type", "text/plain")
+                       .end("Hello from Vert.x!");
+                     });
+                   server.listen(8080, res -> {
+                     if (res.succeeded()) {
+                       startFuture.complete();
+                     } else {
+                       startFuture.fail(res.cause());
+                     }
+                   });
+                 }
+                }
+                1.Verticle的类型：
+                    Standard： 使用event loop线程。所有操作都是在同一个event loop上。
+                    Worker： 从work pool中使用线程。一个实例永远不会由多个线程并发执行。
+                            主要用来调用阻塞块代码。创建Work verticles。
+                            DeploymentOptions options = new DeploymentOptions().setWorker(true);
+                            vertx.deployVerticle("com.mycompany.MyOrderProcessorVerticle", options);
+                    Multi-threaded worker: 从work pool中使用线程。一个实例可以由多个线程并发执行。
+                        eploymentOptions options = new DeploymentOptions()
+                          .setWorker(true)
+                          .setInstances(5) // matches the worker pool size below
+                          .setWorkerPoolName("the-specific-pool")
+                          .setWorkerPoolSize(5);
+                        vertx.deployVerticle("com.mycompany.MyOrderProcessorVerticle", options);
+
+                2.部署Verticles: 使用方法deployVerticle(),只有Java版本
+                    Verticle myVerticle = new MyVerticle();
+                    vertx.deployVerticle(myVerticle);
+                    不同类型的vertical部署：(java,javascript,ruby)
+                        vertx.deployVerticle("com.mycompany.MyOrderProcessorVerticle");
+                        vertx.deployVerticle("verticles/myverticle.js");
+                        vertx.deployVerticle("verticles/my_verticle.rb");
+                3.加载Verticle Factories: 使用registerVerticleFactory() 和 unregisterVerticleFactory()
+                4.部署完成和取消部署句柄：undeploy
+                    vertx.deployVerticle("com.mycompany.MyOrderProcessorVerticle", res -> {
+                      if (res.succeeded()) {
+                        System.out.println("Deployment id is: " + res.result());
+                      } else {
+                        System.out.println("Deployment failed!");
+                      }
+                    });
+                5.指定vertical实例的数量：DeploymentOptions options = new DeploymentOptions().setInstances(16);
+                                         vertx.deployVerticle("com.mycompany.MyOrderProcessorVerticle", options);
+                6.传递配置对象到vertical：JsonObject config = new JsonObject().put("name", "tim").put("directory", "/blah");
+                                        DeploymentOptions options = new DeploymentOptions().setConfig(config);
+                                        vertx.deployVerticle("com.mycompany.MyOrderProcessorVerticle", options);
+                7.访问环境变量：System.getProperty("prop");
+                              System.getenv("HOME");
+                8.运行Verticle命令：下载zip,在bin目录下执行vertx run xxx.java
+                9.上下文对象：它绑定到event loop线程。
+                    Context context = vertx.getOrCreateContext();
+                    if (context.isEventLoopContext()) {
+                      System.out.println("Context attached to Event Loop");
+                    } else if (context.isWorkerContext()) {
+                      System.out.println("Context attached to Worker Thread");
+                    } else if (context.isMultiThreadedWorkerContext()) {
+                      System.out.println("Context attached to Worker Thread - multi threaded worker");
+                    } else if (! Context.isOnVertxThread()) {
+                      System.out.println("Context not attached to a thread managed by vert.x");
+                    }
+
+                    final Context context = vertx.getOrCreateContext();
+                    context.put("data", "hello");
+                    context.runOnContext((v) -> {
+                      String hello = context.get("data");
+                    });
+                10.执行周期性和延迟动作：
+                    long timerID = vertx.setTimer(1000, id -> {
+                      System.out.println("And one second later this is printed");
+                    });
+                    System.out.println("First this is printed");
+
+                    long timerID = vertx.setPeriodic(1000, id -> {
+                      System.out.println("And every second this is printed");
+                    });
+                    System.out.println("First this is printed");
+
+                    vertx.cancelTimer(timerID);
+            11.Event Bus: 事件总线。注册句柄，取消注册句柄，发送消息。
+                地址：信息通过event bus发送到地址。
+                句柄：消息被句柄接受，你在一个地址注册一个句柄。
+                    获取event bus / 注册句柄 / 取消注册句柄 / 发布消息 / 发送消息 / 设置消息头 / 消息顺序 / 消息对象
+                    确认消息，发送回复 / 发送超时 / 发送错误 / 消息代码 / 集群事件总线 / 集群程序 / 命令行集群
+                EventBus eb = vertx.eventBus();
+
+                MessageConsumer<String> consumer = eb.consumer("news.uk.sport");
+                consumer.handler(message -> {
+                  System.out.println("I have received a message: " + message.body());
+                });
+
+                consumer.completionHandler(res -> {
+                  if (res.succeeded()) {
+                    System.out.println("The handler registration has reached all nodes");
+                  } else {
+                    System.out.println("Registration failed!");
+                  }
+                });
+
+                //广播操作，所有handler都能够接收
+                eventBus.publish("news.uk.sport", "Yay! Someone kicked a ball");
+                //竞争操作，只有其中一个能够接收
+                eventBus.send("news.uk.sport", "Yay! Someone kicked a ball");
+                DeliveryOptions options = new DeliveryOptions();
+                options.addHeader("some-header", "some-value");
+                eventBus.send("news.uk.sport", "Yay! Someone kicked a ball", options);
+
+                MessageConsumer<String> consumer = eventBus.consumer("news.uk.sport");
+                consumer.handler(message -> {
+                  System.out.println("I have received a message: " + message.body());
+                  message.reply("how interesting!");
+                });
+
+                eventBus.send("news.uk.sport", "Yay! Someone kicked a ball across a patch of grass", ar -> {
+                  if (ar.succeeded()) {
+                    System.out.println("Received reply: " + ar.result().body());
+                  }
+                });
+            12.配置event bus: 主要是TCP连接方面。有服务器和客户端方面。比如设置集群的端口等
+                VertxOptions options = new VertxOptions()
+                    .setEventBusOptions(new EventBusOptions()
+                        .setSsl(true)
+                        .setKeyStoreOptions(new JksOptions().setPath("keystore.jks").setPassword("wibble"))
+                        .setTrustStoreOptions(new JksOptions().setPath("keystore.jks").setPassword("wibble"))
+                        .setClientAuth(ClientAuth.REQUIRED)
+                    );
+
+                Vertx.clusteredVertx(options, res -> {
+                  if (res.succeeded()) {
+                    Vertx vertx = res.result();
+                    EventBus eventBus = vertx.eventBus();
+                    System.out.println("We now have a clustered event bus: " + eventBus);
+                  } else {
+                    System.out.println("Failed: " + res.cause());
+                  }
+                });
+            13.数据传输值：JSON Object和JSON Arrays。
+                JsonObject: 创建，获取，设值，映射成对象。对象要序列化和get/set方法。
+                    String jsonString = "{\"foo\":\"bar\"}";
+                    JsonObject object = new JsonObject(jsonString);
+
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("foo", "bar");
+                    map.put("xyz", 3);
+                    JsonObject object = new JsonObject(map);
+
+                    object.put("foo", "bar").put("num", 123).put("mybool", true);
+
+                    String val = jsonObject.getString("some-key");
+                    int intVal = jsonObject.getInteger("some-other-key");
+
+                    request.bodyHandler(buff -> {
+                      JsonObject jsonObject = buff.toJsonObject();
+                      User javaObject = jsonObject.mapTo(User.class);
+                    });
+                JsonArray:
+                    String jsonString = "[\"foo\",\"bar\"]";
+                    JsonArray array = new JsonArray(jsonString);
+                    array.add("foo").add(123).add(false);
+                    String val = array.getString(0);
+                    Integer intVal = array.getInteger(1);
+                    Boolean boolVal = array.getBoolean(2);
+            14.缓存区buffers: Buffer.buffer()可以创建，appendXXX()可以扩展。
+                Buffer buff = Buffer.buffer("some string", "UTF-16");
+                byte[] bytes = new byte[] {1, 3, 5};
+                Buffer buff = Buffer.buffer(bytes);
+                Buffer buff = Buffer.buffer(10000);
+
+                buff.appendInt(123).appendString("hello\n");
+                socket.write(buff);
+                buff.setInt(1000, 123);
+                buff.setString(0, "hello");
+                for (int i = 0; i < buff.length(); i += 4) {
+                  System.out.println("int value at " + i + " is " + buff.getInt(i));
+                }
+                //无符号数据
+                Buffer buff = Buffer.buffer(128);
+                int pos = 15;
+                buff.setUnsignedByte(pos, (short) 200);
+                System.out.println(buff.getUnsignedByte(pos));
+            15.写TCP服务和客户端连接： 创建和关闭TCP服务器，配置TCP服务器，开始服务器监听，获取通知，从socket阅读书写数据，关闭句柄和处理异常
+                                    更新连接，SSL/TLS
+                                    创建和配置TCP客户端，配置连接，日志网络活动，使用客户端代理。
+                注意：默认主机0.0.0.0,监听所有合适地址，默认端口0，指示服务器找到随机未使用本地端口并使用它
+                代码举例：
+                    NetServerOptions options = new NetServerOptions().setPort(4321);
+                    NetServer server = vertx.createNetServer(options);
+                    server.listen(1234, "localhost",handle);
+                    server.listen(0, "localhost", handle);
+
+                    server.connectHandler(socket -> {
+                    });
+
+                    //从socket读取和写入数据
+                    server.connectHandler(socket -> {
+                      socket.handler(buffer -> {
+                        System.out.println("I received some bytes: " + buffer.length());
+                      });
+                    });
+                    socket.write("some data", "UTF-16");
+                    socket.closeHandler(v -> {
+                      System.out.println("The socket has been closed");
+                    });
+
+                    //发送文件资源到socket
+                    socket.sendFile("myfile.dat");
+
+                    //创建TCP客户端,可以设置重连次数。
+                    NetClientOptions options = new NetClientOptions().setConnectTimeout(10000)
+                                                    .setReconnectAttempts(10)
+                                                    .setReconnectInterval(500);
+                    NetClient client = vertx.createNetClient(options);
+                    client.connect(4321, "localhost", handle);
+
+                    //设置服务器的证书和秘钥
+                    NetServerOptions options = new NetServerOptions().
+                      setSsl(true).
+                      setClientAuth(ClientAuth.REQUIRED).
+                      setTrustStoreOptions(
+                        new JksOptions().
+                          setPath("/path/to/your/truststore.jks").
+                          setPassword("password-of-your-truststore")
+                      );
+            16.写HTTP服务器和客户端： Vert.x支持协议http1.0,1.1,1.2
+                HttpServerOptions options = new HttpServerOptions()
+                    .setUseAlpn(true)
+                    .setSsl(true)
+                    .setKeyStoreOptions(new JksOptions().setPath("/path/to/my/keystore"));
+                HttpServer server = vertx.createHttpServer(options);
+
+                //创建请求
+                vertx.createHttpServer().requestHandler(request -> {
+                  request.response().end("Hello world");
+                }).listen(8080);
+
+                MultiMap headers = request.headers();
+                System.out.println("User agent is " + headers.get("user-agent"));
+                System.out.println("User agent is " + headers.get("User-Agent"));
+
+                HttpServerResponse response = request.response();
+                response.write("hello world!", "UTF-16");
+                response.end();
+
+                //设置响应头
+                HttpServerResponse response = request.response();
+                MultiMap headers = response.headers();
+                headers.set("content-type", "text/html");
+                headers.set("other-header", "wibble");
+
+                //响应体使用文件
+                vertx.createHttpServer().requestHandler(request -> {
+                  String file = "";
+                  if (request.path().equals("/")) {
+                    file = "index.html";
+                  } else if (!request.path().contains("..")) {
+                    file = request.path();
+                  }
+                  request.response().sendFile("web/" + file);
+                }).listen(8080);
+
+                //发送http请求
+                HttpClient client = vertx.createHttpClient();
+                client.getNow(8080, "myserver.mycompany.com", "/some-uri", response -> {
+                  System.out.println("Received response with status code " + response.statusCode());
+                });
+
+                //发送http请求，end()用于结束请求
+                client.request(HttpMethod.GET, "some-uri", response -> {
+                  System.out.println("Received response with status code " + response.statusCode());
+                }).end();
+
+                //处理http异常
+                HttpClientRequest request = client.post("some-uri", response -> {
+                  if (response.statusCode() == 200) {
+                    System.out.println("Everything fine");
+                    return;
+                  }
+                  if (response.statusCode() == 500) {
+                    System.out.println("Unexpected behavior on the server side");
+                    return;
+                  }
+                });
+                request.end();
+
+                //服务器和客户端连接
+                HttpServer server = vertx.createHttpServer(http2Options);
+                server.connectionHandler(connection -> {
+                  System.out.println("A client connected");
+                });
+
+                request.connectionHandler(connection -> {
+                  System.out.println("Connected to the server");
+                });
+
+                //用vertx来使用https
+                server.websocketHandler(websocket -> {
+                  if (websocket.path().equals("/myapi")) {
+                    websocket.reject();
+                  } else {
+                  }
+                });
+
+                client.websocket("/some-uri", websocket -> {
+                  System.out.println("Connected!");
+                });
+
+                //使用代理来处理http连接
+                HttpClientOptions options = new HttpClientOptions()
+                    .setProxyOptions(new ProxyOptions()
+                    .setType(ProxyType.HTTP)
+                        .setHost("localhost")
+                        .setPort(3128)
+                        .setUsername("username")
+                        .setPassword("secret"));
+                HttpClient client = vertx.createHttpClient(options);
+            17.Vert.x的共享数据：
+                本地共享数据：SharedData sd = vertx.sharedData();
+                            LocalMap<String, String> map1 = sd.getLocalMap("mymap1");
+                异步共享数据：SharedData sd = vertx.sharedData();
+                            sd.<String, String>getAsyncMap("mymap", res -> {
+                                 if (res.succeeded()) {
+                                   AsyncMap<String, String> map = res.result();
+                                 } else {
+                                 }
+                            });
+                异步锁：sd.getLock("mylock", res -> {
+                          if (res.succeeded()) {
+                            Lock lock = res.result();
+                            vertx.setTimer(5000, tid -> lock.release());
+                          } else {
+                          }
+                       });
+                异步计数器：sd.getCounter("mycounter", res -> {
+                            if (res.succeeded()) {
+                              Counter counter = res.result();
+                            } else {
+                            }
+                          });
+            18.Vert.x使用文件系统： 有阻塞操作和非阻塞操作。异步操作文件
+                FileSystem fs = vertx.fileSystem();
+                fs.copy("foo.txt", "bar.txt", res -> {
+                  if (res.succeeded()) {
+                  } else {
+                  }
+                });
+
+                OpenOptions options = new OpenOptions();
+                fileSystem.open("myfile.txt", options, res -> {
+                  if (res.succeeded()) {
+                    AsyncFile file = res.result();
+                  } else {
+                  }
+                });
+            19.数据报套接字UDP：创建发送和接收UDP
+                DatagramSocket socket = vertx.createDatagramSocket(new DatagramSocketOptions());
+                Buffer buffer = Buffer.buffer("content");
+                socket.send(buffer, 1234, "10.0.0.1", asyncResult -> {
+                  System.out.println("Send succeeded? " + asyncResult.succeeded());
+                });
+                socket.listen(1234, "0.0.0.0", asyncResult -> {
+                  if (asyncResult.succeeded()) {
+                    socket.handler(packet -> {
+                    });
+                  } else {
+                    System.out.println("Listen failed" + asyncResult.cause());
+                  }
+                });
+            20.域名解析客户端：有查找ipv4client.lookup4(),有查找ipv6的方法client.lookup6(),解析所有ipv4同名记录client.resolveA()
+                DnsClient client = vertx.createDnsClient(new DnsClientOptions()
+                  .setPort(53)
+                  .setHost("10.0.0.1")
+                  .setQueryTimeout(10000)
+                );
+                client.lookup("vertx.io", ar -> {
+                  if (ar.succeeded()) {
+                    System.out.println(ar.result());
+                  } else {
+                    System.out.println("Failed to resolve entry" + ar.cause());
+                  }
+                });
+            21.流Streams: 链式处理，主要是服务器的连接处理。
+                NetServer server = vertx.createNetServer(
+                    new NetServerOptions().setPort(1234).setHost("localhost")
+                );
+                server.connectHandler(sock -> {
+                  Pump.pump(sock, sock).start();
+                }).listen();
+            22.记录解析器：能够解析协议
+                final RecordParser parser = RecordParser.newDelimited("\n", h -> {
+                  System.out.println(h.toString());
+                });
+            23.Json解析器：JsonParser parser = JsonParser.newParser();
+                          parser.exceptionHandler(err -> {
+                          });
+            24.线程安全：Vert.x对象大部分是线程安全的
+            25.Vert.x有关的命令行操作：
+                vertx run MyVerticle.java
+                vertx run MyVerticle.java -instances 10
+                vertx version
+                java -jar xx..jar
+
+⚠️⚠️⚠️：vertx发送http请求时，可能会报错主机无法解析。
+    异常信息如下：java.net.UnknownHostException: failed to resolve 'xiongjie-1258920061.cos.ap-shanghai.myqcloud.com' after 2 queries
+
+    原因是：vertx使用自带的地址解析器而不是jvm内置的地址解析器。通常，可以同时使用操作系统的hosts文件或者DNS查询来解析主机的IP地址。
+           vertx默认使用操作系统的DNS服务器，如果失效，则使用google的DNS服务器解析地址。
+
+           另外：当服务器没有及时响应，会自动进行DNS列表的下一个主机解析。默认只有4次机会，并且5秒内无反应，则超时查询失败。
+
+           当操作系统的DNS失效，而由于翻墙原因，导致无法访问google的DNS服务器，就会导致无法解析主机。
+
+    解决办法：将地址解析器设置为jvm,而不是vertx自带的解析器。
+             如果是Java -jar 方式启动，则可以添加启动参数 -Dvertx.disableDnsResolver=true
+
+
+🌿🌿🌿🌿🌿🌿
+vertx.x-service-proxy核心思想：【多个独立模块】
+    创建服务代理：
+        1.vertx服务化的基础，准备一个文件夹，里面存放所有服务
+        2.准备一个package.java的普通文件，说明这个文件服务化，并指定服务名称
+        3.在文件夹中添加接口服务，在接口中增加代理注解和静态实例方法，
+        4.配置pom.xml中的自动生成代码操作，执行mvn clean package,将自动生成代理类。
+        总而言之：核心就是一个目录，1个接口，1个模块化文件。
+
+    公开服务并指定服务的实现类：
+        1.最好在同一目录下创建接口的实现类
+        2.最好在同一目录下创建一个verticle，该类将服务进行注册，信息包括(服务名，接口，实现类)
+
+    测试服务代理的使用：
+        1.首先需要部署Verticle，因为这指定了代理类最终执行的地方
+        2.创建一个服务的代理类，也就是自动生成的代码。
+        3.直接调用服务的具体方法。
+        流程：
+            创建服务--》
+            服务由代理类实现--》
+            代理类通过eventbus发送消息给具体的服务地址--》
+            verticle上注册的该地址的服务的具体实现类进行调用。
+        注意：服务接口，创建实现类对象，可以直接执行调用具体方法。
+             服务接口，创建代理类对象，通过发送事件消息，由部署的verticle的实现类调用方法。如果不部署verticle，将会报错找不到发送消息的地址。
+
+    HttpVerticle服务的使用：
+        1.创建一个verticle，在start()方法中注册路由，监听端口。并且创建服务代理类。
+        2.在指定URL的处理句柄方法中，调用服务代理类的方法，将返回结果组装成页面数据返回。
+        3.创建测试方法，首先将httpverticle和它依赖的verticle进行部署，然后创建httpclient，发送一个http请求，触发httpverticle的服务方法，逐级调用后返回结果。
+
+
+    创建代理类的两种方法：
+        1.在编写pom.xml依赖时，增加<classifier>。将会在target的generate-class目录下生成代理类。
+            <dependency>
+                <groupId>io.vertx</groupId>
+                    <artifactId>vertx-codegen</artifactId>
+                    <version>3.7.0</version>
+                    <classifier>processor</classifier>
+            </dependency>
+
+        2.在编写pom.xml插件时，增加<annotationProcessor>，将会在指定的目录下生成代理类，而不是target目录下。
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessors>
+                        <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+                    </annotationProcessors>
+                </configuration>
+            </plugin>
+
+        具体的代理的写法：🌿🌿🌿🌿！！！
+            1.在接口中写静态方法，创建代理类。这是最常用的方法。比如：
+                static SomeDatabaseService createProxy(Vertx vertx, String address) {
+                    return new SomeDatabaseServiceVertxEBProxy(vertx, address);
+                }
+
+            2.在需要使用的verticle中，初始化接口对象。自动生成代理类。好处是不用直接new 代理类。比如：
+                SomeDatabaseService service2 = builder.setOptions(options).build(SomeDatabaseService.class);
+
+
+服务接口方法的约束：
+    1.返回值只能是void 或者 @Fluent注解的this服务类
+    2.参数的类型：JSON=JsonObject,JsonArray
+                原始类型和它的装箱操作,
+                List<?>
+                Set<?>
+                Map<String,?>
+                枚举
+                @DataObject注解的对象
+    3.返回的异步结果参数：Handler<AsyncResult<R>>。R的取值和参数的类型一致。而且增加一个代理对象
+    4.接口中的方法不能有重载方法，因为一个方法只能有一个名字。在远端用来调用时。
+
+
+
+
+
+
+
+
+

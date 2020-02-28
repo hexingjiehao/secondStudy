@@ -1,0 +1,76 @@
+1.java版本的Infinispan 9.4 Embedded API学习。
+    官网地址：https://docs.jboss.org/infinispan/9.4/apidocs/index.html
+
+    1.All Packages:所有包。
+        全部infinispan的包
+    2.Core API:核心。
+        主要包：org.infinispan
+            主要接口：Cache<K,​V>、AdvancedCache<K,​V>【高级缓存】
+
+    3.Persistence API:持久化。⚠️⚠️⚠️
+        主要包：
+        org.infinispan.persistence：
+            类：InitializationContextImpl、PersistenceUtil、PrimaryOwnerFilter<K>、TaskContextImpl
+        org.infinispan.persistence.cluster：
+            类：ClusterLoader
+        org.infinispan.persistence.remote：
+            接口：ExternalizerIds
+            类：LifecycleCallbacks、RemoteStore<K,​V>
+
+    4.Query API:查询。大数据缓存的查询。⚠️⚠️⚠️
+        主要的包：
+        org.infinispan.query：
+            主要接口：CacheQuery<E>
+            主要类：Search
+            枚举：FetchOptions.FetchMode
+            注解：Transformable
+        org.infinispan.query.remote.client：
+            主要接口：ProtobufMetadataManagerMBean、
+            主要类：Externalizers
+            枚举：ContinuousQueryResult.ResultType
+
+    5.Clustered Counter API:集群计数器。和事件监听有关。可以用作限流。⚠️⚠️⚠️
+        主要包：org.infinispan.counter.api
+        主要接口：CounterEvent、CounterListener
+        主要类：CounterConfiguration
+        主要枚举：CounterState
+
+    6.Multimap API:多重映射。一个key,多个value
+        主要包：org.infinispan.multimap.api
+            接口：BasicMultimapCache<K,​V>  【嵌入式和远端的多重映射】
+
+
+    7.Clustered Lock API:集群锁，它是一个数据结构。⚠️⚠️⚠️
+        主要包：org.infinispan.lock.api
+            接口：ClusteredLock、ClusteredLockManager
+            类：ClusteredLockConfiguration
+            枚举：OwnershipLevel
+
+    8.Distributed Executors(deprecated):分布式执行器(弃用)。
+        包：org.infinispan.distexec、org.infinispan.distexec.spi
+
+    9.Remote Client API:远程客户端。主要是热棒Hot Rod客户端。⚠️⚠️⚠️
+        包：org.infinispan.client.hotrod
+
+    10.Server Connectors API:服务器连接。
+        主要是rest和server相关的包。代表性的包有如下：
+        org.infinispan.rest.configuration：（rest）
+            类：RestServerConfiguration、RestServerConfigurationBuilder
+            枚举：ExtendedHeaders
+        org.infinispan.server.core.configuration：（核心）
+            协议相关的抽象接口和类
+        org.infinispan.server.hotrod.configuration：（热棒）
+            接口：HotRodServerChildConfigurationBuilder
+            类：AbstractHotRodServerChildConfigurationBuilder、AuthenticationConfiguration、AuthenticationConfigurationBuilder、HotRodServerConfiguration、HotRodServerConfigurationBuilder
+
+    11.Tree API:树缓存。
+        包：org.infinispan.tree
+            接口：Node<K,​V>、TreeCache<K,​V>
+            类：Fqn、Fqn.Externalizer、TreeCacheFactory
+            异常：NodeNotExistsException、NodeNotValidException
+
+    12.Tasks API:服务器任务。
+        包：org.infinispan.tasks
+            接口：ServerTask<V>、Task
+            类：TaskContext
+            枚举：TaskExecutionMode

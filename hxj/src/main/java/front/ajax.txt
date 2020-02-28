@@ -1,0 +1,60 @@
+1.ajax的发展学习：
+    定义：异步的javascript和xml。可与服务器进行异步(多进程)或者同步(单进程)交互
+    特点：页面无刷新。就是封装一个http请求发送给服务端。http协议中有什么字段，就怎么封装
+    发展史：IE5伴生XMLHttp对象，gmail发布引起人们堆ajax和javascript重视
+    核心：XMLHttpRequest对象
+    生命周期：
+        client发请求给server,server处理后传输数据给client。如果无ajax,请求过程中client阻塞，这是不友好的。
+    创建ajax的XMLHttpRequest对象：
+        XMLHttpRequest：IE7+, Firefox, Chrome, Opera, Safari
+        ActiveXObject("Microsoft.XMLHTTP")：IE6,IE5
+        ActiveXObject('Msxml2.XMLHTTP')：IE5以下更低版本
+        ActiveXObject('Msxml3.XMLHTTP')：
+    常用方法：(最终目的就是封装1个http请求)
+        1.open(method,url,[async]):建立一个http连接
+            method:请求的方法,get/post
+            url:请求的url地址
+            async:是否异步请求,默认为true为异步,false同步
+        2.send(content):发送一个http请求
+            content: 发送请求的数据,如果是get请求content直接写null,如果是post请求需要拼接请求字符串,形如:name=xiaokeai&age=18
+        3.setRequestHeader(header,value) :设置请求头
+            header:请求头名称
+            value:请求头的值
+        4.abort:终止一个ajax请求
+    常用属性：
+        1.readyState:ajax请求的状态,有五个值0,1,2,3,4
+            0:初始化对象还没有调用open()方法
+            1: 已经调用了open()方法 .还没有调用send()方法
+            2:已经调用了send()方法
+            3.已经开始接受服务器返回来的数据,但是不完整.
+            4:完全接收服务器返回来的数据,请求完毕
+        2.onreadystatechange :可以监听ajax状态的一个改变。只能监听1,2,3,4状态,因为状态0没有一个相对变化的过程.
+        3.status :
+            http响应状态码 200:ok
+                          404:not found
+                          304:not modified
+                          5XX(一般都是服务器相关的错误)
+        4.responseText :接收服务器返回来的字符串数据。
+        5.responseXML :接收服务器返回来的xml数据。
+    ajax请求步骤：(本质是封装和发送一个http请求)
+        ①创建ajax对象 var xhr=new XMLHttpRequest()
+        ②建立一个http连接 xhr.open('get',url,true);
+        ③发送一个http请求 xhr.send(null);
+        ④给ajax状态绑定一个回调函数,会在状态改变时调用 xhr.onreadystatechange=function(){};
+        ⑤判断ajax的状态是否等于4,就做相应的业务逻辑xhr.readyState==4 接收字符串xhr.responseText
+    防止浏览器缓存读缓存，数据陈旧的问题：(url+参数解决不想缓存问题)
+        ①随机数:url+Math.random()。但是会在浏览器造成大量缓存文件
+        ②时间戳 :url+ new Date().getTime()。但是会在浏览器造成大量缓存文件
+        ③设置请求头: xhr.setRequestHeader('If-Modified-Since','0');
+        ④服务端禁用缓存 : header("Cache-Control:no-cache,must-revalidate");
+    post请求步骤:
+        ①创建一个ajax对象
+        ②建立一个http连接
+        ③设置请求头 xhr.setRequestHeader("Content-type",'application/x-www-form-urlencoded');
+        ④发送http请求
+        ⑤给ajax状态的改变设置回调函数
+        ⑥判断ajax状态是否等于4,然后组相应的业务逻辑处理
+    url编的处理：(特殊中文字符)
+        javascript:通过encodeURIComponent()编码。
+
+

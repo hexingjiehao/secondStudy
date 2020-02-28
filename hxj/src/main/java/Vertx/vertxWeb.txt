@@ -1,0 +1,62 @@
+1.学习vert.x-web语法：
+    1.核心概念:
+        路由Router：响应请求操作或者转发请求。RoutingCotext被作为参数传递
+                   在路由的handler中可以直接处理，也可以调用next handler。
+        路由的使用代码：
+            全部路由：
+                Route route = router.route();
+            指定路径路由：
+                Route route = router.route().path("/some/path/");
+            模糊路由：
+                Route route = router.route().path("/some/path/*");
+            获取路径参数：
+                Route route = router.route(HttpMethod.POST, "/catalogue/products/:producttype/:productid/");
+            正则表达式路由：
+                Route route = router.route().pathRegex(".*foo");
+            HTTP方法路由：
+                Route route = router.route().method(HttpMethod.POST);
+            设置路由具柄执行顺序：
+                route2.order(-1);
+            基于MIME类型的请求路由：【即设置Content-Type】
+                router.route().consumes("text/html")
+            基于MIME类型的响应体路由：【即设置响应体accapt值】
+                router.route().produces("application/json")
+            上下文数据传递：
+                routingContext.put("foo", "bar");
+                String bar = routingContext.get("foo");
+            重定向路由：【可以重定向地址，异常信息的重定向到指定处理方法】
+                router.get("/some/path").handler(routingContext -> routingContext.reroute("/some/path/B"));
+                router.get("/my-pretty-notfound-handler").handler(ctx -> ctx.response()
+                  .setStatusCode(404)
+                  .end("NOT FOUND fancy html here!!!"));
+            子路由：
+                Router mainRouter = Router.router(vertx);
+                Router restAPI = Router.router(vertx);
+                    ......
+                mainRouter.mountSubRouter("/productsAPI", restAPI);
+            错误处理：【只有当请求的路由失败时，才会执行指定handler】
+                Route route = router.get("/somepath/*");
+                route.failureHandler(frc -> {
+                    ......
+                });
+    2.其他：
+        请求体处理：
+            router.route().handler(BodyHandler.create());
+        cookie处理：
+            router.route().handler(CookieHandler.create());
+        session处理：
+            SessionStore store1 = LocalSessionStore.create(vertx);
+        身份验证和授权：
+            AuthHandler basicAuthHandler = BasicAuthHandler.create(authProvider);
+        服务静态资源：
+            router.route("/static/*").handler(StaticHandler.create());
+        跨域处理：
+            router.route().handler(CorsHandler.create("vertx\\.io").allowedMethod(HttpMethod.GET));
+        模版引擎：
+            TemplateEngine engine = HandlebarsTemplateEngine.create();
+            TemplateHandler handler = TemplateHandler.create(engine);
+        超时处理：
+            router.route("/foo/").handler(TimeoutHandler.create(5000));
+        请求头自动设置：
+            router.route("/api/*").handler(ResponseContentTypeHandler.create());
+

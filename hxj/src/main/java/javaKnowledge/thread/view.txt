@@ -1,0 +1,491 @@
+0.参考《Java并发编程的艺术》
+
+1.学习并发编程：(正确同步，整体有序执行,并发操作一切的异常都是重排序引起的)
+
+    1.并发编程会遇到的问题：(上下文切换,死锁，资源限制)
+        0.常用的性能分析工具：
+            Lmbench3: 测量上下文切换时长
+            vmstat:测量上下文切换次数
+            jstack:查看线程信息
+                jstack 具体pid > 信息写入的文件名
+        1.并发执行的速度不一定比串行执行快。只有数据量特别大时，比如百万级别。
+            thread.join():将当前线程(比如main线程)停止,将这个线程执行完，再讲当前线程(main线程 )继续执行
+
+        2.并发执行减少上下文切换：
+            无锁并发编程：(通过算法转化为并行的方式)
+                避免使用锁,通过数据的hash取模分段,不同线程处理不同数据
+            CAS算法：(适用于java的Atomic包,更新数据不加锁)
+            最少线程：(避免创建多余等待线程)
+            协程：(单线程的多任务调度，任务切换)
+
+        3.避免死锁的方法：(1个thread->1个锁->1个资源)
+            1.1个线程最好1次只获取1个锁
+            2.每个锁最好只占用1个资源
+            3.使用定时锁lock.tryLock(timeout)取代内部锁
+            4.对于数据库锁,加锁解锁必须在同一个连接,finally释放锁
+
+        4.并发编程的资源限制：(明明是并发执行，受限资源，变成串行执行，因为增加了上下文切换和资源调度开销,速度更慢。)
+            硬件限制：
+                带宽上传下载速度,硬盘读写速度,CPU的处理速度
+                解决办法：集群，多开几台服务器,数据ID%机器ID,切分数据到不同区域的机器来执行
+            软件限制：
+                数据库的连接数,socket连接数
+                解决办法：资源池复用。比如连接池
+
+    2.并发机制的实现原理：(cpu->缓存->内存->硬盘。volatile+synchronized(锁)+原子操作(锁+CAS))
+        1.volatile: (轻量级锁：保证共享变量能够被准确和一致的被更新,排它锁获取变量)
+            底层原理：lock指令--(将数据从缓存写入内存，同时其他cpu中该缓存数据无效)
+            数据流向：提高速度,cpu和缓存交互,所以系统提前将内存数据写入缓存。什么时候写回内存呢？
+                     volatile变量被写时，jvm发送lock指令，可以写回去了。
+            使用优化：(追加字节的方式，可以有多种实现)
+                java7的LinkedTransferQueue类使用追加到64字节的方式，用空间换时间，避免头尾节点不会被1个锁同时锁住
+                局限：缓存行不是64字节宽的处理器
+                     共享变量不会被频繁写
+
+        2.synchronized:(一般说是重量级锁)
+            1.同步基础：(对象都可以作为锁)
+                普通同步方法：当前对象this?
+                静态同步方法：当前类的class对象
+                同步方法块：Synchronized括号里配置的对象
+            2.实现原理：(java对象头里有一个monitor(synchronized锁))
+                cpu指令执行到此,获取监视器所有权,即对象锁:   monitorenter{
+                    moniter关联的对象,此时处于锁定状态
+                }monitorexit
+            3.java对象头数据结构：
+                markwork: (说明锁状态。值等于hashcode(25bit) + 分代年龄(4bit) + 是否偏向锁(1bit) + 锁标志位(2bit) )
+                    32位虚拟机:
+                        轻量级锁：指向栈中锁记录的指针+00
+                        重量级锁：指向互斥量的指针+10
+                        GC标记：空+11
+                        偏向锁：threadID+Epoch+分代年龄+1+01
+                    64为虚拟机：
+                        无锁：unused+hashcode+空+0+01
+                        偏向锁：threadID(54bit)+Epoch(2bit)+空+1+01
+                classmetadataaddress: (对象类型指针)
+                arraylength: (数组长度)
+            4.锁升级机制：(无锁->偏向锁->轻量级锁->重量级锁,只能升级不能降级)
+                偏向锁：(锁总是由同一线程多次获得,竞争出现才释放锁)
+                    1.竞争偏向锁：java对象是否偏向锁，不是，则CAS竞争锁,修改状态位和线程ID，如果是则修改对象头线程ID
+                    2.撤销偏向锁：其他线程竞争时,原线程暂停，解锁，原线程恢复
+                    3.延迟和关闭偏向锁：
+                        关闭偏向锁延迟：-:BiasedLockingStartupDelay=0
+                        关闭偏向锁(程序直接进入轻量级锁)：-XX:-UseBiasedLocking=false
+                    特点：
+                        加锁解锁不需额外消耗，锁争用时会带来锁撤销消耗
+                轻量级锁：(推荐)
+                    1.加锁：线程开空间存储对象头markword信息,修改对象头markword指向锁记录。
+                           其他线程CAS竞争失败，使用消耗cpu的自旋争用锁。当锁准备释放时,锁膨胀为重量级锁，争用线程阻塞
+                    2.释放锁：将对象头markword替换为原来的值。正常解锁不会升级成重量锁
+                             解锁失败时,再次解锁并唤醒等待线程
+                    特点：
+                        竞争线程不阻塞，追求响应速度时间。长期得不到锁会自旋消耗cpu
+                重量锁：其他线程争用时都会阻塞,响应时间慢
+
+        3.原子操作：
+            处理器实现:
+                总线锁：封锁其他cpu访问所有内存
+                cpu内部缓存锁：
+                    缓存一致性机制,阻止同一内存数据被多个cpu从各自缓存回写到修改内存
+                    cpu1锁自己缓存，cpu2就不能处理自己的缓存对应的相同值。一下锁住所有cpu的相同缓存值
+                    局限：
+                        数据不能被cpu缓存，或者数据 跨越多个缓存行
+                        cpu不支持缓存锁定
+            java实现：
+                锁：(4种锁。获得锁的线程才能操作内存)
+                循环CAS(compareAndSet):循环比较i值的变化，如果没变化，则进行原子操作。变化了就继续循环
+                    3大问题：
+                        ABA问题：A变成B后又变成A,执行原子操作。这是不对的。
+                            解决：使用版本号。AtomicStampedReference类，引用的预期和更新字段，标识的预期和更新字段完全相等，才原子操作
+                        循环时间长,开销大：
+                            解决：jvm支持pause指令--延长cpu流水线,同时避免出现内存顺序冲突(多个cpu操作同一个缓存行的不同部分)导致的cpu清空流水线
+                        只能保证1个共享变量的原子操作：
+                            解决：多个对象放到1个对象中，使用AutomicReference类保证引用原子性。
+                                 使用锁(处理1片内存区域),除了偏向锁，其他锁通过循环CAS获取锁
+
+    3.并发编程中的java内存模型：
+        1.并发内存基础：
+            线程通信：(volatile修改变量或者CAS算法处理变量)
+                共享内存：(公共状态,java推荐。线程之间共享堆内存)
+                消息传递：
+            线程同步：
+                共享内存情况下：显示声明互斥方法
+            内存屏障：(第一个happens-before第二个)
+                LoadLoad:
+                StoreStore:
+                LoadStore:
+                StoreLoad: (第一个的load和store的同时happens-before第二个的load)
+            happens-before规则：(要求前一个操作(执行的结果)对后一个操作可见。最重要的是可以在不同线程之间执行,正确同步多线程，结果不变)
+                程序顺序规则：线程内操作。对as-if-serial规则的封装
+                监视器锁规则：锁的解锁要happens-before随后的加锁
+                volatile变量规则：写要happens-before随后的读
+                传递性:a->b,b->c,要a->c
+                start():线程A中启动线程B，那么ThreadB.start()操作happens-before线程B中任何操作
+                join():线程A中执行ThreadB.join(),线程B中任意操作happens-before于线程A从线程线程B.join()操作成功返回
+        2.顺序一致性模型：(理想化，操作对所有线程可见)
+            定义：如果程序是正确同步的,那么它具有顺序一致性
+            特性：
+                1.线程内部所有操作按程序顺序来
+                2.每个操作原子执行并且对所有线程可见
+            重排序：(编译器+处理器。jmm通过规则或者内存屏障来禁止特定的重排序)
+                            源代码->编译器优化重排序->指令级并行重排序->内存系统重排序->最终执行的指令序列
+                遵循数据依赖性：(不重排序这个，对同一个变量的操作)
+                    写后读，读后写，写后写。重排后结果改变
+                as-if-serial规则:单线程范围内，重排序后，结果不能有改变
+                程序顺序规则：如果最终结果一致，提升速度的重排序并不非法。但是如果是多线程，可能破环语义。
+        3.三个同步原语：(实现happes-before规则)
+            1.volatile内存语义: ((线程内)程序顺序规则+(写在读之前)volatile+传递性规则试用 )
+                1.特性：
+                    1.可见性(写-读内存语义)：
+                        写：写1个volatile变量，jmm会把该线程对应的本地内存共享变量刷新到主内存
+                        读：读1个volatile变量，jmm会把该线程的对应所有本地变量设为无效，然后从内存读取所有共享变量
+                        读之前能看到最后的对它的写入
+                        实现原则：jmm限制重排序，通过插入内存屏障。
+                            第二个是volatile写，不能重排序
+                            第一个是volatile读，不能重排序
+                            第一个是volatile写，第二个是volatile读，不能重排序
+                        实现的具体操作：(指令顺序)
+                            StoreStore屏障-> volatile写-> StoreLoad屏障...
+                            volatile读-> LoadLoad屏障-> LoadStore屏障...
+                    2.原子性：变量读/写操作具有原子性，但volatile++不具有
+                2.常用封装类：
+                    ReentrantLock:(使用volatile维护状态变量/使用CAS算法维护状态变量，制造锁和释放锁)
+            2.synchronized(锁)内存语义: (让临界区互斥执行，让释放锁的线程和获取同一个锁的线程通信)
+                1.定义：((线程内)程序顺序规则+(释放在加锁之前)监视器锁+传递性规则试用 )
+                    释放锁：释放1个锁，jmm会把该线程对应的本地内存共享变量刷新到主内存
+                    获取锁：加1个锁，jmm会把该线程的对应所有本地变量设为无效，然后从内存读取所有共享变量
+                2.常用封装类：
+                    concurrent包：使用volatile和CAS实现线程通信，写-写和写-读
+                        层次关系：
+                            底层：volatile，CAS
+                            中层：AQS(AbstractQueuedSynchronizer--同步器框架),非阻塞数据结构，原子变量类
+                            高层：Lock,同步器，阻塞队列，Excutor,并发容器
+            3.final语义:
+                重排序规则：(禁止写对象内变量-写对象给别的引用变量，初次读对象-初次读对象变量)
+                    写：禁止把final域的写重排序后构造函数外
+                        jmm禁止编译器把final域的写重排到构造函数外
+                        编译器在final域的写之后和reture之间插入StoreStore屏障
+                    读：1个线程内，读对象引用和对象引用的final域禁止重排序。(jmm禁止处理器这样重排,编译器在final域前面插入LoadLoad屏障)
+        4.设计原理：
+            延迟初始化技术：(降低初始化类和对象开销)
+                双重检查锁定：动态初始化高开销操作。但是可能存在部分初始化情况的不安全情况。比如多线程的静态成员变量初始化
+                    判断对象==null的意思：变量是否指向有分配的内存空间，而不是对象是否初始化
+                线程安全的延迟初始化：
+                    不允许(对象指向分配的内存空间)和(对象初始化)重排序：(volatile修饰变量)--使用一般变量延迟初始化
+                    允许(对象指向分配的内存空间)和(对象初始化)重排序，但不允许其他线程看到：(基于类初始化的解决方案)----使用静态变量延迟初始化
+                        类的初始化过程(多线程过程)：
+                            1.线程A和线程B同时争用类初始化锁，A成功，B失败后等待,A设置state=doing,A释放锁
+                            2.A初始化类的静态部分，同时，B获取锁,读取state=doing后释放锁，继续进一步等待
+                            3.A获取锁，设置state=done,唤醒进一步等待的线程B,A释放锁，A初始化完成
+                            4.B获取锁，读取state=done后释放锁,B初始化完成
+
+        5.内存模型总结：
+            顺寻一致性内存模型：(理论参考模型)
+                处理器内存模型：(按放松情况分类，而且当前线程的写操作对外不可见--硬件级别)
+                    TSO:可以storeload重排序
+                    PSO:可以storeload,storestore重排序
+                    RMO:可以storeload,storestore,loadstore,loadload重排序
+                    PowerPC:可以storeload,storestore,loadstore,loadload重排序，可以读到其他cpu的写
+                jmm(java内存模型)：(屏蔽内存模型差异--基于处理器内存模型--语言级别)
+                    TSO:插入storeload屏障
+                    PSO:插入storeload,storestore屏障
+                    RMO:插入storeload,storestore,loadstore,loadload屏障
+                    PowerPC:插入storeload,storestore,loadstore,loadload屏障
+            jmm内存可见性保证：
+                单线程:没问题。必然和顺序一致性结果相同
+                正确同步的多线程：和顺序一致性的结果相同。通过限制重排序保证
+                未正确同步的多线程：最小安全性。线程读的值要么时默认值，要么一定被写过
+                jdk5旧内存模型的修补：
+                    增强volatile语义：限制volatile和非volatile的重排序，使volatile写-读和锁释放-获取的语义相同
+                    增强final语义：保证初始化安全性。只要对象正确构造，final值必然已经初始化
+
+    4.并发编程的基础：(线程)
+        1.线程：
+            定义：(计数器+堆栈+局部变量+共享内存)
+                操作系统调度的最小单元。简单main方法的实现是多线程实现
+            优先级：(最小为1，最大为10，默认为5)
+                数字小，优先级低，分配时间片少，cpu资源少
+                程序正确性不依赖线程优先级的高低,部分linux系统会忽略线程优先级。优先级是概率事件,不稳定
+            状态：6种
+                new:初始状态，start()之前
+                runnable:运行状态。等于系统中的(就绪+运行)状态
+                blocked:阻塞状态。阻塞于锁
+                waiting:等待状态。需要其他线程通知或中断
+                time_waiting:超时等待状态。指定事件自行返回，变成运行状态
+                terminated:终止状态。
+
+                查看线程状态的操作：
+                    命令行中输入jps,查看所有程序的线程
+                    接着输入jstack pid,查看该程序运行的线程的情况，有名字的
+                状态之间的转换：6个大的转化步骤
+                    new->runnable:
+                        执行start()
+                    runnable->ready,ready->runnable:
+                        调用yield()让步,运行变就绪。系统争用调度，让步变就绪
+                    runnable->waiting,waiting->runnable:
+                        调用wait(),join(),park(),运行变等待。
+                        调用notify(),notifyAll(),unpark(thread),等待变运行
+                    runnable->time_waiting,time_waiting->runnable:
+                        调用sleep(long),wait(long),join(long),parkNanos(),parkUtil(),运行变超时等待
+                        调用notify(),notifyAll(),unpark(thread),时间到了，超时等待变运行
+                    runnable->blocked,blocked->runnable:
+                        调用synchronized,运行变阻塞。获取到锁，阻塞变运行
+                    runnable->terminated:
+                        正常：run执行完后 或者 线程中使用标志位判断，运行变终止
+                        异常：调用interrupt(),运行变终止
+             Daemon线程(支持性线程)： 不能够依靠Daemon线程的finally来回收资源
+        2.启动和终止线程：
+            init():父进程分配资源等操作  -->start()：通知jvm，空闲就启动
+            isInterrupted():中断状态位是否被其他线程设置,如果抛出过异常，中断位会复位
+            过期的方法：(不推荐，使用 通知/等待机制 代替)
+                suspend():暂停线程,携带资源暂停，可能死锁
+                resume()：恢复线程
+                stop()：停止线程。不能正确释放资源
+            人为标志位和interrupt()能够安全终止线程
+        3.线程通信：(共享变量的修改)
+            修饰符：
+                volatile:告知程序volatile变量的读取从共享内存拿，对它的写，要刷新回共享内存
+                synchronized:获取对象监视器，成功则进入，失败则阻塞。获取的过程具有排他性
+            等待/通知机制：(需要在synchronized方法块里)
+                wait():进入等待状态，释放锁，其他线程来唤醒，或者中断直接结束
+                notify():通知再一个obj上的线程，使其再wait()上返回。有wait()的线程要继续wait()后的方法，需要再次获取锁
+                经典范式：
+                    等待方:
+                        synchronized(对象){
+                            while(条件不满足){
+                                对象.wait()
+                            }
+                            正常处理逻辑
+                        }
+                    通知方:
+                        synchronized(对象){
+                            改变条件
+                            对象.notiffyAll();
+                        }
+            管道输入/输出：(必须互相绑定)
+                面向字符(大)：PipedWriter和PipedReader
+                面向字节(小)：PipedOutputStream和PipeInputStream
+            Thread.join(): (使用等待/通知原理实现,强制该线程跑完再跑其他线程)
+            ThreadLocal: 辅助线程类,key-value模型，threadlocal为key,任意值为value。绑定到线程
+
+        4.线程应用：(连接池，线程池)
+            等待超时模式：
+                public synchronized Object get(long waitTime){
+                    long futrue=now+waitTime;
+                    long remainTime=waitTime;
+                    while( remianTime>0 ){
+                        wait(remain);
+                        remain=future-now;
+                    }
+                    业务处理
+                    return result;
+                }
+
+    5.java中更加灵活的锁：(读写锁，互斥锁，重入锁--都有同步队列的数据结构)
+        Lock接口： (多个锁的组合获取和释放)
+            Lock lock=new ReetrantLock();
+            lock.lock();
+            try{
+            }finnaly{
+                lock.unlock();
+            }
+        队列同步器：(int类型的同步状态,实现最终的Lock锁功能)---它是很多锁的实现基础。同步状态被volatile修饰
+            同步队列：链表式存储未获取到状态的线程信息
+            getState():获取状态
+            setState(int newState):设置状态
+            compareAndSetState(int expect,int update):cas算法
+            独占式获取释放状态：acquire(),release()
+            共享式获取释放状态：acquireShare(),releaseShared()
+        重入锁(ReentrantLock)：(对一个资源同步加锁,策略有公平和非公平选择)
+            一般说来：获取锁的线程，如果没释放锁，再次申请锁，会把自己给阻塞。这就是不可重入。
+            为了解决锁住的方法中是递归方法，设置了重入锁，synchronized隐形支持。
+            面临的问题：
+                锁识别线程：getExclusiveOwnerThread()==Thread.currentThread()
+                n层锁的最终释放：自定义同步器实现，计数器。
+            公平策略：等待时间越长，获取锁的优先级越高。等价于顺序获取锁。能够减少"饥饿"现象.
+            非公平策略(默认) ：只要CAS设置同步状态成功，则获取锁。
+        读写锁(ReentrantReadWriteLock)：(增强型重入锁，写锁可降级为读锁)
+            将同步状态变量按位切割。高16位-读状态，低16位-写状态。
+            锁降级：拿到写锁后，然后再拿到读锁，最后释放写锁的过程
+        LockSupport工具：park阻塞,unpark唤醒。能够查看阻塞对象的信息
+        Condition接口：和lock组合实现等待/通知机制。await()和signal()
+
+    6.java并发容器和框架：(保证多线程并发安全)
+        ConcurrentHashMap:(使用volatile+synchronized保证原子操作)
+            hashmap多线程并发时，可能导致链表结构成环形结构，形成死循环。
+            数据分段锁，默认16个。
+        ConcurrentLinkedQueue:(使用CAS算法保证安全)
+            入队操作返回永远为true,不能判断是否成功
+        阻塞队列：(支持阻塞的插入和移除--使用通知模式实现，Condition+lock)
+            4种处理方式：(队列不可用)
+                抛出异常：add(e),remove(),element()
+                一直阻塞：put(e),take()
+                返回特殊值：offer(e).poll(),peek()
+                超时退出：offer(e.time,unit),poll(time.unit)
+            7种阻塞队列:(有公平和非公平策略)
+                SynchronousQueue：不存储元素的阻塞队列
+                PriorityBlockingQueue： 优先级排序无界阻塞队列
+                DelayQueue: 延时获取元素的无界阻塞队列。适用于--缓存系统和定时任务调度
+                ArrayBlockingQueue： 数组结构有界阻塞队列
+                LinkedBlockingQueue： 链表结构有界阻塞队列
+                LinkedTransferQueue：链表结构无界阻塞队列
+                LinkedBlockingDeque：链表结构双向阻塞队列。适用于<工作窃取>模式
+        Fork/Join框架：(并行执行任务的框架--2分法，递归)
+            工作窃取算法：某个线程从其他双端队列获取任务来执行。前提：线程和任务队列一一对应
+            设计原理：（ForkJoinTask类+ForkJoinPool类）
+                分割大任务：ForkJoinTask=RecursiveAction(没有返回结果的任务)+RecursiveTask(有返回结果的任务)
+                执行任务并合并结果：
+
+    7.12个原子操作类：(java.util.concurrent.atomic--不会自动拆箱)
+        原子更新基本类型：
+            AtomicBoolean:
+            AtomicInteger:
+            AtomicLong:
+        原子更新数组：
+            AtomicIntegerArray:
+            AtomicLongArray:
+            AtomicReferenceArray:
+        原子更新引用：
+            AtomicReference:
+            AtomicReferenceFieldUpdater: 更新引用中的字段
+            AtomicMarkableReference: 更新标记位的引用类型
+        原子更新类中字段：
+            AtomicIntegerFieldUpdater:
+            AtomicLongFieldUpdater:
+            AtomicStampedFieldUpdater: 更新带有版本号的引用类型。可以解决CAS算法的ABA问题
+
+    8.并发工具类：(多线程到同一起跑线才一起执行)
+        CountDownLatch(计数器--后等于0才启动):(不能重置计数器)
+            允许1个或者多个线程等待其他线程完成操作。举例：其他线程操作完成后countDown()==0，主线程才执行await()之后的语句。
+        CyclicBarrier(同步屏障):
+            拦截所有的多线程到同一同步点，才放行。适用于多线程处理数据后合并结果。能够重置计数器
+            cd.countDown()等价于cb.await()。都使计数器-1
+        Semaphore(信号量):适用于流量控制，比如数据库连接。多线程中只允许其中1部分并发执行
+        Exchanger(线程间数据交换): 提供同步点，两个线程同时执行exchange(),交换数据。适用于遗传算法
+
+    9.并发线程池：
+        1.任务：核心线程数->阻塞队列->最大线程数->饱和策略
+        2.配置线程池：(查看cpu个数：Runtime.getRuntime().availableProcessors()--最好使用有界队列 )
+            CPU密集型：(cpu个数+1)个线程数
+            IO密集型：(2*cpu个数)个线程数
+            优先级不同任务：使用PriorityBlockingQueue队列
+
+    10.Executor框架：
+        1.框架结构：
+            任务：Runnable接口+Callable接口
+            任务执行：Executor接口+ExecutorService接口。实现类ThreadPoolExecutor+ScheduledThreadPoolExecutor
+            异步计算结果：Future接口+FutureTask类
+        2.框架成员：(Executors生成)
+            ThreadPoolExecutor:(线程池执行器)
+                FixThreadPool：适用于负载较重服务器
+                CachedThreadPool：适用于负载较轻服务器
+                SingleThreadExecutor：适用于顺序执行任务
+            ScheduledThreadPoolExecutor:(延迟类线程池执行器)
+                ScheduledThreadPoolExecutor：包含多个线程。多个线程周期任务，资源有限的管理
+                SingleThreadScheduledExecutor:包含1个线程。单个线程周期任务，保证顺序
+            Future: FutureTask接口实现类，结算结果
+            Runnable/Callable：Runnable无返回值,Callable有返回值
+
+    11.线上问题定位：
+        top命令:(1/H)查看进程情况
+        jstack pid >log.log: 将线程信息存入log文件
+        netstat -nat|grep port -c: 查询端口链接的机器数
+        ps -eLf|grep java -c:查看java线程池的线程数
+        grep Y ./log.log |awk -F ',' '{print $7$5}' | sort -nr|head -20 ：统计执行最慢的sql
+        cat /proc/net/dev: 查看网络流量
+        cat /proc/loadavg: 查看系统平均负载
+        cat /proc/meminfo: 查看系统内存
+        cat /proc/stat: 查看CPU利用率
+
+    12.常用的面试中的多线程场景：(最好在应用层加锁，最好不要在数据库层加锁)
+        库存超卖：商场抢购中，高并发可能会导致卖出了超过库存的商品
+            错误代码示范：先select后update,多线程下会出现负数
+                        beginTranse(开启事务)
+                        try{
+                            $result = $dbca->query('select amount from s_store where postID = 12345');
+                            if(result->amount > 0){
+                                $dbca->query('update s_store set amount = amount - quantity where postID = 12345');
+                            }
+                        }catch($e Exception){
+                           rollBack(回滚)
+                        }
+                        commit(提交事务)
+                解决办法：(面对高并发场景,redis缓存+version乐观锁)
+                    代码层面：
+                        1.先update再select。只能保证最终的结果一致性，库存不会小于0，update操作其他线程是能够看到的，用到了排它锁
+                                beginTranse(开启事务)
+                                try{
+                                    $dbca->query('update s_store set amount = amount - quantity where postID = 12345');
+                                    $result = $dbca->query('select amount from s_store where postID = 12345');
+                                    if(result->amount < 0){
+                                       throw new Exception('库存不足');
+                                    }
+                                }catch($e Exception){
+                                    rollBack(回滚)
+                                }
+                                commit(提交事务)
+                        2.直接1条sql语句更新,增加过滤条件。该sql使用排它锁。
+                            beginTranse(开启事务)
+                            try{
+                                $dbca->query('update s_store set amount = amount - quantity where amount>=quantity and postID = 12345');
+                            }catch($e Exception){
+                                rollBack(回滚)
+                            }
+                            commit(提交事务)
+                        3.redis也支持版本号的乐观锁。使用缓存redis的原子性方法setnx来实现。redis为单线程单进程模式，采用队列模式将并发访问变成串行访问，使用 setnx命令实现分布式锁。
+                          @CacheLock(lockedPrefix = "xx")
+                            setnx key = xx
+                            del key=xx
+                    理论层面：(不要让数据库直面高并发的操作)
+                        1.不是让mysql去直面大并发读写,会借助比如缓存、利用主从库实现读写分离、分表、使用队列写入等方法来降低并发读写。
+                        2.在服务端的加内存锁（锁主键）,修改时将id存入缓存，其他线程也要修改就阻止操作。
+                        3.加乐观锁，增加version控制多线程修改数据，提交时比较版本号。
+                          加悲观锁，类似于oralce中使用select xxxxx from xxxx where xx=xx for update，这样其他线程将无法提交数据。
+                        4.使用缓存，在缓存中添加计数器等防止过多请求
+                        5.使用缓存，将商品放入缓存，用锁处理并发，先减1然后处理业务，处理失败再+1
+
+        分布式锁：
+            1.问题描述：
+                1.分布式部署的应用集群中，同一个方法在同一时间只能被一台机器上的一个线程执行
+                2.它是可重入锁避免死锁，最好是阻塞性的
+                3.高效的获取和释放锁
+            2.分布式的CAP理论：任何一个分布式系统都无法同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance），最多只能同时满足两项。
+              在互联网领域，需要牺牲强一致性来换取系统的高可用性，系统往往只需要保证“最终一致性”，只要这个最终时间是在用户可以接受的范围内即可。
+            3.方案：(都是在共享的数据端实现高并发处理)
+                1.基于数据库实现分布式锁：
+                    基于数据库表：创建一个锁记录表，方法名唯一，锁方法时添加记录，释放锁时删除记录。
+                                通过备份数据库。解决单点问题
+                                通过定时任务，每隔一定时间把数据库中的超时数据清理一遍。解决失效时间
+                                通过while循环直到insert成功再返回成功。解决是非阻塞是问题
+                                通过在数据库表中加个字段，记录当前获得锁的机器的主机信息和线程信息，
+                                    那么下次再获取锁的时候先查询数据库，如果当前机器的主机信息和线程信息在数据库可以查到的话，
+                                    直接把锁分配给他就可以了。解决非重入问题
+                    基于数据库排它锁(MySql的InnoDB引擎)： 能够解决非阻塞锁和释放锁问题。但不能处理单点和可重入
+                        connnection.setAutoCommit(false);
+                        sql=".... for update";  //加锁
+                        connnection.commit();  //释放锁
+                2.基于缓存(redis，memcached)：可以集群部署的,解决单点问题
+                        使用put/get来存储和取出锁的信息。中间进行加锁操作,有对应的方法比如setnx。
+                3.基于Zookeeper实现分布式锁：(临时有序节点----基于文件类型的锁)
+                        每个客户端对某个方法加锁时，在zookeeper上的与该方法对应的指定节点的目录下，生成一个唯一的瞬时有序节点。
+                        判断是否获取锁的方式很简单，只需要判断有序节点中序号最小的一个。 当释放锁的时候，只需将这个瞬时节点删除即可。
+                        同时，其可以避免服务宕机导致的锁无法释放，而产生的死锁问题。
+                4.方案的优劣比较：
+                    从理解的难易程度角度（从低到高）：数据库 > 缓存 > Zookeeper
+                    从实现的复杂性角度（从低到高）：Zookeeper >= 缓存 > 数据库
+                    从性能角度（从高到低）：缓存 > Zookeeper >= 数据库 (推荐)
+                    从可靠性角度（从高到低）：Zookeeper > 缓存 > 数据库
+
+2.死锁：(系统资源有限-->进程推进顺序不合理)
+    4个必要条件：
+        互斥：
+        占有且等待：
+        不可抢占：
+        循环等待：
+    处理死锁的方法：
+        死锁预防：破坏占有且等待条件：一次性分配完进程所需全部资源
+                 破坏不可抢占条件：有资源后请求不到，释放自己资源
+                 破坏循环等待条件：只能申请比自己进程号大的资源
+        避免死锁： 在使用前进行判断，只允许不会产生死锁的进程申请资源。----银行家算法
+        死锁检测与解除：抢占资源
+                      撤销进程
+

@@ -1,0 +1,123 @@
+学习JUnit测试语法：
+    2.Junit：目前最新的版本是5.3.2.官网的教程URL是：https://junit.org/junit5/docs/current/user-guide/
+                     对应的代码API是https://junit.org/junit5/docs/current/api/overview-summary.html。
+                     其中junit4和junit3的API完全不同。JUnit5支持lambda表达式。默认Java8支持
+                历史版本:v5.3.0
+                        v5.2.0
+                        v5.1.1
+                        v5.1.0
+                        v5.0.3
+                        v5.0.2
+                        ......
+                定义：JUnit 5 = JUnit Platform + JUnit Jupiter + JUnit Vintage
+                         JUnit Platform：是java虚拟机上启动测试框架的基础平台。定义测试引擎的API，提供命令行等方式的控制台启动器。
+                         JUnit Jupiter：它由编程模型和扩展模型组成。有一个测试引擎
+                         JUnit Vintage：提供测试引擎，运行JUnit3 和 JUnit4
+                资源依赖：内部核心类库：Group ID: org.junit.platform
+                                     Artifact IDs: junit-platform-commons
+                                     Version: 1.2.0
+
+                                     Group ID: org.junit.jupiter
+                                     Artifact IDs:junit-jupiter-api
+                                     Version: 5.3.0
+
+                                     Group ID: org.junit.vintage
+                                     Artifact ID:junit-vintage-engine
+                                     Version: 5.3.0
+                        JUnit4运行测试器：junit-platform-runner
+                物料清单：Group ID: org.junit
+                         Artifact ID: junit-bom
+                         Version: 5.3.0
+                         底层的依赖：Group ID: org.apiguardian
+                                   Artifact ID: apiguardian-api
+                                   Version: 1.0.0
+
+                                   Group ID: org.opentest4j
+                                   Artifact ID: opentest4j
+                                   Version: 1.0.0
+                         实例代码：Maven工程：junit5-jupiter-starter-maven。URL：https://github.com/junit-team/junit5-samples/tree/r5.3.0/junit5-jupiter-starter-maven
+                编写测试：
+                    核心注解：@Test/@ParameterizedTest/@RepeatedTest/@TestFactory/@TestInstance/@TestTemplate
+                            @DisplayName/@BeforeEach/@AfterEach/@BeforeAll/@AfterAll/@Nested/@Tag/@Disable/@ExtendWith
+                            注意：@Test、@TestTemplate、@RepeatedTest、@BeforeAll、@AfterAll、@BeforeEach 或 @AfterEach
+                                 标记的方法不能有返回值
+                            可以自定义组合注解
+                    测试类和测试方法：拥有@Test等注解的方法或者类都是测试的。不必将他们声明成public
+                    添加名字：可以给测试类和测试方法添加名字@DisplayName("...")
+                    断言：org.junit.jupiter.api.Assertions中的静态方法。鼓励使用第三方断言类库，比如Hamcrest
+                    假设：org.junit.jupiter.api.Assumptions的静态方法。
+                    禁用测试：在类上或者方法上添加@Disabled，类似于注释。
+                    条件测试执行：在指定操作系统上执行:@EnabledOnOs 和 @DisabledOnOs
+                                在指定Java版本运行: @EnabledOnJre 和 @DisabledOnJre
+                                在指定系统属性条件上执行: @EnabledIfSystemProperty 和 @DisabledIfSystemProperty
+                                在指定环境变量上执行: @EnabledIfEnvironmentVariable 和 @DisabledIfEnvironmentVariable
+                                在执行脚本上执行:@EnabledIf 和 @DisabledIf
+                    标记和过滤：标记不能为null或空。@Tag("这里的取值必须连续字符，不能有空格，保留字，分割符等")
+                    测试实例生命周期：前置class模式，前置方法模式。默认的@TestInstance(Lifecycle.PER_METHOD）启用生命周期，一个测试类只创建一个实例。
+                                    可以修改为@TestInstance(Lifecycle.PER_CLASS）。
+                                    也可以创建junit-platform.properties文件，添加内容junit.jupiter.testinstance.lifecycle.default = per_class
+                    嵌套测试：内部类上的注解@Nested
+                    构造函数和方法的依赖注入：允许给构造函数传入参数。该参数需要被已注册解析器ParameterResolver解析
+                        内置解析器有：TestInfoParameterResolver
+                                    RepetitionInfoParameterResolver
+                                    RandomParametersExtension可以随机生成数据进行测试。
+                    测试接口和默认方法:在接口的额default方法傻姑娘增加@Test等注解即可。实现测试接口可以获取信息。
+                    重复测试：@RepeatedTest。代码写法：比如@RepeatedTest(10)
+                    参数化测试：声明参数源，多次测试。@ParameterizedTest
+                                                 @ValueSource(strings = { ""，""，"".... })
+                              maven下载不了最新版。可能阿里巴巴的仓库没更新吧。
+                    测试模板：@TestTemplate。主要用于多次测试。组合使用TestTemplateInvocationContextProvider
+                    动态测试：@TestRactory必须返回Stream，Collection，Iterable，Iterator或DynamicNode实例数组。整体前后的测试只执行一次。
+                    并行执行：JUnit Jupiter默认单线程执行。junit.jupiter.execution.parallel.enabled=true
+                运行测试：一般在maven中配置执行范围test。
+                扩展模型：
+                    注册扩展： @ExtenWith 注解进行声明式注册
+                              @RegisterExtension 注解进行编程式注册。静态字段注册扩展
+                              Java的 ServiceLoader 机制自动注册。junit.jupiter.extensions.autodetection.enabled=true
+                            注册顺序以声明顺序为先后。
+                    扩展的相对执行顺序：
+                    JUnit4到JUpiter的迁移：使用JUnit Vintage测试引擎
+                    JUnit5引入生命周期，用于改变JUnit4的臃肿。
+                比较好的博文：https://www.ibm.com/developerworks/cn/java/j-introducing-junit5-part1-jupiter-api/index.html
+                JUnit4和JUnit5的区别：注解不一样了。@Test	@Test	表示该方法是一个测试方法。JUnit5与JUnit 4的@Test注解不同的是，它没有声明任何属性，因为JUnit Jupiter中的测试扩展是基于它们自己的专用注解来完成的。这样的方法会被继承，除非它们被覆盖
+                                        @BeforeClass	@BeforeAll
+                                        @AfterClass	    @AfterAll
+                                        @Before	        @BeforeEach
+                                        @After	        @AfterEach
+                                        @Ignore	        @Disabled
+                                        @Category	    @Tag
+                                        @Parameters	    @ParameterizedTe
+                                        @RunWith	    @ExtendWith
+                                        @Rule	        @ExtendWith
+                                        @ClassRule	    @ExtendWith
+                JUnit5基于Java8重写了所有代码。可以使用lambda表达式。是模块化的集合
+
+
+1.JUnit的核心概念：
+    1. 断言核心方法：
+        assertArrayEquals(expecteds, actuals)：	查看两个数组是否相等。
+        assertEquals(expected, actual)：     	查看两个对象是否相等。类似于字符串比较使用的equals()方法
+        assertNotEquals(first, second)：	        查看两个对象是否不相等。
+        assertNull(object)：	                    查看对象是否为空。
+        assertNotNull(object)：	                查看对象是否不为空。
+        assertSame(expected, actual)：	        查看两个对象的引用是否相等。类似于使用“==”比较两个对象
+        assertNotSame(unexpected, actual)：	    查看两个对象的引用是否不相等。类似于使用“!=”比较两个对象
+        assertTrue(condition)：	                查看运行结果是否为true。
+        assertFalse(condition)：	                查看运行结果是否为false。
+        assertThat(actual, matcher)：	        查看实际值是否满足指定的条件
+        fail()：                 	            让测试失败
+    2.常用注解：
+        @Before：	    初始化方法
+        @After：	        释放资源
+        @Test：	        测试方法，在这里可以测试期望异常和超时时间
+        @Ignore：	    忽略的测试方法
+        @BeforeClass：	针对所有测试，只执行一次，且必须为static void
+        @AfterClass：	针对所有测试，只执行一次，且必须为static void
+        @RunWith：	    指定测试类使用某个运行器
+        @Parameters：	指定测试类的测试数据集合
+        @Rule：	        允许灵活添加或重新定义测试类中的每个测试方法的行为
+        @FixMethodOrder
+       【类级别】单元测试的执行顺序：@BeforeClass –> @Before –> @Test –> @After –> @AfterClass
+       【方法级别】测试方法的调用顺序：@Before –> @Test –> @After
+    3.其他注意事项：
+        @Test(timeout=10000):表示超时时间

@@ -1,0 +1,1637 @@
+1.开始尝试对docker和kubernete进行实际操作：
+
+正常安装kubernete的方法：🌿🌿🌿🌿🌿
+    在安装的ubuntu虚拟机中安装minikube--minikube需要虚拟机才能启动【虚拟机中安装虚拟机】【就差一步成功😢😢😢】
+        //安装virtualbox
+        sudo apt-get install virtualbox
+        //下载kubectl文件
+        curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.13.1/bin/linux/amd64/kubectl && chmod +x kubectl  && sudo mv kubectl /usr/local/bin/
+        //下载minikube文件
+        curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.1.1/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+            启动报错（minikube start）：This computer doesn't have VT-X/AMD-v enabled. Enabling it in the BIOS is mandatory
+            尝试解决：minikube start --no-vtx-check
+                继续报错：无法启动虚拟机。
+                    Unable to start the VM: /usr/bin/VBoxManage startvm minikube --type headless failed:
+                     VBoxManage: error: VT-x is not available (VERR_VMX_NO_VMX)
+                     VBoxManage: error: Details: code NS_ERROR_FAILURE (0x80004005), component ConsoleWrap, interface IConsole
+                可能原因：安装的最外层虚拟机没有启动嵌套虚拟化功能。
+        目前主要的虚拟机有virtualBox,VMware,Hyper-v虚拟机。其中VMware支持嵌套虚拟化。目前公司使用Hyper-v创建的192.168.1.14的虚拟机
+        查看mac电脑是否支持硬件虚拟化：sysctl -a | grep machdep.cpu.features
+            如果结果中包含VMX，则表示支持VT/NX硬件虚拟化功能
+
+
+    参考文件：https://shimo.im/docs/P9PZKhRMLwkBBaWl/read
+    1.下载虚拟机
+    2.安装kubectl的两种方法：
+        curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/darwin/amd64/kubectl  &&  chmod +x ./kubectl  && sudo mv ./kubectl /usr/local/bin/kubectl
+        brew install kubernetes-cli
+    3.安装minikube
+        curl -Lo minikube http://kubernetes.oss-cn-hangzhou.aliyuncs.com/minikube/releases/v1.2.0/minikube-darwin-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+    4.将minikube的镜像设置为阿里云
+        minikube start --registry-mirror=https://registry.docker-cn.com
+
+Docker方面的操作：
+    1.构建一个node.js的应用：app.js
+        const http = require('http');
+        const os = require('os');
+        console.log("Kubia server starting...");
+        var handler = function(request, response) {
+          console.log("Received request from " + request.connection.remoteAddress);
+          response.writeHead(200);
+          response.end("You've hit " + os.hostname() + "\n");
+        };
+        var www = http.createServer(handler);
+        www.listen(8080);
+    2.编写Dockerfile文件
+        FROM node:7
+        ADD app.js /app.js
+        ENTRYPOINT ["node", "app.js"]
+    3.将js应用构建成容器镜像
+        docker build -t kubia .
+    4.显示镜像信息并运行容器
+        docker images
+        docker run --name kubia-container -p 8080:8080 -d kubia
+    5.查看容器中的js程序具体的运行情况
+        curl localhost:8080
+        docker ps
+        docker inspect kubia-container
+    6.进入具体容器的虚拟机系统中，执行shell命令🌿🌿🌿🌿🌿
+        docker exec -it kubia-container bash
+
+        6.1 查看容器中程序的运行情况
+            ps aux
+            ps aux | grep app.js
+
+        6.2 退出容器
+            exit;
+    7.停止和移除容器
+        docker stop kubia-container
+        docker rm kubia-container
+
+        docker ps -a //列出所有容器
+    8.将容器镜像推送到远程仓库（http://hub.docker.com）
+        8.1 重新标记镜像（以用户名开头）
+            docker tag kubia hexingjiehao/kubia
+        8.2 登录到docker hub仓库
+            docker login   //需要输入用户名密码
+        8.3 推送镜像到docker hub
+            docker push hexingjiehao/kubia
+        8.4 在其他任何机器上运行镜像（docker登录状态下）
+            docker run -p 8080:8080 -d hexingjiehao/kubia
+
+
+Kubernetes方面的操作：
+    1.使用minikube运行本地单节点Kubernetes集群
+        1.1 插入minikube
+            OSX系统：
+                curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.23.0/minikube-darwin-amd64 && chmod +x minikube && sudo mv minikube  /usr/local/bin/
+            Linux系统：
+                curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.23.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube  /usr/local/bin/
+            注意⚠️⚠️⚠️：启动集群需要虚拟机，因此首先安装virtualBox。
+            如果显示缺少依赖：可以去这个找对应的包http://mirrors.edge.kernel.org/ubuntu/pool/universe/q/qtx11extras-opensource-src/
+        1.2 启动kubernetes集群并查看状态
+                minikube start
+                minikube status
+                minikube stop: 只是停止，里面的各种pod资源没有删除
+                minikube delete： 全部资源删除
+        1.3 插入kubernetes的客户端命令行工具（kubectl）
+                OSX系统：
+                    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+                    curl -Lo minikube http://kubernetes.oss-cn-hangzhou.aliyuncs.com/minikube/releases/v1.1.1/minikube-darwin-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+                Linux系统：
+                    curl -LO https://storage.googleapis.com/kubernetes-release/release
+                     /$(curl -s https://storage.googleapis.com/kubernetes-release/release
+                     /stable.txt)/bin/linux/amd64/kubectl
+                     && chmod +x kubectl
+                     && sudo mv kubectl /usr/local/bin/
+            13.1 查看集群信息
+                kubectl cluster-info
+    2.使用goole kubernetes 引擎启动集群【⚠️⚠️⚠️暂不推荐，因为要翻墙】
+        2.1 注册登录谷歌账户
+        2.2 在谷歌云平台控制台创建一个项目
+        2.3 启动账单或者使用免费版本
+        2.4 启动Kubernetes Engine API
+        2.5 下载并且插入谷歌云SDK，包括gcloud命令行工具
+        2.6 插入kubectl命令行客户端：gcloud components install kubectl
+
+        2.7 创建一个有3个节点的kubernetes集群
+            gcloud container clusters create kubia --num-nodes 3 --machine-type f1-micro
+            kubectl get nodes  //查看集群节点状态
+            kubectl describe node minikube  //查看某个具体的节点的详细信息
+
+    3.在kubernetes集群上运行第一个应用程序
+        3.1 在kubernetes集群上创建一个容器的副本控制器(名字必须是小写的)🌿🌿🌿🌿🌿
+            kubectl run kubia --image=hexingjiehao/kubia --port=8080 --generator=run/v1
+        3.2 查看创建的pod中的容器
+            kubectl get pods
+            kubectl describe pod 名字
+            期望的结果：该容器的副本控制器状态为running。
+            问题1：节点状态长期处于容器创建中?
+                查看详细信息kubectl describe pod kubia
+                进入minikube查看详细信息：minikube ssh  --> journalctl -xe
+                原因是minikube使用地址 gcr.io/google_containers/pause-amd64:3.0。地址被墙了
+                解决办法：在minikube的虚拟机中执行命令
+                    docker pull googlecontainer/pause-amd64:3.0
+                    docker tag googlecontainer/pause-amd64:3.0 gcr.io/google_containers/pause-amd64:3.0
+                        然后在外部机器上：将原来的pod删除：kubectl delete pod kubia-xxx
+
+        3.3 将集群内部的pods中程序运行的服务暴露到外部，方便外部访问
+            3.3.1 创建一个Service对象，将副本控制器进行暴露，也就是pod
+                kubectl expose rc kubia --type=LoadBalancer --name kubia-http
+            3.3.2 列出暴露的服务对象。默认有一个kubernetes服务，不用管它
+                kubectl get services
+                新创建的服务暂时没有外部IP，需要等待集群进行负载均衡操作，过段时间就会分配好地址
+                ⚠️⚠️⚠️如果是minikube启动的kubernetes集群服务，则不会分配外部地址。因为它没有该功能
+                       不过有一个折中的方法：使用minikube service kubia-http命令，在浏览器获取该IP地址和端口
+
+            3.3.3 使用mac系统的Docker desktop启动kubernets集群🌿🌿🌿🌿🌿
+                    其中的步骤和解决办法在：https://www.cnblogs.com/lakeslove/p/10881405.html
+                    删除所有镜像的操作：docker rmi `docker images -q`
+                    删除所有容器的操纵：docker rm $(docker ps -aq)
+                    其中生成的外部服务地址是localhost
+
+        3.4 通过暴露的外部IP访问集群内的service
+            curl localhost:8080
+
+        3.5 水平伸缩应用程序
+            3.5.1 查看副本控制器的数量
+                kubectl get replicationcontrollers
+            3.5.2 增加pod副本的数量
+                kubectl scale rc kubia --replicas=3
+            3.5.3 查看伸缩后的副本控制器数量和pod的数量
+                kubectl get rc
+                kubectl get podskubectl
+            3.5.4 自动负载均衡多个pod对应的1个服务
+                minikube service kubia-http  //获取到外部IP和port
+                curl curl http://192.168.99.103:31355  //多次执行，能够看到负载均衡效果
+
+        3.6 展示应用程序在哪个节点上执行
+                kubectl get pods -o wide
+                kubectl describe pod kubia-hfl8c  //3.6.1 查看pod的具体信息
+
+        3.7 使用kubernetes dashboard作为web图形化界面【前提是使用GKE启动的kuberenetes服务器】
+            3.7.1 获取仪表盘的IP和port
+                kubectl cluster-info | grep dashboard
+            3.7.2 获取使用仪表盘的用户名密码
+                gcloud container clusters describe kubia | grep -E "(username|password):"
+            3.7.3 使用minikube访问仪表盘（前提是有这个插件）
+                minikube dashboard
+                ⚠️⚠️️⚠️这里有一个墙的原因，可能无法打开仪表盘，需要替换dashboard的images来解决
+
+
+使用json挥着yaml文件进行kubernetes集群的各种配置：
+    1.查看pod的yaml格式信息
+        kubectl get pod kubia-4lp47 -o yaml
+
+    2.使用kubectl explian命令发现每个组件的概念
+        kubectl explain pod
+        kubectl explain pod.spec
+        kubectl explain node
+        kubectl explain service
+        ......
+    3.使用yaml文件创建pod
+        元素主要包括metadata,Spec,Status,
+        文件内容：
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: kubia-manual
+            spec:
+              containers:
+              - image: hexingjiehao/kubia
+                name: kubia
+                ports:
+                - containerPort: 8080
+                  protocol: TCP
+        执行命令：
+            kubectl create -f kubia-manual.yaml
+        查看pod定义：
+            kubectl get pod kubia-manual -o yaml
+            kubectl get pod kubia-manual -o json
+
+    4.查看容器的日志
+        4.1 进入到pod节点查看
+            minikube ssh
+            docker logs 容器ID
+        4.2 直接在外部控制台查看
+            docker logs 容器ID
+            kubectl logs kubia-manual
+        4.3 指定多容器的pod中具体的容器名字的日志
+            kubectl logs kubia-manual -c 容器名字
+        4.4 发送请求到pod(不通过暴露服务)
+            kubectl port-forward kubia-manual 8888:8080
+
+            4.4.1 检查请求的效果。主要是日志
+                curl localhost：8888
+
+    5.使用标签来管理pod(注意yaml的内容格式)
+        5.1 书写yaml文件：kubia-manual-with-labels.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+                name: kubia-manual-v2
+                labels:
+                    creation_method: manual
+                    env: prod
+            spec:
+              containers:
+              - image: hexingjiehao/kubia
+                name: kubia
+                ports:
+                - containerPort: 8080
+                  protocol: TCP
+        5.2 执行yaml文件创建pod
+            kubectl create -f kubia-manual-with-labels.yaml
+
+            5.2.1 查看所有pod的标签
+                kubectl get pod --show-labels
+            5.2.2 查看pod的具体的标签的值
+                kubectl get pod -L creation_method,env
+            5.2.3 添加指定pod的标签
+                kubectl label pod kubia-manual creation_method=manual
+            5.2.4 修改存在的pod的标签
+                kubectl label pod kubia-manual-v2 env=debug --overwrite
+            5.2.5 通过标签选择器列出pod
+                kubectl get pods -l creation_method=manual
+                kubectl get pods -l creation_method
+                kubectl get pods -l '!env'   //列出没有env标签的pod
+                kubectl get pods -l creation_method,env   //列出有多个标签的pod
+
+        5.3 给节点设置标签
+            kubectl label node minikube gpu=true
+
+            5.3.1 查看节点的标签
+                kubectl get nodes -l gpu=true
+                kubectl get nodes -L gpu  //区分大小写，大写表示增加额外的列
+
+    6. 将pod调度到指定node
+        6.1 创建yaml文件：kubia-gpu.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: kubia-gpu
+            spec:
+              nodeSelector:
+                gpu: "true"
+              containers:
+              - image: hexingjiehao/kubia
+                name: kubia
+        6.2 执行kubia-gpu.yaml文件创建pod
+            kubectl create -f kubia-gpu.yaml
+
+    7. 给pod添加注解
+        kubectl annotate pod kubia-manual mycompany.com/someannotation="foo bar"
+
+        7.1 查看某个pod的注解信息
+            kubectl describe pod kubia-manual
+
+    8. 对资源使用命名空间
+        8.1 查看所有的命名空间
+            kubectl get ns
+        8.2 查看指定命名空间下的pod
+            kubectl get pod --namespace kube-system
+        8.3 创建命名空间
+            8.3.1 创建yaml文件：custom-namespace.yaml
+                apiVersion: v1
+                kind: Namespace
+                metadata:
+                  name: custom-namespace
+            8.3.2 执行文件custom-namespace.yaml
+                kubectl create -f custom-namespace.yaml
+            8.3.3 直接使用命令创建命名空间
+                kubectl create namespace custome-namespace-v2
+            8.3.4 在资源创建时指定命名空间
+                kubectl create -f kubia-manual.yaml -n custom-namespace   //默认时default命名空间
+
+    9.停止和删除pods 🌿🌿🌿🌿🌿
+        如果删除的是副本集中的pod，则会自动创建新的pod
+        9.1 删除单个pod (注意不是立即删除，需要等待一段时间，默认30秒)
+            kubectl delete pod kubia-gpu
+        9.2 删除多个pod
+            kubectl delete pod pod1 pod2
+        9.3 使用标签选择器删除pod
+            kubectl delete pod -l creation_method=manual
+        9.4 通过删除整个命名空间删除pods (也需要等待时间)
+            kubectl delete ns custom-namespace
+        9.5 删除全部pod
+            kubectl delete pod --all
+        9.6 使用ReplicationController创建的pod，也就是使用kubectl run命令，
+            直接删除pod会不停重建pod，解决办法是：删除ReplicationController
+                kubectl delete rc kubiareplicationcontroller
+        9.7 删除所有资源🌿🌿🌿🌿🌿
+            kubectl delete all --all
+
+    10.创建Service对象
+        10.1 创建yaml文件：kubia-service.yaml
+            apiVersion: v1
+            kind: Service
+            metadata:
+                name: kubia-service
+            spec:
+                type: NodePort
+                selector:
+                    app: kubia-k8s-demo
+                ports:
+                - protocol: TCP
+                  port: 80
+                  targetPort: 8080
+                  nodePort: 30008
+        10.2 执行kubia-service.yaml文件
+            kubectl create -f kubia-service.yaml --record
+
+    11.创建Deployment
+        11.1 创建yaml文件：kubia-deployment.yaml
+            apiVersion: extensions/v1beta1   //取值是固定的几个值
+            kind: Deployment
+            metadata:
+                name: kubia-deployment
+                labels:
+                    app: kubia-k8s-demo
+            spec:
+                replicas: 2
+                template:
+                    metadata:
+                        labels:
+                            app:kubia-k8s-demo
+                    spec:
+                        containers:
+                        - name: kubia-deployment
+                          image: hexingjiehao/kubia
+                          imagePullPolicy: Always
+                          ports:
+                          - containerPort: 8080
+        11.2 执行kubia-deployment.yaml文件
+            kubectl create -f kubia-deployment.yaml
+        11.3 查看部署的情况
+            kubectl get deployments
+
+    12.自动负载均衡
+        12.1 通过查看日志的方式检查效果
+            kubectl logs -f kubia-deployment-7b86845f65-645vc
+            kubectl logs -f kubia-deployment-7b86845f65-zd255
+
+    13.服务伸缩pod
+        13.1 修改kubia-deployment.yaml中spec.replicas的值即可
+             然后应用该修改：kubectl apply -f kubia-deployment.yaml
+
+
+副本和控制集器的细节：
+    1.使用活性探针保持pod健康
+        1.1 创建yaml文件：kubia-liveness-probe.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: kubia-liveness
+            spec:
+              containers:
+              - image: hexingjiehao/kubia-unhealthy
+                name: kubia-unhealthy
+                ports:
+                - containerPort: 8080
+                  protocol: TCP
+                livenessProbe:
+                  httpGet:
+                    path: /
+                    port: 8080
+
+            ⚠️⚠️⚠️在kubernetes中运行的镜像的名字，不能有下划线_
+        1.2 执行kubia-liveness-probe.yaml
+            kubectl create -f kubia-liveness-probe.yaml
+        1.3 在yaml文件中配置额外的属性initialDelaySeconds，防止陷入死循环
+                initialDelaySeconds: 15
+        1.4 查看该探针是否起作用🌿🌿🌿🌿🌿
+                kubectl describe pod kubia-unhealthy
+                如果其中有错误状态，说明程序有问题，不能部署，还需要修改程序
+
+    2.使用副本控制器（最终会废弃）
+        2.1 创建副本控制器的yaml文件：kubia-rc.yaml
+            apiVersion: v1
+            kind: ReplicationController
+            metadata:
+              name: kubia
+            spec:
+              replicas: 3
+              selector:
+                app: kubia
+              template:
+                metadata:
+                  labels:
+                    app: kubia
+                spec:
+                  containers:
+                  - name: kubia
+                    image: hexingjiehao/kubia
+                    ports:
+                    - containerPort: 8080
+        2.2 执行kubia-rc.yaml文件
+            kubectl create -f kubia-rc.yaml
+        2.3 通过更改pod的标签，让pod脱离replicationController的绑定，或者修改控制器的标签选择器进行解绑
+        2.4 水平扩容pod--通过修改副本控制器
+            kubectl scale rc kubia --replicas=10
+        2.5 删除副本控制器
+            2.5.1 同时删除控制器和pod
+                kubectl delete rc kubia
+            2.5.2 删除副本控制器时不级联删除pod
+                kubectl delete rc kubia --cascade=false
+
+    3.使用副本集合ReplicaSets（推荐使用）
+        ReplicaSet有更富表现力的pod选择器。
+        ReplicationController的标签选择器只允许匹配包含特定标签的pod: 只有in操作
+        ReplicaSet的选择器也允许匹配缺少特定标签的pods或包含特定标签键的pods：有in操作和not in操作
+        3.1 创建yaml文件： kubia-replicaset.yaml
+            apiVersion: apps/v1beta2
+            kind: ReplicaSet
+            metadata:
+              name: kubia
+            spec:
+              replicas: 3
+              selector:
+                matchLabels:
+                  app: kubia
+              template:
+                metadata:
+                  labels:
+                    app: kubia
+                spec:
+                  containers:
+                  - name: kubia
+                    image: hexingjiehao/kubia
+        3.2 查看副本集的情况
+            kubectl get rs
+        3.3 查看副本集的详细情况
+            kubectl describe rs (可选)副本集名字
+        3.4 设置副本集各种选择器:
+            selector:
+                matchLabels:
+                  app: kubia
+
+            //这种格式有3个属性：key,operator,values
+            selector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - kubia
+
+            具体的取值有：
+                In：标签值必须匹配其中一个指定值
+                Not In：标签值不能匹配其中任意指定值
+                Exists：pod必须包含一个拥有指定key的标签
+                DoesNotExist： pod必须不包含一个拥有指定key的标签，values一定不能指定
+        3.5 删除副本集
+            单独删除一个pod，都会自动重建pod
+            kubectl delete rs kubia
+
+    4.使用守护集合DaemonSet
+        默认情况下，它会在每个节点创建一个pod，用于监视资源使用情况和使用日志，其中kube-proxy就是一个例子。
+        它也能向副本集合一样使用标签选择器，在指定的节点上创建pod
+        4.1 创建yaml文件：ssd-monitor-daemonset.yaml
+            apiVersion: apps/v1beta2
+            kind: DaemonSet
+            metadata:
+              name: ssd-monitor
+            spec:
+              selector:
+                matchLabels:
+                  app: ssd-monitor
+              template:
+                metadata:
+                  labels:
+                    app: ssd-monitor
+                spec:
+                  nodeSelector:
+                    disk: ssd
+                  containers:
+                  - name: main
+                    image: hexingjiehao/kubia
+        4.2 创建DaemonSet,查看pod，增加标签
+            kubectl create -f ssd-monitor-daemonset.yaml
+            kubectl get ds
+            kubectl get pod
+            kubectl get node
+            kubectl label node monikube disk=ssd
+        4.3 删除节点上的标签，同时指定的pod自动删除
+            kubectl label node minikube disk=hdd --overwrite
+
+    5.使用Job resource
+        任务只运行一遍，程序结束后，不再重新启动pod.设置restartPolicy: OnFailure
+        这里需要创建一个简单的main程序就行,不是web程序
+        5.1 创建yaml文件：exporter.yaml
+            apiVersion: batch/v1
+            kind: Job
+            metadata:
+              name: batch-job
+            spec:
+              template:
+                metadata:
+                  labels:
+                    app: batch-job
+                spec:
+                  restartPolicy: OnFailure
+                  containers:
+                  - name: main
+                    image: hexingjiehao/batch-job
+        5.2 执行yaml文件并查看详情
+            kubectl create -f exporter.yaml
+            kubectl get jobs    //job和副本控制器是一个级别的
+            kubectl get pod
+        5.3 查看job的日志
+            kubectl logs batch-job-42th5
+        5.4 在一个job中运行多个实例，可以并行或者顺序执行
+            5.4.1 顺序执行job pods（默认情况）
+                增加配置completions: 5
+            5.4.2 并行指定job pods
+                增加配置completions: 5
+                       parallelism: 2
+        5.5 伸缩Job (前提是job当前还在运行,伸缩的是执行的job的线程数）
+            kubectl scale job batch-job --replicas 3
+        5.6 配置job的超时时间和重试次数
+            activeDeadlineSeconds：超时时间
+            spec.backoffLimit：重试次数
+
+    6. 定时完成job
+        6.1 创建CronJob: cronjob.yaml
+
+            apiVersion: batch/v1beta1
+            kind: CronJob
+            metadata:
+                name: batch-job-every-fifteen-minutes
+            spec:
+              schedule: "0/10 * * * *"
+              jobTemplate:
+                spec:
+                  template:
+                    metadata:
+                      labels:
+                        app: periodic-batch-job
+                    spec:
+                      restartPolicy: OnFailure
+                      containers:
+                      - name: main
+                        image: hexingjiehao/batch-job
+        6.2 配置定时器
+            minute-Hour-day of mouth-month-day of week
+            0/1 * * * *   :从0分钟开始，每隔1分钟执行1次job
+            可以设置每隔job必须在指定时间内启动： startingDeadlineSeconds: 15
+
+
+开始用Service进行内部应用的暴露接口：一定要著名服务的类型type：NodePort还是ClusterIP,ExternalName等🌿🌿🌿🌿🌿
+    1. 创建服务：kubia-svc.yaml
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: kubia
+        spec:
+          ports:
+          - port: 80
+            targetPort: 8080
+          selector:      //核心，自动查找对应pod并进行绑定
+            app: kubia
+    2.执行yaml文件并查看情况
+        kubectl create -f kubia-svc.yaml
+        kubectl get svc
+    3. 在集群内部测试服务
+        3.1 创建一个pod并发送请求到集群ip并且查看响应日志【暂未测试】
+            ssh到k8s节点并使用curl命令 【暂未测试】
+            使用kubectl exec命令进入pod内部，然后使用curl命令 【暂未测试】
+                kubectl exec kubia-manual -- curl -s http://10.110.51.228
+                kubectl exec -it kubia-manual bash
+        3.2 在服务上配置会话关联。每次都能够访问到同一个节点，而不是集群中的随机节点
+            spec:
+              sessionAffinity: ClientIP
+        3.3 在同一个服务中公开多个端口:创建mutil-ports.yaml文件
+            可以在pod创建的yaml中，给端口取名字，然后在service的targetPort取值中使用命名端口
+
+            apiVersion: v1
+            kind: Service
+            metadata:
+                name: kubia
+            spec:
+                ports:
+                - name: http
+                    port: 80
+                    targetPort: 8080
+                - name: https
+                    port: 443
+                    targetPort: 8443
+                selector:               //核心，用于绑定后台应用程序的pod，副本控制器，副本集等
+                    app: kubia
+        3.4 客户端pod发现service 🌿🌿🌿🌿🌿
+            3.4.1 通过环境变量
+                列出某个pod容器中的环境变量 kubectl exec kubia-manual env
+            3.4.2 通过DNS
+                在命名空间kube-system中，存在一个kube-dns的pod，它运行DNS服务器
+            3.4.3 通过FQDN
+                进入pod的容器中，然后执行：curl http://kubia.default.svc.cluster.local
+                服务名.命名空间.可配置的集群域名前缀
+                backend-database.default.svc.cluster.local
+                还是需要在客户端pod中设置端口
+                如果前段pod和后端pod在同一个命名空间：可以使用backend-database
+            3.4.4 在pod容器中运行shell
+                 kubectl exec -it kubia-manual bash
+    4.连接到集群外部的服务Service
+        4.1 介绍服务的端点资源
+            kubectl get endpoints kubia
+        4.2 手动配置服务端点资源
+            首先创建一个服务，它没有指定pod选择器,然后创建一个端点资源。绑定方法是同样的名字
+            4.2.1 无选择器服务：external-service.yaml
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: external-service
+                spec:
+                    ports:
+                    - port: 80
+            4.2.2 端点资源：external-service-endpoints.yaml
+                apiVersion: v1
+                kind: Endpoints
+                metadata:
+                  name: external-service
+                subsets:
+                  - addresses:
+                    - ip: 11.11.11.11
+                    - ip: 22.22.22.22
+                    ports:
+                    - port: 80
+        4.3 给外部服务类型创建一个别名：external-service-externalname.yaml
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: external-service
+            spec:
+              type: ExternalName
+              externalName: someapi.somecompany.com
+              ports:
+              - port: 80
+    5.暴露服务到外部客户端🌿🌿🌿🌿🌿
+        5.1 使用NodePort：🌿🌿🌿🌿🌿
+            创建yaml文件：kubia-svc-nodeport.yaml
+                apiVersion: v1
+                kind: Service
+                metadata:
+                   name: kubia-nodeport
+                spec:
+                  type: NodePort
+                  ports:
+                  - port: 80
+                    targetPort: 8080
+                    nodePort: 30123
+                  selector:
+                    app: kubia
+        5.2 创建一个指定标签的pod，然后通过下面方法访问
+            在集群内部：内部ip:内部port
+            在集群外部：集群node1的外部ip:外部port
+                      集群node2的外部ip:外部port
+                      ......
+            5.2.1 通过GKE启动的k8s集群，需要修改防火墙规则，让外部客户端访问nodePort服务
+                gcloud compute firewall-rules create kubia-svc-rule --allow=tcp:30123
+        5.3 通过外部负载平衡器公开服务
+            一般运行在云提供商的k8s自动提供负载平衡器，服务类型设置为LoadBalancer即可。最新版的minikube有该功能！！！
+            创建yaml文件：kubia-svc-loadbalancer.yaml
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: kubia-loadbalancer
+                spec:
+                  type: LoadBalancer
+                  ports:
+                  - port: 80
+                    targetPort: 8080
+                  selector:
+                    app: kubia
+        5.4 通过入口资源对外公开服务
+            5.4.1 查看minikube可用组件
+                minikube addons list
+            5.4.2 启动入口组件
+                minikube addons enable ingress   //最后一个参数可以是列出来的任意一个组件
+            5.4.3 创建yaml文件：kubia-ingress.yaml
+                apiVersion: extensions/v1beta1
+                kind: Ingress
+                metadata:
+                  name: kubia
+                spec:
+                  rules:
+                  - host: kubia.example.com
+                    http:
+                      paths:
+                      - path: /
+                        backend:
+                          serviceName: kubia-nodeport
+                          servicePort: 80
+            5.4.4 查看入口信息：注意将域名和ip在dns中进行配置成对cat /etc/hosts
+                kubectl get ingress
+                curl http://kubia.example.com
+            5.4.5 通过相同的入口暴露多个服务
+                在pahts字段下有多个-path字段。这样做能够请求一个地址，访问到奥不同的后台服务，一般是用作相同服务的负载均衡
+                    - host: kubia.example.com
+                    http:
+                        paths:
+                          - path: /kubia
+                            backend:
+                              serviceName: kubia
+                              servicePort: 80
+                          - path: /foo
+                            backend:
+                              serviceName: bar
+                              servicePort: 80
+                将不同的服务映射到不同主机
+                    spec: rules:
+                      - host: foo.example.com
+                        http:
+                          paths:
+                          - path: /
+                            backend:
+                              serviceName: foo
+                              servicePort: 80
+                      - host: bar.example.com
+                        http:
+                          paths:
+                          - path: /
+                            backend:
+                              serviceName: bar
+                              servicePort: 80
+            5.4.6 配置Ingress来处理TLS流量，也就是https
+                当客户端打开到入口控制器的TLS连接时，控制器将终止TLS连接。客户机和控制器之间的通信是加密的，而控制器和后端pod之间的通信则不是加密的。
+                在pod中运行的应用程序不需要支持TLS
+                创建入口证书和私钥：🌿🌿🌿🌿🌿
+                    openssl genrsa -out tls.key 2048
+                    openssl req -new -x509 -key tls.key -out tls.cert -days 360 -subj /CN=kubia.example.com
+                使用证书和秘钥创建Secret:
+                    kubectl create secret tls tls-secret --cert=tls.cert --key=tls.key
+                使用CertificateSigningRequest资源获得签名证书，而不是自己签名证书
+                    kubectl certificate approve <name of the CSR>
+                更新后的yaml文件：kubia-ingress-tls.yaml
+                    apiVersion: extensions/v1beta1
+                    kind: Ingress
+                    metadata:
+                      name: kubia
+                    spec:
+                        tls:
+                        - hosts:
+                            - kubia.example.com
+                            secretName: tls-secret
+                        rules:
+                        - host: kubia.example.com
+                          http:
+                            paths:
+                            - path: /
+                              backend:
+                                serviceName: kubia-nodeport
+                                servicePort: 80
+                访问https：curl -k -v https://kubia.example.com/kubia
+    6.使用headless服务发现单个pods
+        6.1 创建headless服务：kubia-svc-headless.yaml
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: kubia-headless
+            spec:
+              clusterIP: None
+              ports:
+              - port: 80
+                targetPort: 8080
+              selector:
+                app: kubia
+        6.2 通过命令行直接创建pod，而且不会创建副本控制器
+                kubectl run dnsutils --image=hexingjiehao/kubia --generator=run-pod/v1 --command -- sleep infinity
+
+
+使用Volumes来将硬盘存储附加到容器上
+   1.创建1个fortune的镜像
+        1.1 创建fortuneloop.sh脚本
+             #!/bin/bash
+             trap "exit" SIGINT
+             mkdir /var/htdocs
+             while :
+             do
+               echo $(date) Writing fortune to /var/htdocs/index.html
+               /usr/games/fortune > /var/htdocs/index.html
+               sleep 10
+             done
+        1.2 创建Dockerfile
+            FROM ubuntu:latest
+            RUN apt-get update ; apt-get -y install fortune
+            ADD fortuneloop.sh /bin/fortuneloop.sh
+            RUN chmod +x /bin/fortuneloop.sh    //一定要给shell执行授权
+            ENTRYPOINT /bin/fortuneloop.sh
+        1.3 构建镜像并上传到dockerhub仓库
+            docker build -t fortune .
+            docker tag fortune hexingjiehao/fortune
+            docker push hexingjiehao/fortune
+   2.创建pod
+        2.1 创建yaml文件：fortune-pod.yaml【一定要注意格式】
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: fortune
+            spec:
+              containers:
+              - image: hexingjiehao/fortune
+                name: html-generator
+                volumeMounts:
+                - name: html
+                  mountPath: /var/htdocs
+              - image: nginx:alpine
+                name: web-server
+                volumeMounts:
+                - name: html
+                  mountPath: /usr/share/nginx/html
+                  readOnly: true
+                ports:
+                - containerPort:80
+                  protocol: TCP
+              volumes:                  //卷是在pod下面
+              - name: html
+                emptyDir: {}
+        2.2 emptyDir默认的文件是挂载在pod的硬盘上，也可以设置为内存上
+            volumes:
+              - name: html
+                emptyDir:
+                  medium: Memory
+   3.使用Git存储库作为卷的介质
+        gitRepo卷基本上是一个emptyDir卷，它通过克隆Git存储库并在pod启动时(但在创建容器之前)来填充该卷
+        当将更改推送到gitRepo并希望开始提供网站的新版本时，都需要删除pod。
+        挂载的卷的内容在属性mountPath下，它和gitrepo中的内容一致
+        为了保证gitrepo中的资源和容器中挂载的资源保持一致，我们需要使用sidcar容器，后续在18章讲述
+        如果您想克隆一个私有的Git repo到您的容器中，您应该使用Git - sync sidecar或类似的方法，而不是gitRepo卷。
+
+        3.1 创建yaml文件： gitrepo-volume-pod.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: gitrepo-volume-pod
+            spec:
+              containers:
+              - image: nginx:alpine
+                name: web-server
+                volumeMounts:
+                - name: html
+                  mountPath: /usr/share/nginx/html
+                  readOnly: true
+                ports:
+                - containerPort: 80
+                  protocol: TCP
+              volumes:
+              - name: html
+                gitRepo:
+                  repository: https://github.com/hexingjiehao/kubia-website-example.git
+                  revision: master
+                  directory: .
+        3.2 进入pod容器中的方法
+            kubectl exec -it pod名字 bash
+            kubectl exec -it pod名字 sh
+   4. 使用hostpath卷
+        将一个node级别的目录挂载到容器的文件系统下。它是一个持久化存储的卷类型,和被调度的node绑定。如果被移动到另外的node，则数据丢失
+        正常情况下，在kube-system命名空间下，有使用hostpath卷的pod
+        不推荐用于持久化程序数据
+        4.1 创建yaml文件：hostpath.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: hostpath-volume
+            spec:
+              containers:
+              - image: nginx:alpine
+                name: web-server
+                volumeMounts:
+                - name: html
+                  mountPath: /usr/share/nginx/html
+                  readOnly: true
+                ports:
+                - containerPort: 80
+                  protocol: TCP
+              volumes:
+              - name: html
+                hostPath:
+                  path: /Users/admin/Downloads/images/App-volumes
+   5.使用持久化存储：【暂时没测试】
+        使用GCE基础设施：
+            spec:
+              volumes:
+              - name: mongodb-data
+                gcePersistentDisk:
+                  pdName: mongodb
+                  fsType: ext4
+        使用AWS基础设施：
+            spec:
+              volumes:
+              - name: mongodb-data
+                awsElasticBlockStore:
+                    volumeId: my-volume
+                    fsType: ext4
+        使用NFS基础设施：
+             volumes:
+              - name: mongodb-data
+                nfs:
+                  server: 1.2.3.4
+                  path: /some/path
+   6.使用PersistentVolumes 和 PersistentVolumeClaims
+        PV是集群级别的资源，PVC属于命名空间的范围
+        当pv和pvc都创建完毕时，如果他们的容量和访问模式匹配，则自动将这两个进行绑定
+        6.1 创建pv：mongodb-pv-gce.yaml。它是集群级别的资源
+            apiVersion: v1
+            kind: PersistentVolume
+            metadata:
+              name: mongodb-pv
+            spec:
+              capacity:
+                storage: 1Gi
+              accessModes:
+              - ReadWriteOnce
+              - ReadOnlyMany
+              persistentVolumeReclaimPolicy: Retain
+              gcePersistentDisk:
+                pdName: mongodb
+                fsType: ext4
+
+        6.2 创建pvc：mongodb-pvc.yaml
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: mongodb-pvc
+            spec:
+              resources:
+                requests:
+                  storage: 1Gi
+              accessModes:
+              - ReadWriteOnce
+              storageClassName: ""
+
+        6.3 在pod中使用pvc：创建yaml文件mongodb-pod-pvc.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: mongodb
+            spec:
+              containers:
+              - image: mongo
+                name: mongodb
+                volumeMounts:
+                - name: mongodb-data
+                  mountPath: /data/db
+                ports:
+                - containerPort: 27017
+                  protocol: TCP
+              volumes:
+              - name: mongodb-data
+                persistentVolumeClaim:
+                  claimName: mongodb-pvc
+
+        6.4 删除pv和pvc
+                删除pvc,然后重新创建pvc，pvc的状态为Pending，pv的状态为Released。二者并不会又重新绑定
+        6.5 持久性卷的动态供应
+            它能够动态的设定卷的大小，而不需要事先创建持久性卷，使用pvc时自动创建pv
+            6.5.1 使用StorageClass: storageclass-fast-gcepd.yaml
+                apiVersion: storage.k8s.io/v1
+                kind: StorageClass
+                metadata:
+                  name: fast
+                provisioner: kubernetes.io/gce-pd
+                parameters:
+                    type: pd-ssd
+                    zone: europe-west1-b
+            6.5.2 在pvc中使用storageclass: 创建文件mongodb-pvc-dp.yaml
+                apiVersion: v1
+                kind: PersistentVolumeClaim
+                metadata:
+                  name: mongodb-pvc
+                spec:
+                  storageClassName: fast
+                  resources:
+                    requests:
+                      storage: 100Mi
+                  accessModes:
+                    - ReadWriteOnce
+            6.5.3 使用命令kubectl delete all --all并不能删除掉pv和pvc和storageclass
+                  创建pvc时如果没有指定存储类，则使用k8s集群中的已经存在的默认存储类进行绑定
+                  如果想使用定义好的存储类，可以设置storageClassName: ""
+
+
+开始使用ConfigMap和Secrets：🌿🌿🌿🌿🌿
+    1. 传递命令行参数到docker容器中
+       1.1 在Dockerfile中设置变量，这种方将值给写死了
+            ENTRYPOINT： 定义了容器在启动时,调用的可执行命令或者脚本
+            CMD：指定传递到ENTRYPOINT的参数， 一般作为容器启动的默认参数
+                CMD ["10"]
+            1.1.1 执行镜像的两种方法
+                docker run <image>
+                docekr run <image> <arguments>
+                    docker run -it hexingjiehao/fortune:args 15
+            1.1.2 两种不同的格式shell,exec
+                shell：ENTRYPOINT node app.js
+                exec:  ENTRYPOINT ["node","app.js"]
+                当使用命令进入pod的容器时，如果该容器使用shell格式，命令如下： kubectl exec -it pod名字 bash
+                当使用命令进入pod的容器时，如果该容器使用exec格式，命令如下：kubectl exec -it pod名字 bash
+            1.1.3 构建镜像时：默认tag时latest,也可以设置tag
+                docker build -t fortune:args .
+                docker tag fortune:args hexingjiehao/fortune:args
+                docker run -it hexingjiehao/fortune:args 15
+    2.在kubernetes中重写命令和参数
+        2.1 在pod的yaml文件中重写command和args
+            kind: Pod
+            spec:
+              containers:
+              - image: some/image
+                command: ["/bin/command"]
+                args: ["arg1", "arg2", "arg3"]
+            注意⚠️：当pod创建好后，这两个参数不能被更新
+                command=ENTRYPOINT
+                args=CMD
+        2.2 在yaml文件中设置参数变量: fortune-pod-args.yaml
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: fortune2s
+            spec:
+              containers:
+              - image: hexingjiehao/fortune:args
+                args: ["2"]
+                name: html-generator
+                volumeMounts:
+                - name: html
+                  mountPath: /var/htdocs
+              volumes:
+              - name: html
+                emptyDir: {}
+            注意⚠️：一般是Dockerfile中调用shell,然后shell中设置变量
+        2.3 在pod的多个容器中，每个容器单独设置环境变量
+            2.3.1 在shell脚本中，直接使用环境变量，不进行设值,然后使用Dockerfile重新创建images
+            2.3.2 在pod的yaml文件中设置容器的环境变量：fortune-pod-env.yaml
+                kind: Pod
+                spec:
+                 containers:
+                   - image: hexingjiehao/fortune:env
+                     env:
+                     - name: INTERVAL
+                       value: "30"
+                     name: html-generator
+                       volumeMounts:
+                       - name: html
+                         mountPath: /var/htdocs
+                   volumes:
+                   - name: html
+                     emptyDir: {}
+            2.3.3 设置第二个环境变量引用第一个环境变量
+                env:
+                - name: FIRST_VAR
+                  value: "foo"
+                - name: SECOND_VAR
+                  value: "$(FIRST_VAR)bar"
+    3.使用ConfigMap键值对
+        3.1 创建ConfigMap对象
+            kubectl create configmap fortune-config --from-literal=sleep-interval=25
+            kubectl create configmap myconfigmap --from-literal=foo=bar --from-literal=bar=baz --from-literal=one=two
+        3.2 查看详情
+            kubectl get cm
+            kubectl get cm myconfigmap -o yaml
+            kubectl describe cm forune-config
+        3.3 将文件和目录作为实体进行存储，默认key值是文件名
+            kubectl create configmap my-config --from-file=config-file.conf
+            kubectl create configmap my-config --from-file=customkey=config-file.conf
+            kubectl create cm fileconfig --from-file=/Users/admin/Downloads/images/App-volumes
+                将目录下的所有文件进行存储，这里不能直接设置key
+            kubectl create configmap my-config --from-file=foo.json --from-file=bar=foobar.conf --from-file=config-opts/ --from-literal=some=thing
+        3.4 将ConfigMap条目作为环境变量传递给容器
+                本质是将原来的直接设值修改为从ConfigMap中获取
+            3.4.1 创建yaml文件：fortune-pod-env-configmap.yaml
+                apiVersion: v1
+                    kind: Pod
+                metadata:
+                  name: fortune-env-from-configmap
+                spec:
+                  containers:
+                  - image: hexingjiehao/fortune:env
+                    env:
+                    - name: INTERVAL
+                      valueFrom:        //核心
+                        configMapKeyRef:
+                          name: fortune-config
+                          key: sleep-interval
+                    name: html-generator
+                    volumeMounts:
+                    - name: html
+                      mountPath: /var/htdocs
+                  volumes:
+                  - name: html
+                    emptyDir: {}
+            3.4.2 执行fortune-pod-env-configmap.yaml文件
+                如果启动报错，可能没有设置configmap，重新设置好即可。
+                也可以在yaml问价中设置configMapKeyRef.optional: true。即使没有设置configmap也能启动configmap
+            3.4.3 将ConfigMap作为环境变量传递1次
+                当confgimap有大量的键值对时，逐个传递比较麻烦，直接使用envFrom进行整体传递
+                可以给每个环境变量在不同的容器中设置不同的前缀 - prefix: CONFIG_ ,这个前缀是可选的
+                spec:
+                  containers:
+                  - image: some-image
+                    envFrom:
+                    - prefix: CONFIG_
+                      configMapRef:
+                        name: my-config-map
+                注意⚠️：当环境变量的名字包含-符号时，不会创建这个条目
+        3.5 将ConfigMap条目作为命令行参数传递
+            本质将configMap设置为容器中的环境变量，然后在yaml中使用该变量作为shell文件执行的参数
+            3.5.1 创建yaml文件：fortune-pod-args-configmap.yaml
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: fortune-args-from-configmap
+                spec:
+                  containers:
+                  - image: hexingjiehao/fortune:args
+                    env:
+                    - name: INTERVAL
+                      valueFrom:
+                        configMapKeyRef:
+                          name: fortune-config
+                          key: sleep-interval
+                    args: ["$(INTERVAL)"]
+                    name: html-generator
+                    volumeMounts:
+                    - name: html
+                      mountPath: /var/htdocs
+                  volumes:
+                  - name: html
+                    emptyDir: {}
+        3.6 使用configMap volume将configMap条目公开为文件
+            目的是为了解决配置的内容特别长的情况
+            3.6.1 创建nginx的配置文件：my-nginx-config.conf
+                server {
+                  listen     80;
+                  server_name  www.kubia-example.com;
+
+                  gzip on;
+                  gzip_types text/plain application/xml;
+
+                  location / {
+                    root   /usr/share/nginx/html;
+                    index  index.html index.htm;
+                  }
+                }
+            3.6.2 创建configmap
+                mkdir configmap-files   //创建目录
+                vim my-nginx-config.conf   //json配置
+                vim sleep-interval   //25
+
+                //创建configmap
+                kubectl create configmap fortune-config --from-file=configmap-files
+                //查看信息
+                kubectl get configmap fortune-config -o yaml
+            3.6.3 在卷中使用configmap
+                本质是使用hostpath类型的卷，将本地目录内容挂载到容器中。中间使用ConfigMap进行代替
+                3.6.3.1 创建yaml文件：fortune-pod-configmap-volume.yaml
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: fortune-configmap-volume
+                    spec:
+                      containers:
+                      - image: nginx:alpine
+                        name: web-server
+                        volumeMounts:
+                        - name: config
+                          mountPath: /etc/nginx/conf.d
+                          readOnly: true
+                      volumes:
+                      - name: config
+                        configMap:
+                          name: fortune-config
+                3.6.3.2 验证ConfigMap作为卷挂载的内容有没有用到配置里面
+                    kubectl port-forward fortune-configmap-volume 8080:80 &
+                    curl -H "Accept-Encoding: gzip" -I localhost:8080
+                    kubectl exec fortune-configmap-volume -c web-server ls /etc/nginx/conf.d
+                3.6.3.3 将configmap中特定条目暴露到卷中：fortune-pod-configmap-volume-with-items.yaml
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: fortune-configmap-volume
+                    spec:
+                      containers:
+                      - image: nginx:alpine
+                        name: web-server
+                        volumeMounts:
+                        - name: config
+                          mountPath: /etc/nginx/conf.d     //默认情况下，这个一般是目录
+                          readOnly: true
+                      volumes:
+                      - name: config
+                        configMap:
+                          name: fortune-config
+                          items:
+                          - key: my-nginx-config.conf
+                            path: gzip.conf
+                    注意⚠️：在configMap中存储的文件值，在导入到容器中的时候，可以修改名字，但是内容不变
+                            而且，挂载到容器的目录值，会隐藏原本容器目录中的文件
+                3.6.3.4 将configmap中的文件挂载到容器中而不隐藏容器原本的文件：fortune-cm-single-file.yaml
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: fortune-cm
+                    spec:
+                      containers:
+                      - image: nginx:alpine
+                        name: web-server
+                        volumeMounts:
+                        - name: config
+                          mountPath: /etc/someconfig.conf     //挂载成一个不存在的文件
+                          subPath: my-nginx-config.conf    //ConfigMap中的值
+                      volumes:
+                      - name: config
+                        configMap:
+                          name: fortune-config
+                          defaultMode: 0660   //设置文件的执行权限
+        3.7 更新应用配置，在不重启应用的情况下
+            3.7.1 编辑ConfigMap
+                kubectl edit configmap fortune-config   //打开对象并在其中进行编辑
+            3.7.2 查看修改情况：要花一段时间进行容器内的更新配置
+                kubectl exec fortune-configmap-volume -c web-server cat /etc/nginx/conf.d/my-nginx-config.conf
+            3.7.3 重新加载nginx的配置
+                kubectl exec fortune-configmap-volume -c web-server -- nginx -s reload
+                注意⚠️：如果在容器中挂载单个文件，不会自动更新
+    4.使用Secrect对象【也是一个键值对】
+        4.1 使用默认的token Secret对象
+            每一个pod都有一个secret卷自动附加
+            查看信息：kubectl get secrets
+                     kubectl describe secrets
+        4.2 创建私钥和拥有公钥证书
+            openssl genrsa -out https.key 2048      //创建私钥
+            openssl req -new -x509 -key https.key -out https.cert -days 3650 -subj /CN=www.kubia-example.com  //创建证书
+        4.3 创建一个待加密文件
+            echo bar > foo
+        4.4 创建 一般的Secret 对象：
+            一般由3个文件创建，也可以整个目录进行处理，必须包含这3个文件
+            kubectl create secret generic fortune-https --from-file=https.key --from-file=https.cert --from-file=foo
+            kubectl create secret generic fortune-https --from-file=../fortune-https
+        4.5 创建tls Secrets 对象
+            只需要证书和私钥两个文件
+            kubectl create secret tls tls-secret --cert=tls.cert --key=tls.key
+        4.6 查看详细情况
+            kubectl get secret fortune-https -o yaml
+            Secret对象是Base64编码，ConfigMap对象是正常内容
+        4.7 在Secret中使用StringData字段
+            它是只写属性，使用get命令查看时，无法看到该字段
+        4.8 在pod中使用Secret对象
+            4.8.1 修改ConfigMap中的https,增加以下内容
+                命令：kubectl edit configmap fortune-config
+                kubectl create configmap fortune-config --from-file=configmap-files
+                内容：
+                    listen                443 ssl;
+                    ssl_certificate       certs/https.cert;
+                    ssl_certificate_key   certs/https.key;
+                    ssl_protocols         TLSv1 TLSv1.1 TLSv1.2;
+                    ssl_ciphers           HIGH:!aNULL:!MD5;
+            4.8.2 将创建的Secrets挂载到pod：fortune-pod-https.yaml
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: fortune-https
+                spec:
+                  containers:
+                  - image: hexingjiehao/fortune:env
+                    name: html-generator
+                    env:
+                    - name: INTERVAL
+                      valueFrom:
+                        configMapKeyRef:
+                          name: fortune-config
+                          key: sleep-interval
+                    volumeMounts:
+                    - name: html
+                      mountPath: /var/htdocs
+                  - image: nginx:alpine
+                    name: web-server
+                    volumeMounts:
+                    - name: html
+                      mountPath: /usr/share/nginx/html
+                      readOnly: true
+                    - name: config
+                      mountPath: /etc/nginx/conf.d
+                      readOnly: true
+                    - name: certs
+                      mountPath: /etc/nginx/certs/
+                      readOnly: true
+                    ports:
+                    - containerPort: 80
+                    - containerPort: 443
+                  volumes:
+                  - name: html
+                    emptyDir: {}
+                  - name: config
+                    configMap:
+                      name: fortune-config
+                      items:
+                      - key: my-nginx-config.conf
+                        path: https.conf
+                  - name: certs
+                    secret:
+                      secretName: fortune-https
+                注意⚠️：查看pod启动错误的方法：kubectl logs pod名字
+                        在写配置文件的时候，一定要注意（分号；）。
+                        当修改完配置文件后，一定要重新加载configmap和pod。而且证书的位置一定要在configMap下
+            4.8.3 进入pod的不同容器
+                kubectl exec -it fortune-https -c html-generator bash
+                kubectl exec -it fortune-https -c web-server sh
+            4.8.4 测试nginx服务器是否使用Secret
+                kubectl port-forward fortune-https 8443:443 &  //将容器服务暴露到外部并对应端口后台运行
+                curl https://localhost:8443 -k  //本地测试
+                //详细的响应信息
+                curl https://localhost:8443 -k -v
+
+                kubectl port-forward fortune-https 8080:80 &
+                curl https://localhost:8080 -k
+            4.8.5 Secret卷存储在内存中
+                kubectl exec fortune-https -c web-server -- mount | grep certs
+            4.8.6 通过环境变量暴露Secret实体【不推荐，使用Secret的方法最好是volume】
+                本质：和ConfigMap的变量设置是一致的
+                    env:
+                    - name: FOO_SECRET
+                      valueFrom:
+                        secretKeyRef:
+                          name: fortune-https
+                          key: foo
+        4.9 从私有image仓库拉取images,通过Secret
+            4.9.1 使用DOCKER HUB上的私有映像存储库
+                为Docker注册表创建一个包含凭据的秘密。
+                在pod的描述文件中的imagePullSecrets字段中引用Secret
+            4.9.2 创建Docker registry需要的Secret
+                kubectl create secret docker-registry mydockerhubsecret --docker-username=hexingjiehao --docker-password=xj15928286403 --docker-email=xj2711992339@163.com
+            4.9.3 创建aml文件pod-with-private-image.yaml
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: private-pod
+                spec:
+                  imagePullSecrets:
+                  - name: mydockerhubsecret
+                  containers:
+                  - image: hexingjiehao/private
+                    name: main
+                注意⚠️：当将Secret添加到ServiceAccount上时，不用为每个pod拉取私有image而设置Secret
+
+
+从应用程序访问pod元数据和其他资源---也就是将pod的元信息暴露给容器
+    1.通过环境变量暴露metadata：downward-api-env.yaml
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: downward
+        spec:
+          containers:
+          - name: main
+            image: busybox
+            command: ["sleep", "9999999"]
+            resources:
+              requests:
+                cpu: 15m
+                memory: 100Ki
+              limits:
+                cpu: 100m
+                memory: 4Mi
+            env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+            - name: CONTAINER_CPU_REQUEST_MILLICORES
+              valueFrom:
+                resourceFieldRef:
+                  resource: requests.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT_KIBIBYTES
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+                  divisor: 1Ki
+    2.在pod的容器中查看metadata
+        kubectl exec downward env
+    3.使用downwardAPI卷 传递 metadata 数据
+        将pod的标签和注释暴露到容器中，在容器中的保存形式是多种文件：downward-api-volume.yaml
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: downward
+          labels:
+            foo: bar
+          annotations:
+            key1: value1
+            key2: |
+              multi
+              line
+              value
+        spec:
+          containers:
+          - name: main
+            image: busybox
+            command: ["sleep", "9999999"]
+            resources:
+              requests:
+                cpu: 15m
+                memory: 100Ki
+              limits:
+                cpu: 100m
+                memory: 4Mi
+            volumeMounts:
+            - name: downward
+              mountPath: /etc/downward
+          volumes:
+          - name: downward
+            downwardAPI:
+              items:
+              - path: "podName"
+                fieldRef:
+                  fieldPath: metadata.name
+              - path: "podNamespace"
+                fieldRef:
+                  fieldPath: metadata.namespace
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+              - path: "annotations"
+                fieldRef:
+                  fieldPath: metadata.annotations
+              - path: "containerCpuRequestMilliCores"
+                resourceFieldRef:
+                  containerName: main
+                  resource: requests.cpu
+                  divisor: 1m
+              - path: "containerMemoryLimitBytes"
+                resourceFieldRef:
+                  containerName: main
+                  resource: limits.memory
+                  divisor: 1
+    4.查看暴露成卷的pod数据的内容
+        kubectl exec downward ls /etc/downward
+        kubectl exec downward cat /etc/downward/labels
+        kubectl exec downward cat /etc/downward/annotations
+        注意：当使用环境变量暴露标签和注释时，修改它们，容器中的值不会更新
+    5. 与Kubernetes API服务器对话
+        5.1 探索Kubernetes REST API
+            kubectl cluster-info
+        5.2 使用kubectl proxy访问API服务器
+            kubectl proxy
+            curl http:127.0.0.1:8001  //查看API服务器详细信息,里面有各种API地址
+        5.3 在pod中访问API 服务器
+            找到API服务器位置；并确定与服务器对话，而不是模拟器；使用服务器进行身份验证;否则它不会让你看到或做任何事情。
+            5.3.1 创建yaml文件：curl.yaml
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: curl
+                spec:
+                  containers:
+                  - name: main
+                    image: tutum/curl
+                    command: ["sleep", "9999999"]
+            5.3.2 查看信息并找到API服务器地址
+                kubectl exec -it curl bash
+                kubectl get svc   //kubernetes服务就是API服务器
+                在容器中执行env：其中服务器IP和端口如下：KUBERNETES_SERVICE_PORT=443
+                                                    KUBERNETES_SERVICE_HOST=10.0.0.1
+                在容器中访问API服务器：curl https://kubernetes   //⚠️⚠️⚠️这里报错无法解析kubernetes，因为k8s的内部DNS服务器没有启动
+            5.3.3 列出容器中的证书
+                ls /var/run/secrets/kubernetes.io/serviceaccount/
+                //访问服务器时，传递授权证书
+                curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt https://kubernetes
+                //将证书转化为环境变量
+                export CURL_CA_BUNDLE=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            5.3.4 API服务器的身份验证
+                //将token设置为环境变量
+                export TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+                //重新访问
+                curl -H "Authorization: Bearer $TOKEN" https://10.96.0.1 -k    //成功在pod中访问API服务器
+                //授权所有服务账户管理员权限
+                kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --group=system:serviceaccounts
+            5.3.5 在pod的容器中获取命名空间
+                export NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+                //测试容器内访问有命名空间的API
+                curl -H "Authorization: Bearer $TOKEN" https://10.96.0.1/api/v1/namespaces/$NS/pods -k
+        5.4 使用大使容器简化和API服务器的沟通
+            本质是单个容器http访问大使容器，然后大使容器https访问API服务器，类似与翻墙的VPN
+            5.4.1 创建yaml文件：curl-with-ambassador.yaml
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: curl-with-ambassador
+                spec:
+                  containers:
+                  - name: main
+                    image: tutum/curl
+                    command: ["sleep", "9999999"]
+                  - name: ambassador
+                    image: luksa/kubectl-proxy:1.6.2   //文档作者的image，上传到了docker hub公有仓库。这里有一个证书问题
+                注意⚠️：最好是自己创建这个大使容器，将证书添加到image里面
+            5.4.1 进入main容器然后访问大使容器
+                kubectl exec -it curl-with-ambassador -c main bash
+                curl localhost:8001
+        5.5 使用客户端库沟通API服务器
+            官方：
+                Golang client—https://github.com/kubernetes/client-go
+                Python—https://github.com/kubernetes-incubator/client-python
+            第三方：
+                Java client by Fabric8—https://github.com/fabric8io/kubernetes-client
+                Java client by Amdatu—https://bitbucket.org/amdatulabs/amdatu-kubernetes
+                Node.js client by tenxcloud—https://github.com/tenxcloud/node-kubernetes-client
+                Node.js client by GoDaddy—https://github.com/godaddy/kubernetes-client
+                PHP—https://github.com/devstub/kubernetes-api-php-client
+                Another PHP client—https://github.com/maclof/kubernetes-client
+                Ruby—https://github.com/Ch00k/kubr
+                Another Ruby client—https://github.com/abonas/kubeclient
+                Clojure—https://github.com/yanatan16/clj-kubernetes-api
+                Scala—https://github.com/doriordan/skuber
+                Perl—https://metacpan.org/pod/Net::Kubernetes
+            5.5.1 minikube启用Swagger-UI
+                minikube start --extra-config=apiserver.Features.Enable-SwaggerUI=true
+            5.5.2 查看界面
+                http(s)://<api server>:<port>/swagger-ui
+                https://https://192.168.99.110:8443/swagger-ui  //这里需要证书
+
+
+使用Deployments：以声明的方式更新应用
+    1.创建Deployment: kubia-deployment-v1.yaml
+        apiVersion: apps/v1beta1
+        kind: Deployment
+        metadata:
+          name: kubia
+        spec:
+          replicas: 3
+          template:
+            metadata:
+              name: kubia
+              labels:
+                app: kubia
+            spec:
+              containers:
+              - image: luksa/kubia:v1
+                name: nodejs
+    2.查看详细信息：
+        kubectl get deployment
+        kubectl describe deployment
+        kubectl rollout status deployment kubia   //重要的命令
+
+使用StatefulSets：部署副本有状态的应用
+    1.创建Headless Service对象
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: kubia
+        spec:
+          clusterIP: None
+          selector:
+            app: kubia
+          ports:
+          - name: http
+            port: 80
+    2.创建StatefulSet对象
+        apiVersion: apps/v1beta1
+        kind: StatefulSet
+        metadata:
+          name: kubia
+        spec:
+          serviceName: kubia
+          replicas: 2
+          template:
+            metadata:
+              labels:
+                app: kubia
+            spec:
+              containers:
+              - name: kubia
+                image: luksa/kubia-pet
+                ports:
+                - name: http
+                  containerPort: 8080
+                volumeMounts:
+                - name: data
+                  mountPath: /var/data
+
+
+其他事项：
+    Kubernetes间pod的网络通信是使用CNI插件接口，它的实现有Flannel等
+
+
+
+
+
+
+
+
+
+
+
+
+

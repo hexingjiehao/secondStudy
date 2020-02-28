@@ -1,0 +1,52 @@
+步骤如下：
+0. 打开两个命令行窗口,以下的命令两个窗口都要相同的执行
+1. 进入容器内部: docker exec -it 0f109946a159 bash
+2. 将用户切换为postgres：su - postgres
+3. 使用命令行登录postgres：psql
+4. 进入到postgres数据库：\c postgres
+5. 开始执行逻辑任务：
+    5.1 开始事务：begin;
+    5.2 获取读写锁：select pg_advisory_xact_lock(1);
+    5.3 查询数据库的执行值：select count(*) from test where number=100;
+    5.4 插入数据值：insert into test(number) values(100);
+    5.5 提交事务: commit;
+
+psql常用的命令：
+\l：列出所有的数据库；
+\c DatabaseName：连接数据库；
+\dt：查看进入到的数据库中的所有表；
+\d TableName：查看某个表的描述，此命令可以用来查看某个表中的列元素和相应的数据类型；
+\q：退出psql连接
+
+
+postgres的in查询的效率问题：参考地址：https://www.cnblogs.com/zp900704/p/7694125.html
+    本质：postgresql提供了regexp_split_to_table这个函数，我们可以借助该函数避免使用in带来的问题
+    使用方法：
+
+    　　有表A，表A中有字段Id
+
+    　　使用in查询：select  *  from A where id in ( xxx,xxxx,xxxx)
+    
+    　　替换后写法：select A.* from (select regexp_split_to_table('xxxx,xxx',',' ) as ids) as tt join A on tt.ids=A.id
+
+    分割方式随意，上面的替换的写法分割方式是“,”
+
+
+非常重要：⚠️⚠️⚠️⚠️⚠️
+    1.在postgres的命令行中使用数组的方法：regexp_split_to_array('M437,M438',',')
+        SELECT count(1) from material.material where realm_id=10001 and number = ANY(regexp_split_to_array('M437,M438',','));
+    2.在java中将数组传入postgres的调用方法：只能串字符串进去，使用逗号连接即可(,)
+        Java：
+            String result="";
+            int materialCount=numberList.size();
+            for(int i=0;i<materialCount;i++){
+              if(i==materialCount-1){
+                result+=numberList.get(i);
+              }else {
+                result +=numberList.get(i) + ",";
+              }
+            }
+            //查询导入的物料是否有存在的
+            return tx.queryOneOrNone("getMaterialsInNumber", Tuple.of(realm, result), collectInteger())
+        sql:
+            SELECT count(1) from material.material where realm_id=$1 and number=ANY(regexp_split_to_array($2,','))

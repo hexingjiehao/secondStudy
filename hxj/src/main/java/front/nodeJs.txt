@@ -1,0 +1,91 @@
+1.学习node.js的知识点
+    1.官网地址：https://nodejs.org/en/
+    2.概念：Node.js是一个构建在chrome v8的javascript引擎上的javaScript运行时环境。
+           它是异步事件驱动的。
+    3.版本：稳定版12.13.1 LTS; 最新版13.2.0 Current
+    4.重要依赖和工具:
+        依赖：V8/libuv/llhttp/c-ares/OpenSSL/zlib
+        工具：npm/gyp/gtest
+    5.概述：
+        入门代码举例：需要插入Node--创建app.js文件
+            const http = require('http');
+            const hostname = '127.0.0.1';
+            const port = 3000;
+            //创建http服务器
+            const server = http.createServer((req, res) => {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'text/plain');
+              res.end('Hello World\n');
+            });
+            //服务器监听接口
+            server.listen(port, hostname, () => {
+              console.log(`Server running at http://${hostname}:${port}/`);
+            });
+            启动：node app.js ,然后访问http://localhost:3000
+    6.Node.js核心概念：
+        阻塞和非阻塞：
+            主要是libuv库中的I/O
+            代码举例：
+                //阻塞模式
+                const fs = require('fs');
+                const data = fs.readFileSync('/file.md');
+
+                //异步模式
+                const fs = require('fs');
+                fs.readFile('/file.md', (err, data) => {
+                  if (err) throw err;
+                });
+        Node.js事件循环，定时器和线程执行：
+            事件循环：它允许Node.js执行非阻塞I/O操作，javascript是单线程的。
+            定时器阶段：某个域值之后，回调可能会被执行
+                const fs = require('fs');
+                function someAsyncOperation(callback) {
+                  fs.readFile('/path/to/file', callback);
+                }
+
+                const timeoutScheduled = Date.now();
+                setTimeout(() => {
+                  const delay = Date.now() - timeoutScheduled;
+                  console.log(`${delay}ms have passed since I was scheduled`);
+                }, 100);
+
+                someAsyncOperation(() => {
+                  const startCallback = Date.now();
+                  while (Date.now() - startCallback < 10) {
+                  }
+                });
+            process.nextTick(): ❓❓❓❓❓
+                function apiCall(arg, callback) {
+                  if (typeof arg !== 'string')
+                    return process.nextTick(callback,new TypeError('argument should be string'));
+                }
+        不阻塞事件循环/工作池：
+            Node.js 运行javascript代码在事件循环上，并且提供工作池处理昂贵的I/O任务
+        定时器：
+            window.setTimeout()
+            function myFunc(arg) {
+              console.log(`arg was => ${arg}`);
+            }
+            setTimeout(myFunc, 1500, 'funky');
+
+未完待续......
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

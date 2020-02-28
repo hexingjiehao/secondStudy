@@ -1,0 +1,50 @@
+1.单元测试的总体学习：
+    常用的种类：【OK】harmcrest:最原始的断言Assert，测试性框架，可读性不强，不支持fluent风格.
+                        但是很多的比较器都是这里面的！
+              【OK】Junit：扩展harmcrest。不支持fluent风格。关键字assertEquals
+              【OK】REST Assured：公司主要用于断言json,测试同步http
+              【OK】Mockito:模拟某个功能点中的依赖，不是主要的测试部分。非常重要很复杂，模拟要考虑最终结果的准确性
+              【OK】Open API：看懂接口含义，看swagger的说明即可。
+              【OK】AspectJ：面向切面编程。用于数据的初始化和资源回收，以及日志记录。
+              【OK】Vertx-unit：扩展Junit。用于异步测试
+              【OK】jacoco:用于检查代码的覆盖率.idea自带代码覆盖率检查工具，还有jacoco插件
+              【OK】AssertJ：测试Java类的service的单一性和覆盖性。支持fluent风格
+              【OK】webclient测试：spring 5 webflux框架的一部分。异步非阻塞HTTP客户端
+
+
+    后期重点：AspectJ(嵌入式编程，初始化和资源回收)+JUnit(普通Java单元测试)+AssertJ+Mockito(模拟对象创建和方法调用)+OpenAPI(接口文档规范和测试)+vertx-unit(异步测试)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

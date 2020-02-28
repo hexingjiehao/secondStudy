@@ -1,0 +1,271 @@
+1.学习vert.x-web-client语法：
+    1.概念: 是一个异步的http和http/2的客户端。方便的和web服务器进行http的请求响应交互。
+            不提供websocket api。需要详细的控制时，还是需要vertx core的httpclient
+    2.特点：json请求体的编码和解码
+           请求和响应的注入
+           请求参数
+           统一的错误处理
+           表单提交
+    3.jar包依赖：<dependency>
+                  <groupId>io.vertx</groupId>
+                  <artifactId>vertx-web-client</artifactId>
+                  <version>3.7.0</version>
+                </dependency>
+    4.使用步骤：
+        1.创建一个web客户端：【可添加配置与使用已经存在的对象】
+            WebClientOptions options = new WebClientOptions()
+              .setUserAgent("My-App/1.2.3");
+            options.setKeepAlive(false);
+            WebClient client = WebClient.create(vertx, options);
+
+            WebClient client = WebClient.wrap(httpClient);
+
+        2.发送请求：
+            1.无请求体：【GET，OPTIONS，HEAD(请求资源的部分信息)】
+                WebClient client = WebClient.create(vertx);
+                client.get(8080, "myserver.mycompany.com", "/some-uri")
+                    .addQueryParam("param", "param_value").send(ar -> {
+                        if (ar.succeeded()) {
+                          ......
+                        } else {
+                          ......
+                        }
+                    });
+
+                // Send a HEAD request
+                client.head(8080, "myserver.mycompany.com", "/some-uri").send(ar -> {
+                    if (ar.succeeded()) {
+                      ......
+                    } else {
+                      .....
+                    }
+                  });
+
+                // 增加请求参数，覆盖重复的参数
+                HttpRequest<Buffer> request = client.get(8080, "myserver.mycompany.com", "/some-uri?param1=param1_value&param2=param2_value");
+                request.addQueryParam("param3", "param3_value");
+                request.setQueryParam("param2", "another_param2_value");
+
+                HttpRequest<Buffer> request = client.get(8080, "myserver.mycompany.com", "/some-uri");
+                request.addQueryParam("param1", "param1_value");
+                request.uri("/some-uri?param1=param1_value&param2=param2_value");
+
+            2.写请求体：【sendXXX 方法】
+                // sendBuffer,最常用方法
+                client.post(8080, "myserver.mycompany.com", "/some-uri").sendBuffer(buffer, ar -> {
+                    if (ar.succeeded()) {
+                      ......
+                    }
+                  });
+
+                // sendStream,大数据处理。ReadStream<Buffer>是核心， AsyncFile是其中一种。可能分块
+                client.post(8080, "myserver.mycompany.com", "/some-uri").sendStream(stream, ar -> {
+                    if (ar.succeeded()) {
+                      .....
+                    }
+                  });
+
+                    // 知道请求体长度，设置content-length。这样请求不会分块
+                    fs.open("content.txt", new OpenOptions(), fileRes -> {
+                      if (fileRes.succeeded()) {
+                        ReadStream<Buffer> fileStream = fileRes.result();
+                        String fileLen = "1024";
+                        client.post(8080, "myserver.mycompany.com", "/some-uri").putHeader("content-length", fileLen)
+                          .sendStream(fileStream, ar -> {
+                            if (ar.succeeded()) {
+                              ......
+                            }
+                          });
+                      }
+                    });
+
+                // sendJsonObject。可通过Json.encode()方法将java对象转化为json
+                client.post(8080, "myserver.mycompany.com", "/some-uri").sendJsonObject(new JsonObject()
+                    .put("firstName", "Dale")
+                    .put("lastName", "Cooper"), ar -> {
+                    if (ar.succeeded()) {
+                      ......
+                    }
+                  });
+
+                // sendForm,发送表单, MultiMap模拟表单。也可以设置请求头
+                MultiMap form = MultiMap.caseInsensitiveMultiMap();
+                form.set("firstName", "Dale");
+                form.set("lastName", "Cooper");
+                client.post(8080, "myserver.mycompany.com", "/some-uri")
+                    .putHeader("content-type", "multipart/form-data").sendForm(form, ar -> {
+                        if (ar.succeeded()) {
+                          ......
+                        }
+                    });
+
+                // sendMultipartForm, 上传文件.核心MultipartForm
+                MultipartForm form = MultipartForm.create()
+                  .attribute("imageDescription", "a very nice image")
+                  .binaryFileUpload("imageFile", "image.jpg", "/path/to/image", "image/jpeg");
+                client.post(8080, "myserver.mycompany.com", "/some-uri").sendMultipartForm(form, ar -> {
+                    if (ar.succeeded()) {
+                      ......
+                    }
+                  });
+
+            3.写请求头：核心MultiMap,一个key可以有多个值。
+                HttpRequest<Buffer> request = client.get(8080, "myserver.mycompany.com", "/some-uri");
+                MultiMap headers = request.headers();
+                headers.set("content-type", "application/json");
+                headers.set("other-header", "foo");
+
+                HttpRequest<Buffer> request = client.get(8080, "myserver.mycompany.com", "/some-uri");
+                request.putHeader("content-type", "application/json");
+                request.putHeader("other-header", "foo");
+
+            4.配置请求增加身份验证：
+                HttpRequest<Buffer> request = client.get(8080, "myserver.mycompany.com", "/some-uri")
+                  .basicAuthentication("myid", "mypassword");
+
+                HttpRequest<Buffer> request = client.get(8080, "myserver.mycompany.com", "/some-uri")
+                  .bearerTokenAuthentication("myBearerToken");
+
+            5.重用请求：【多次调用send方法,第二次可以修改后请求】
+                HttpRequest<Buffer> get = client.get(8080, "myserver.mycompany.com", "/some-uri");
+                get.send(ar -> {
+                  if (ar.succeeded()) {
+                    ......
+                  }
+                });
+
+                // Same request again
+                get.send(ar -> {
+                  if (ar.succeeded()) {
+                    ......
+                  }
+                });
+
+                // The "get" request instance remains unmodified
+                get.copy().putHeader("a-header", "with-some-value").send(ar -> {
+                  if (ar.succeeded()) {
+                    ......
+                  }
+                });
+
+            6.超时：
+                client.get(8080, "myserver.mycompany.com", "/some-uri").timeout(5000).send(ar -> {
+                    if (ar.succeeded()) {
+                      ......
+                    } else {
+                      ......
+                    }
+                  });
+
+        3.处理http响应：【核心是HttpResponse, buffer通过BodyCodec.pipe转化为write stream】
+            client.get(8080, "myserver.mycompany.com", "/some-uri").send(ar -> {
+                if (ar.succeeded()) {
+                  HttpResponse<Buffer> response = ar.result();
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+            // 通过BodyCodec将响应体转化为指定格式。as(BodyCodec.jsonObject())
+            // 可以的取值有Plain String，Json object，Json mapped POJO，WriteStream
+            client.get(8080, "myserver.mycompany.com", "/some-uri").as(BodyCodec.jsonObject()).send(ar -> {
+                if (ar.succeeded()) {
+                  HttpResponse<JsonObject> response = ar.result();
+                  JsonObject body = response.body();
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+            // 解决响应内容过大 .as(BodyCodec.pipe(writeStream))
+            client.get(8080, "myserver.mycompany.com", "/some-uri").as(BodyCodec.pipe(writeStream)).send(ar -> {
+                if (ar.succeeded()) {
+                  HttpResponse<Void> response = ar.result();
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+            // 对响应内容不感兴趣 .as(BodyCodec.none())
+            client.get(8080, "myserver.mycompany.com", "/some-uri").as(BodyCodec.none()).send(ar -> {
+                if (ar.succeeded()) {
+                  HttpResponse<Void> response = ar.result();
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+            // 响应解码的第二种方式。bodyAsXXX()
+            client.get(8080, "myserver.mycompany.com", "/some-uri").send(ar -> {
+                if (ar.succeeded()) {
+                  HttpResponse<Buffer> response = ar.result();
+                  JsonObject body = response.bodyAsJsonObject();
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+            // 手动检查响应结果 response.statusCode() == 200
+            client.get(8080, "myserver.mycompany.com", "/some-uri").send(ar -> {
+                if (ar.succeeded()) {
+                  HttpResponse<Buffer> response = ar.result();
+                  if (response.statusCode() == 200 && response.getHeader("content-type").equals("application/json")) {
+                    ......
+                  } else {
+                    ......
+                  }
+                } else {
+                  ......
+                }
+              });
+
+            // 响应谓词，也就是判断操作 .expect(ResponsePredicate.SC_SUCCESS)
+            client.get(8080, "myserver.mycompany.com", "/some-uri")
+              .expect(ResponsePredicate.SC_SUCCESS)
+              .expect(ResponsePredicate.JSON)
+              .send(ar -> {
+                if (ar.succeeded()) {
+                    ......
+                } else {
+                  ......
+                }
+              });
+
+            // 预定义谓词。ResponsePredicate
+            ResponsePredicate.SC_SUCCESS： 响应码为2xx
+            ResponsePredicate.JSON: 响应体的格式为json
+            可以自定义谓词
+
+            //处理30x重定向
+            WebClient client = WebClient.create(vertx, new WebClientOptions().setFollowRedirects(false));
+            WebClient client = WebClient.create(vertx, new WebClientOptions().setMaxRedirects(5));
+
+        4.使用https: 【ssl(true) 或者getAbs() 】
+            client.get(443, "myserver.mycompany.com", "/some-uri").ssl(true).send(ar -> {
+                if (ar.succeeded()) {
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+            client.getAbs("https://myserver.mycompany.com:4043/some-uri").send(ar -> {
+                if (ar.succeeded()) {
+                  ......
+                } else {
+                  ......
+                }
+              });
+
+        5.session管理器：
+            1.创建对象：WebClient client = WebClient.create(vertx);
+                      WebClientSession session = WebClientSession.create(client);
+
+
+
+

@@ -1,0 +1,8 @@
+学习使用./gradlwe命令测试公司的项目
+    具体命令：
+        指定项目下全部测试并打印日志: ./gradlew clean test --info
+        ./gradlew clean test --tests 类/方法路径 --info
+
+注意：命令会将整个项目的的子项目都进行clean并且test。
+
+测试的路径：com.qjnext.tenant.rest.hr.CorporationCRUDTest . updateCorporation

@@ -1,0 +1,269 @@
+1.学习vertx-shell的语法：
+    1. 概念：它是一个命令行接口。可以访问Vert.x服务。可以扩展。它也是一个Vert.x服务
+    2. 使用Vert.x shell: 【本质是直接部署已经封装好的应用】
+        在命令行窗口执行：【注意⚠️⚠️⚠️：能够成功部署，就是时间太慢！！！】
+            1. 使用Telnet启动一个shell服务
+               vertx run -conf '{"telnetOptions":{"port":5000}}' maven:io.vertx:vertx-shell:3.8.0
+
+            2. 使用ssh启动一个shell服务
+                # 给ssh服务器创建一个键值对
+                keytool -genkey -keyalg RSA -keystore ssh.jks -keysize 2048 -validity 1095 -dname CN=localhost -keypass secret -storepass secret
+                # 创建授权配置文件
+                echo user.admin=password > auth.properties
+                # 启动shell
+                vertx run -conf '{"sshOptions":{"port":4000,"keyPairOptions":{"path":"ssh.jks","password":"secret"},"authOptions":{"provider":"shiro","config":{"properties_path":"file:auth.properties"}}}}' maven:io.vertx:vertx-shell:3.8.0
+
+            3. 使用http启动一个shell服务
+                # 给http服务器创建一个证书
+                keytool -genkey -keyalg RSA -keystore keystore.jks -keysize 2048 -validity 1095 -dname CN=localhost -keypass secret -storepass secret
+                # 创建授权配置文件
+                echo user.admin=password > auth.properties
+                vertx run -conf '{"httpOptions":{"port":8080,"ssl":true,"keyStoreOptions":{"path":"keystore.jks","password":"secret"},"authOptions":{"provider":"shiro","config":{"properties_path":"file:auth.properties"}}}}' maven:io.vertx:vertx-shell:3.8.0
+
+        在代码中执行：
+            4. 在自己的verticle中部署这个服务
+                vertx.deployVerticle("maven:{maven-groupId}:{maven-artifactId}:{maven-version}",
+                    new DeploymentOptions().setConfig(
+                        new JsonObject().put("telnetOptions",
+                            new JsonObject().
+                                put("host", "localhost").
+                                put("port", 4000))
+                    )
+                );
+
+                vertx.deployVerticle("maven:{maven-groupId}:{maven-artifactId}:{maven-version}",
+                    new DeploymentOptions().setConfig(new JsonObject().
+                            put("sshOptions", new JsonObject().
+                                put("host", "localhost").
+                                put("port", 5000).
+                                put("keyPairOptions", new JsonObject().
+                                    put("path", "src/test/resources/ssh.jks").
+                                    put("password", "wibble")).
+                                put("authOptions", new JsonObject().
+                                    put("provider", "shiro").
+                                    put("config", new JsonObject().
+                                        put("properties_path", "file:/path/to/my/auth.properties"))))
+                    )
+                );
+
+                vertx.deployVerticle("maven:{maven-groupId}:{maven-artifactId}:{maven-version}",
+                    new DeploymentOptions().setConfig(new JsonObject().
+                            put("httpOptions", new JsonObject().
+                                put("host", "localhost").
+                                put("port", 8080).
+                                put("ssl", true).
+                                put("keyPairOptions", new JsonObject().
+                                    put("path", "src/test/resources/server-keystore.jks").
+                                    put("password", "wibble")).
+                                put("authOptions", new JsonObject().
+                                    put("provider", "shiro").
+                                    put("config", new JsonObject().
+                                        put("properties_path", "file:/path/to/my/auth.properties"))))
+                    )
+                );
+        ⚠️⚠️⚠️：当Vert.x已经在类路径中：可以使用service:io.vertx.ext.shell 代替 maven:io.vertx:vertx-shell:3.8.0
+
+    3. 使用Programmatic service：【本质是自己创建服务并部署】
+        1. 使用ssh启动一个shell服务
+            ShellService service = ShellService.create(vertx,
+                new ShellServiceOptions().setSSHOptions(
+                    new SSHTermOptions().
+                        setHost("localhost").
+                        setPort(5000).
+                        setKeyPairOptions(new JksOptions().
+                                setPath("server-keystore.jks").
+                                setPassword("wibble")
+                        ).
+                        setAuthOptions(new ShiroAuthOptions().
+                                setType(ShiroAuthRealmType.PROPERTIES).
+                                setConfig(new JsonObject().
+                                    put("properties_path", "file:/path/to/my/auth.properties"))
+                        )
+                )
+            );
+            service.start();
+
+        2. 使用Telnet启动一个shell服务
+            ShellService service = ShellService.create(vertx,
+                new ShellServiceOptions().setTelnetOptions(
+                    new TelnetTermOptions().
+                        setHost("localhost").
+                        setPort(4000)
+                )
+            );
+            service.start();
+            ⚠️⚠️⚠️：Telnet不提供任何身份验证和加密
+
+        3. 使用http启动一个shell服务
+            ShellService service = ShellService.create(vertx,
+                new ShellServiceOptions().setHttpOptions(
+                    new HttpTermOptions().
+                        setHost("localhost").
+                        setPort(8080)
+                )
+            );
+            service.start();
+
+    4. 各种配置案例：
+        4.1 在ssh上部署一个shell服务，有mongo身份认证
+            vertx.deployVerticle("maven:{maven-groupId}:{maven-artifactId}:{maven-version}",
+                new DeploymentOptions().setConfig(new JsonObject().
+                        put("sshOptions", new JsonObject().
+                            put("host", "localhost").
+                            put("port", 5000).
+                            put("keyPairOptions", new JsonObject().
+                                put("path", "src/test/resources/ssh.jks").
+                                put("password", "wibble")).
+                            put("authOptions", new JsonObject().
+                                put("provider", "mongo").
+                                put("config", new JsonObject().
+                                    put("connection_string", "mongodb://localhost:27018"))))
+                )
+            );
+        4.2 在ssh上运行一个shell服务，有mongo身份认证
+            ShellService service = ShellService.create(vertx,
+                new ShellServiceOptions().setSSHOptions(
+                    new SSHTermOptions().
+                        setHost("localhost").
+                        setPort(5000).
+                        setKeyPairOptions(new JksOptions().
+                                setPath("server-keystore.jks").
+                                setPassword("wibble")
+                        ).
+                        setAuthOptions(new MongoAuthOptions().setConfig(new JsonObject().
+                                put("connection_string", "mongodb://localhost:27018"))
+                        )
+                )
+            );
+            service.start();
+
+    5. 基本命令：
+        Verticle命令：
+            verticle-ls
+            verticle-undeploy:
+            verticle-deploy:
+            verticle-factories:
+        文件系统命令：ls/cd/pwd
+        Bus命令：
+            bus-tail: 展示所有通过eventbus的输入信息
+            bus-send: 在eventbus上发送信息
+        Net命令：net-ls
+        共享数据命令：local-map-put/local-map-get/local-map-rm
+        其他命令：echo/sleep/help/exit/logout
+        Job控制：fg/bg/jobs
+
+    6. 扩展Vert.x Shell
+        CommandBuilder builder = CommandBuilder.command("my-command");
+        builder.processHandler(process -> {
+            process.write("Hello World");
+            process.end();
+        });
+        //注册自定义的命令
+        CommandRegistry registry = CommandRegistry.getShared(vertx);
+        registry.registerCommand(builder.build(vertx));
+
+        命令行参数：
+            command.processHandler(process -> {=
+              for (String arg : process.args()) {
+                process.write("Argument " + arg);
+              }
+              process.end();
+            });
+        使用Vert.x CLI创建命令：
+            CLI cli = CLI.create("my-command").addArgument(new Argument().setArgName("my-arg")).
+                addOption(new Option().setShortName("m").setLongName("my-option"));
+            CommandBuilder command = CommandBuilder.command(cli);
+
+            command.processHandler(process -> {
+              CommandLine commandLine = process.commandLine();
+              String argValue = commandLine.getArgumentValue(0);
+              String optValue = commandLine.getOptionValue("my-option");
+              process.write("The argument is " + argValue + " and the option is " + optValue);
+              process.end();
+            });
+
+    7. 使用Shell服务器
+        ShellServer server = ShellServer.create(vertx);
+        Router shellRouter = Router.router(vertx);
+        router.mountSubRouter("/shell", shellRouter);
+        TermServer httpTermServer = TermServer.createHttpTermServer(vertx, router);
+        server.registerTermServer(httpTermServer);
+        TermServer sshTermServer = TermServer.createSSHTermServer(vertx);
+        server.registerTermServer(sshTermServer);
+        server.registerCommandResolver(CommandResolver.baseCommands(vertx));
+        server.listen();
+
+
+        Shell shell = shellServer.createShell();
+        Job job = shell.createJob("my-command 1234");
+        Pty pty = Pty.create();
+        pty.stdoutHandler(data -> {
+          System.out.println("Command wrote " + data);
+        });
+        job.setTty(pty.slave());
+        job.statusUpdateHandler(status -> {
+          System.out.println("Command terminated with status " + status);
+        });
+
+    8. 使用Terminal服务器
+        SSH终端：
+            TermServer server = TermServer.createSSHTermServer(vertx, new SSHTermOptions().setPort(5000).setHost("localhost"));
+            server.termHandler(term -> {
+              term.stdinHandler(line -> {
+                term.write(line);
+              });
+            });
+            server.listen();
+        Telnet终端：
+            TermServer server = TermServer.createTelnetTermServer(vertx, new TelnetTermOptions().setPort(5000).setHost("localhost"));
+            server.termHandler(term -> {
+              term.stdinHandler(line -> {
+                term.write(line);
+              });
+            });
+            server.listen();
+        HTTP终端：
+            TermServer server = TermServer.createHttpTermServer(vertx, new HttpTermOptions().setPort(5000).setHost("localhost"));
+            server.termHandler(term -> {
+              term.stdinHandler(line -> {
+                term.write(line);
+              });
+            });
+            server.listen();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

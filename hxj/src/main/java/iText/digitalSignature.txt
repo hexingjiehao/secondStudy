@@ -1,0 +1,832 @@
+1.学习digitalSignature知识点：
+    1.参考书籍：《Digital Signatures for PDF documents》
+        自己的理解：感觉加密算法本质，其实就是一个映射关系表。比如某某加密算法：数据'a',经过加密算法，得到值'123'。于是该算法建立起了一个映射关系'a'='123'。
+                  有的加密算法，使用秘钥a可以从key计算出value，同时也可以从value计算出key。这是对称加密算法。属于3维层面的加密解密a-key-value
+                  有的加密算法，使用秘钥a可以从key计算value，但是不能从value计算出key,需要一个辅助秘钥b，帮出value在同样的算法中计算出key。这是一种交叉映射表。也就是非对称加密算法
+                  比如：实际上加密和解密本质上都是一个调用同一个函数的过程而已，公钥和私钥的本质都是一个key而已，用于调用函数的参数传递
+                        公钥    待算法处理的内容(加密)   处理后的内容    私钥   处理后的内容(解密)
+                        "a"          "5"                 "A"        "b"       "5"
+                        "b"          "A"                 "5"        "a"       "A"
+                        "a"          "A"                 "a0"       "b"       "6"
+                        "b"          "5"                 "B"        "a"       "7"
+                  实际上：非对称加密算法的公钥和私钥也是一个映射关系表。由权威认证机构(CA)管理。上述例子中的"a"-"b"应该就是其中一种
+                  猜想：既然加密算法的本质是要建议一种映射关系。如果能够建立一种4维关系图a-key-b-value。那么该加密算法就不需要了。直接从4维关系图中查询。理论上4维上每个变量都是无穷的。
+                       但是，我们可以将常用的取值取出，做一个涵盖大范围的映射表，只要知道加密算法和公钥，就能解密大部分内容了。使用暴力破解思想+时间的积累，能够完成某个算法大部分的4维关系图。
+
+        介绍：
+            问：为什么我们需要pdf和数字签名
+            答：PDF过去的主要原理是以一种可靠的方式查看和打印文档。
+               人们对便携式文档格式的需求，它应该能够提供在屏幕和打印机相同的输出结果。而且相对于其他文档格式有优势：电子签名
+               为了保证有法律价值文件的真实性和完整性从，从而代替白纸黑字的效果。PDF，全名叫做可移植文档格式，于是被使用做电子签名的载体。
+
+        第1章：理解数字签名的概念🌿🌿🌿🌿🌿
+            - 一个简单的PDF示例
+                问：如何伪造pdf内容？一个数字签名过的pdf文档？检查数字签名的语法？使签名无效？
+                答：一个pdf文件可以有指定的语法编写完成%PDF ... %%EOF。所以，能够修改pdf源文件的内容，从而伪造pdf文件。为了确保pdf文档不被伪造，需要进行保护
+                    数字签名的正确性可以保证pdf没有被伪造修改。
+                    签名是在整个源文件的byte内容进行代码混淆(hash加密，牵一发而动全身)，形成新的文件，签名是看不见的，最大程度上保证pdf完整。
+                    当对签名后的pdf文档进行内容修改，adobe reader在解析pdf文件时，发现签名结构错误，报错内容被修改。
+            - 创建消息摘要
+                问：如何检查密码？什么是摘要算法? Java SDK的默认MessageDigest实现？ Bouncy Castle(轻量级密码术包) ？
+                答：在数据库中存储密码摘要，而不是实际密码。举例：
+                                         public class DigestDefault {
+                                            protected byte[] digest;
+                                            protected MessageDigest md;
+
+                                            protected DigestDefault(String password, String algorithm, String provider) throws GeneralSecurityException {
+                                                if (provider == null)
+                                                    md = MessageDigest.getInstance(algorithm);
+                                                else
+                                                    md = MessageDigest.getInstance(algorithm, provider);
+                                                digest = md.digest(password.getBytes());
+                                            }
+
+                                            public static DigestDefault getInstance(String password, String algorithm) throws GeneralSecurityException {
+                                                return new DigestDefault(password, algorithm, null);
+                                            }
+                                            public int getDigestSize() {
+                                                return digest.length;
+                                            }
+                                            public String getDigestAsHexString() {
+                                                return new BigInteger(1, digest).toString(16);
+                                            }
+                                            public boolean checkPassword(String password) {
+                                                return Arrays.equals(digest, md.digest(password.getBytes()));
+                                            }
+                                            public static void showTest(String algorithm) {
+                                                try {
+                                                    DigestDefault app = getInstance("password", algorithm);
+                                                    System.out.println("Digest using " + algorithm + ": "+ app.getDigestSize());
+                                                    System.out.println("Digest: " + app.getDigestAsHexString());
+                                                    System.out.println("Is the password 'password'? "+ app.checkPassword("password"));
+                                                    System.out.println("Is the password 'secret'? "+ app.checkPassword("secret"));
+                                                } catch (NoSuchAlgorithmException e) {
+                                                    System.out.println(e.getMessage());
+                                                }
+                                            }
+                                         }
+                    创建摘要时，我们使用hash加密算法将任意数据块转化为固定大小的字符串，数据块又叫消息，哈希值又叫做消息摘要。
+                        以前数据块是《密码password》，现在对于pdf文档而言，pdf文件的特定范围的byte数据对象是数据块。所以，任意对pdf的修改，都将导致hash值不一致。
+                        这是一个单向算法。能从密码计算出消息摘要，但是不能从消息摘要计算出密码。部分老旧hash算法有漏洞，目前都至少是salt hash并且多次迭代
+                        常用的加密hash算法：MD5(128bit位，有2^128种hash值，广泛使用但不太安全)，SHA(标准安全，sha-1有60bit位,有2^160种hash值，依旧存在bug，多种sha-2算法是安全的)，RIPEMD（有128bit，160bit,256bit）等
+                    java中的消息摘要的加密算法实现： MD5，SHA族。RIPEMD不合适
+                    bouncy Castle是一个用于密码学的API集合。核心是BouncyCastleProvider。举例：
+                                        public class DigestBC extends DigestDefault {
+                                            public static final BouncyCastleProvider PROVIDER = new BouncyCastleProvider();
+                                            static {
+                                                //提供丰富的加密算法，比如提供了RIPEMD加密算法
+                                                Security.addProvider(PROVIDER);
+                                            }
+                                            protected DigestBC(String password, String algorithm) throws GeneralSecurityException {
+                                                super(password, algorithm, PROVIDER.getName());
+                                            }
+                                            public static DigestBC getInstance(String password, String algorithm, String provider)throws NoSuchAlgorithmException, NoSuchProviderException {
+                                                return new DigestBC(password, algorithm);
+                                            }
+                                        }
+                        注意：对称加密算法，可以通过反复修改文档，进而推测加密算法，从而更容易伪造内容。因此需要非对称算法进行加密。
+            - 使用公钥加密对消息进行加密
+                问：创建密钥存储？加密和解密消息？检查我们的自签名证书？使用公钥算法进行身份验证和不可否认性？
+                答：对称加密算法不仅包括加密和解密使用相同的秘钥，同时也包括用于加密的密钥派生出用于解密的密钥。最常用的公钥加密系统是RSA。它是非对称加密算法。对称加密算法没有公钥和私钥的概念。
+                    可以通过java sdk自带的keytool工具来创建秘钥对，它包含一个私钥和一个证书，该证书中包含用户信息和公钥。命令行操作示例：
+                        keytool -genkey -v -keystore myKey.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myAlias
+                        输入你的秘钥存储库密码：
+                        再次输入你的秘钥存储库密码：
+                        依次你的相关信息：多行多次输入
+                        输入你的秘钥密码对于刚才创建的项目<demo>密码（和上面的密码一致）：
+
+                        注意：秘钥存储库可以包含多个私钥，私钥的密码 不同于 密钥存储库的密码。例如：要获取私钥内容，首先需要输入秘钥存储库密码，然后输入指定私钥的密码，才能获取该私钥内容。
+                             在mac上生成的秘钥位置：cd ～/.ssh/  id_rsa.pub就是公钥。
+                             github上的代码管理也用到了这个加密机制。我本机的证书让github信任(本质是本机的公钥给了github)，github就能够直接给我发信息，不需要每次都输入密码
+                    加密和解密步骤的核心是KeyStore和key类：比如：
+                                        public class EncryptDecrypt {
+                                            protected KeyStore ks;
+                                            public EncryptDecrypt(String keystore, String ks_pass) throws GeneralSecurityException, IOException {
+                                                initKeyStore(keystore, ks_pass);
+                                            }
+                                            public void initKeyStore(String keystore, String ks_pass)throws GeneralSecurityException, IOException {
+                                                ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                                                ks.load(new FileInputStream(keystore), ks_pass.toCharArray());
+                                            }
+                                            public X509Certificate getCertificate(String alias)throws KeyStoreException {
+                                                return (X509Certificate) ks.getCertificate(alias);
+                                            }
+                                            public Key getPublicKey(String alias)throws GeneralSecurityException, IOException {
+                                                return getCertificate(alias).getPublicKey();
+                                            }
+                                            public Key getPrivateKey(String alias, String pk_pass) throws GeneralSecurityException, IOException {
+                                                return ks.getKey(alias, pk_pass.toCharArray());
+                                            }
+                                            public byte[] encrypt(Key key, String message)throws GeneralSecurityException {
+                                                Cipher cipher = Cipher.getInstance("RSA");
+                                                cipher.init(Cipher.ENCRYPT_MODE, key);
+                                                byte[] cipherData = cipher.doFinal(message.getBytes());
+                                                return cipherData;
+                                            }
+                                            public String decrypt(Key key, byte[] message) throws GeneralSecurityException {
+                                                Cipher cipher = Cipher.getInstance("RSA");
+                                                cipher.init(Cipher.DECRYPT_MODE, key);
+                                                byte[] cipherData = cipher.doFinal(message);
+                                                return new String(cipherData);
+                                            }
+                                            public static void main(String[] args)throws GeneralSecurityException, IOException {
+                                                //首先先要执行一下命令：
+                                                // keytool -genkey -v -keystore myKey.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myAlias
+                                                // 输入密码123456
+                                                EncryptDecrypt app =new EncryptDecrypt("/Users/admin/myKey.jks", "123456");
+                                                Key publicKey = app.getPublicKey("myAlias");
+                                                Key privateKey = app.getPrivateKey("myAlias", "123456");
+
+                                                System.out.println("Let's encrypt 'secret message' with a public key");
+                                                byte[] encrypted = app.encrypt(publicKey, "secret message");
+                                                System.out.println("Encrypted message: "+ new BigInteger(1, encrypted).toString(16));
+                                                System.out.println("Let's decrypt it with the corresponding private key");
+                                                String decrypted = app.decrypt(privateKey, encrypted);
+                                                System.out.println(decrypted);
+                                                System.out.println("You can also encrypt the message with a private key");
+                                                encrypted = app.encrypt(privateKey, "secret message");
+                                                System.out.println("Encrypted message: "+ new BigInteger(1, encrypted).toString(16));
+                                                System.out.println("Now you need the public key to decrypt it");
+                                                decrypted = app.decrypt(publicKey, encrypted);
+                                                System.out.println(decrypted);
+                                            }
+                                        }
+                    证书有拥有者和发行人的属性，当在本机使用命令行创建秘钥时，这个证书就是自签名证书。通过代码查询证书内容Certificate.toString()
+                    因为我用私钥加密的消息，使用我的公钥能够解密。当别人使用我的证书中的公钥解密时，它知道这是我的私钥进行的加密，而这个私钥只有秘钥的拥有者有，确定了消息的发送者的身份。除非我的私钥泄漏了
+                        公钥私钥机制解决了数据完整性，身份验证和不可否认性。
+                        当需要加密解密大数据量消息时，这不现实。我们可以只将消息摘要进行加密解密，当消息摘要是真实的，我们就可以认定整个消息是真实的。
+                        也就是数字签名--只加密解密消息摘要（都能够完整表示消息）。类似于二次加密操作(加少数据量，节约时间和CPU)
+            - 密码学缩略语及标准概述
+                问：首字母缩略词？公钥密码学标准(PKCS)？PDF ISO标准？CAdES, XAdES和PAdES？
+                答：首字母缩略词：
+                        PKI--表示公钥基础设施。它是一组创建、管理、分发、使用、存储和撤销数字证书所需的硬件、软件、人员、策略和过程。
+                        ASN.1--表示抽象语法符号。它是一种标准的、灵活的符号，描述用于表示、编码、传输和解码电信和计算机网络数据的规则和结构。
+                        BER--表示基本编码规则。它们是ASN.1标准规定的原始规则，用于将抽象信息编码到特定的数据流中
+                        DER--表示区分编码规则。DER是BER的子集，提供了一种编码ASN.1值的方法。它是从X.509对BER编码的约束中得到的。
+                        X.509--X.509是公钥基础设施(PKI)和权限管理基础设施的标准。它指定了公钥证书和证书撤销列表的标准格式。
+                        IETF--代表一个组织，和W3C,ISO,IEC一起开发和推动了网络标准
+                        RFC--代表征求意见的备忘录。RFC是互联网工程特别工作组(IETF)发布的一份备忘录，描述了适用于互联网和互联网连接系统工作的方法、行为、研究或创新。
+                        FIPS--代表联邦信息处理标准。这是美国联邦政府为计算机系统开发的一种标准化。
+                    公钥密码学标准(PKCS)：目前只要使用PKCS#7,也就是加密消息语法(CMS)
+                        PKCS#1: RSA加密标准
+                        PKCS#7:加密消息语法标准
+                        PKCS#11:密码令牌接口。它是一个API，定义了加密令牌的通用接口
+                        PKCS#12:个人信息交换语法标准。该标准定义了一种文件格式，用于存储带有附带公钥证书的私钥，并使用基于密码的对称密钥进行保护
+                        PKCS 13:椭圆曲线密码学标准。它是一种公钥密码方法
+                    PDF开源于Adobe，规范于ISO，目前已有多种类型PDF/X,PDF/A,PDF/E,PDF/VT,PDF/UA
+                    ETSI组织发布了高级电子签名的技术标准：有3套规范。该标准内容指明：唯一关联签名人，识别签名人，签字人可以在他的唯一控制下进行维护，并链接到与之相关的数据，以便对数据进行任何后续更改可检测。
+                        CMS高级电子签名(CAdES)：是CMS的一组扩展，即使底层加密算法被破坏，电子签名文档也可以长期有效。
+                        XML高级电子签名(XAdES)：是XML- dsig11的扩展，itext不支持。
+                      🌿PDF高级电子签名(PAdES)：由6个部分组成。暂时支持iText 5.3.4及以上版本
+            - 总结
+                从伪造pdf文档到哈希算法+加密保护PDF文档
+
+        第2章：PDF及数字签名
+            - PDF格式的数字签名
+                问：签名处理程序和子过滤器？数字签名所覆盖的字节范围？如何组成签名？PDF支持的算法？
+                答：itext默认使用/Adobe.PPKLite过滤器。
+                        iText5.3.0之前的版本：setCrypto(PdfSignatureAppearance.WINCER_SIGNED)--使用子过滤器/adbe.pkcs7.sha1
+                                             setCrypto(PdfSignatureAppearance.SELF_SIGNED)--使用子过滤器/adbe.x509.rsa_sha1
+                        iText5.3.0版本：默认使用分离签名（/adbe.pkcs7.detached 或者 /ETSI.CAdES.detached）
+                   如果子过滤器是/ETSI.CAdES.detached或者/ETSI.RFC3161，那么字节范围覆盖整个文件，包括签名字典，但不包括/Contents值
+                   理论上：包含公钥+标记信息的证书，私钥，原始文档，字节范围。这4个组成了签名文档。实际组成pdf文档时，在文档的中间由证书和签名消息数字时间戳组成数字签名
+                        签名签署的是整个文档，不存在签署单个页面的说法
+                   PDF支持的加密算法：
+                        adbe.pkcs7.sha1：
+                        adbe.x509.rsa_sha1：
+                        adbe.pkcs7.detached, ETSI.CAdES.detached and ETSI.RFC3161：
+            - 使用iText进行数字签名的“Hello World”
+                问：一个向文档添加可见签名的简单示例？管理可信度身份列表？在adobereader中向联系人列表添加证书？签署大型PDF文件？
+                答：签名举例：
+                        app.sign(SRC, String.format(DEST, 4), chain, pk, DigestAlgorithms.RIPEMD160,provider.getName(), CryptoStandard.CADES, "Test 4", "Ghent");
+
+                        public void sign(String src, String dest,Certificate[] chain, PrivateKey pk, String digestAlgorithm, String provider, CryptoStandard subfilter, String reason, String location)throws Exception {
+                            PdfReader reader = new PdfReader(src);
+                            FileOutputStream os = new FileOutputStream(dest);
+                            PdfStamper stamper = PdfStamper.createSignature(reader, os, '\0');
+
+                            // Creating the appearance
+                            PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
+                            appearance.setReason(reason);
+                            appearance.setLocation(location);
+                            appearance.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig");
+
+                            // Creating the signature
+                            ExternalDigest digest = new BouncyCastleDigest();
+                            ExternalSignature signature =new PrivateKeySignature(pk, digestAlgorithm, provider);
+                            MakeSignature.signDetached(appearance, digest, signature, chain,null, null, null, 0, subfilter);
+                        }
+                    可通过签名面板点击按钮添加可信任身份
+                    别人发送证书给我，我将它添加到信任列表：
+                        从秘钥库抽取证书：keytool -export -alias myAlias -file xiongjie.crt -keystore myKey.jks -storepass 123456
+                    对大文件签名时，可以将数据副本从内存转移到硬盘进行签名：PdfStamper stamper = PdfStamper.createSignature(reader, os, '\0', new File(tmp));
+            - 创建和签署签名字段🌿🌿🌿🌿🌿
+                问：使用adobeacrobat添加签名字段？使用iText以编程方式创建签名字段？使用iText将空签名字段添加到现有文档？
+                答：打开pdf文档，从菜单中选择添加数字签名字段，并在文档中绘制签名区域即可。然后使用代码填充该区域:appearance.setVisibleSignature(name);
+                    原理是创建AcroForm对象，在其中设置一个矩形并设置一个占位符属性(文本属性)。
+                    同上一行
+            - 创建不同的签名外观
+                问：定义自定义PdfSignatureAppearance？使用方便的方法创建签名外观？向签名字典添加元数据？普通签名和认证签名？在文档签署后添加内容？
+                答：有n0到n4个图层。
+                            PdfTemplate n0 = appearance.getLayer(0);
+                            float x = n0.getBoundingBox().getLeft();
+                            float y = n0.getBoundingBox().getBottom();
+                            float width = n0.getBoundingBox().getWidth();
+                            float height = n0.getBoundingBox().getHeight(); n0.setColorFill(BaseColor.LIGHT_GRAY);
+                            n0.rectangle(x, y, width, height);
+                            n0.fill();
+
+                            PdfTemplate n2 = appearance.getLayer(2);
+                            ColumnText ct = new ColumnText(n2);
+                            ct.setSimpleColumn(n2.getBoundingBox());
+                            Paragraph p = new Paragraph("This document was signed by Bruno Specimen.");
+                            ct.addElement(p);
+                            ct.go();
+                   直接创建text字段或者image字段，又或者自定义呈现模式：
+                       appearance.setLayer2Text("This document was signed by Bruno Specimen");
+                       appearance.setLayer2Font(new Font(FontFamily.TIMES_ROMAN));
+
+                       appearance.setImage(Image.getInstance(IMG));
+                       appearance.setImageScale(-1);
+
+                       RenderingMode.DESCRIPTION：只有描述
+                       RenderingMode.NAME_AND_DESCRIPTION：签名者+描述
+                       RenderingMode.GRAPHIC_AND_DESCRIPTION：图像+描述
+                       RenderingMode.GRAPHIC：图像
+                            appearance.setRenderingMode(renderingMode);
+                            appearance.setSignatureGraphic(image);
+                   可以将Name，M,Location,Reason,ContactInfo这些原数据添加到字典
+                       PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
+                       appearance.setReason(reason);
+                       appearance.setLocation(location);
+                       appearance.setVisibleSignature(name);
+                       appearance.setContact(contact);
+                       appearance.setSignDate(signDate);
+                       appearance.setSignatureEvent(
+                           new SignatureEvent(){
+                                   public void getSignatureDictionary(PdfDictionary sig) {
+                                   sig.put(PdfName.NAME, new PdfString(fullName));
+                                }
+                           }
+                       );
+                   证书级别：appearance.setCertificationLevel(certificationLevel);
+                        NOT_CERTIFIED：普通签名
+                        CERTIFIED_NO_CHANGES_ALLOWED：证书签名--即作者签名，然后不准修改
+                        CERTIFIED_FORM_FILLING：作者签名后，其他人也可以签名
+                        CERTIFIED_FORM_FILLING_AND_ANNOTATIONS：作者签名后，其他人也可以签名和添加注释
+                   对一个签名文档进行多次签名（保证之前的签名正确）：添加注释和添加签名不破坏原本内容
+                        PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest), '\0', true); //核心是第3，4个参数
+            - PDF签名和工作流
+                问：PDF格式的顺序签名？为多个签名创建具有占位符的表单？多次签署文档？多次签名和填写字段？签名后锁定字段和文档
+                答：后面的签名必须包含签名的签名的摘要，否则签名失败
+                    使用PdfFormField创建占位表单字段
+                    多次调用签名方法，不同的人不同的签名参数。顺序不同的进行签名，可能对文档有影响
+                    顺序签名的填写字段：
+                        AcroFields form = stamper.getAcroFields();
+                        form.setField(name, value);
+                        form.setFieldProperty(name, "setfflags", PdfFormField.FF_READ_ONLY, null);
+                    锁定操作：认证权限和批准权限。
+                        特定的锁动作：ALL，INCLUDE，EXCLUDE。
+                        锁动作的权限值：NO_CHANGES_ALLOWED，FORM_FILLINGFORM_FILLING_AND_ANNOTATION
+                        PdfSigLockDictionary lock = new PdfSigLockDictionary(LockAction.INCLUDE, "sig1", "approved_bob", "sig2");
+                        table.addCell(createSignatureFieldCell(writer, "sig2", lock));
+            - 总结
+                从hello,world签名到签名显示，创建签名字段和创建各种外观，认证签名和作者签名，多次签名操作
+
+        第3章：证书颁发机构、证书撤销及加盖时间戳
+            - 证书颁发机构（文档是用Cacert项目cacert.org--用户名163邮箱，密码Xj233550）
+                问：从证书颁发机构用p12文件签署文档？信任证书颁发机构的根证书？签署协议的最佳实践
+                答：在cacert.org创建一个秘钥对，然后在本地创建一个属性文件，从文件中进行签名操作
+                    在cacert.org下载证书，然后在面板进行信任操作。如果私钥丢失，通知证书颁发机构，将其列入撤销列表。
+                    签名方法的参数解释：MakeSignature.signDetached(appearance, digest, pks, chain, crlList, ocspClient, tsaClient, estimatedSize, subfilter);
+            - 添加证书撤销信息
+                问：查找证书撤销列表的URL？获取CRL的URL？使用CRL的离线副本创建CrlClient？使用在线证书状态协议(OCSP)？哪一个更好:嵌入CRLs还是OCSP响应?
+                答：在证书中嵌入一个撤销列表。代码举例：
+                        Certificate[] chain = ks.getCertificateChain(alias);
+                        for (int i = 0; i < chain.length; i++) {
+                            X509Certificate cert = (X509Certificate)chain[i];
+                            System.out.println(String.format("[%s] %s", i, cert.getSubjectDN()));
+                            System.out.println(CertificateUtil.getCRLURL(cert));
+                        }
+                   在pdf中嵌入CRL：使用CrlClient类。找到撤销列表的URL就停止
+                        List<CrlClient> crlList = new ArrayList<CrlClient>();
+                        crlList.add(new CrlClientOnline());
+
+                        让java虚拟机信任Cacert颁发的证书，将证书添加到java目录的lib/security中的cacerts中
+                            keytool -import -keystore cacerts -file CAcertSigningAuthority.crt -alias cacert
+                        使用特定的URL创建证书撤销列表客户端
+                            CrlClient crlClient = new CrlClientOnline("https://crl.cacert.org/revoke.crl"); List<CrlClient> crlList = new ArrayList<CrlClient>();
+                            crlList.add(crlClient);
+                        使用离线副本，能够节约资源，防止每次签名都去下载撤销列表。
+                   代码举例：
+                        FileInputStream is = new FileInputStream(CRL);
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        byte[] buf = new byte[1024];
+                        while (is.read(buf) != -1) {
+                            baos.write(buf);
+                        }
+                        CrlClient crlClient = new CrlClientOffline(baos.toByteArray());
+                        List<CrlClient> crlList = new ArrayList<CrlClient>();
+                        crlList.add(crlClient);
+
+
+                        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                        X509CRL crl = (X509CRL)cf.generateCRL(new FileInputStream(CRL));
+                        System.out.println("CRL valid until: " + crl.getNextUpdate());
+                        System.out.println("Certificate revoked: " + crl.isRevoked(chain[0]));
+                   能够解决嵌入式撤销证书过大的情况：
+                        BouncyCastleProvider provider = new BouncyCastleProvider();
+                        Security.addProvider(provider);
+                        KeyStore ks = KeyStore.getInstance("pkcs12", provider.getName());
+                        ks.load(new FileInputStream(path), pass.toCharArray());
+                        String alias = (String)ks.aliases().nextElement();
+                        Certificate[] chain = ks.getCertificateChain(alias);
+                        for (int i = 0; i < chain.length; i++) {
+                            X509Certificate cert = (X509Certificate)chain[i];
+                            System.out.println(String.format("[%s] %s", i, cert.getSubjectDN()));
+                            System.out.println(CertificateUtil.getOCSPURL(cert));
+                        }
+
+                        OcspClient ocspClient = new OcspClientBouncyCastle();
+                        SignWithOCSP app = new SignWithOCSP();
+                        app.sign(pk, chain, SRC, DEST, provider.getName(), "Test", "Ghent",DigestAlgorithms.SHA256, CryptoStandard.CMS, null, ocspClient, null, 0);
+                   最好是组合使用。三个方面的考虑因素，已签名文档的文件大小、创建签名时的性能和法律。撤销列表小的优先，性能快的优先。符合国家法律，比如德国，额外条件时证书存在，权威的时间戳等
+            - 添加时间戳
+                问：处理过期和撤销日期？连接到时间戳服务器？
+                答：要做到过去签署的文件，一直到今天都是有效的。通过添加时间戳，包含当时的签名信息和撤销信息。通过另一个第三方：时间戳管理局(TSA)。它将返回使用TSA私钥签名的散列和经过身份验证的属性。
+                    代码举例:
+                        BouncyCastleProvider provider = new BouncyCastleProvider();
+                        Security.addProvider(provider);
+                        KeyStore ks = KeyStore.getInstance("pkcs12", provider.getName());
+                        ks.load(new FileInputStream(path), pass.toCharArray());
+                        String alias = (String)ks.aliases().nextElement();
+                        Certificate[] chain = ks.getCertificateChain(alias);
+                        for (int i = 0; i < chain.length; i++) {
+                            X509Certificate cert = (X509Certificate)chain[i];
+                            System.out.println(String.format("[%s] %s", i, cert.getSubjectDN()));
+                            System.out.println(CertificateUtil.getTSAURL(cert));
+                        }
+
+                        TSAClient tsaClient = new TSAClientBouncyCastle(tsaUrl, tsaUser, tsaPass); //创建时间戳对象，服务器是GlobalSign
+
+                        TSAClientBouncyCastle tsaClient = new TSAClientBouncyCastle(tsaUrl, tsaUser, tsaPass);
+                        tsaClient.setTSAInfo(new TSAInfoBouncyCastle() {
+                            public void inspectTimeStampTokenInfo(TimeStampTokenInfo info) {
+                                System.out.println(info.getGenTime());
+                            }
+                        });
+            - 如何获得绿色勾号
+                问：存储在其他地方的信任证书？Adobe认可信托名单(AATL)？使用USB令牌签署文档(第1部分:MSCAPI)？
+                答：很多软件和硬件附带一个根存储，它们包含常见的证书。可以在adobe配置安全时让其读取操作系统证书
+                    可以通过网站访问进行下载，更新本机的adobe reader的证书库。CDS是一个adobe的认证文档服务
+                    秘钥对被存储在硬件上，不能被提取私钥。在USB上存储证书，插入操作系统后，进行证书添加。Java中有MSCAPI的签名模块，在外部设备上完成签名，而不是java虚拟机上。
+                        public static void main(String[] args)throws IOException, GeneralSecurityException, DocumentException {
+                            LoggerFactory.getInstance().setLogger(new SysoLogger());
+                            BouncyCastleProvider providerBC = new BouncyCastleProvider();
+                            Security.addProvider(providerBC);
+
+                            SunMSCAPI providerMSCAPI = new SunMSCAPI();
+                            Security.addProvider(providerMSCAPI);
+
+                            KeyStore ks = KeyStore.getInstance("Windows-MY");
+                            ks.load(null, null);
+                            String alias = (String)ks.aliases().nextElement();
+                            PrivateKey pk = (PrivateKey)ks.getKey(alias, null);
+                            Certificate[] chain = ks.getCertificateChain(alias);
+
+                            OcspClient ocspClient = new OcspClientBouncyCastle();
+                            TSAClient tsaClient = null;
+                            for (int i = 0; i < chain.length; i++) {
+                                X509Certificate cert = (X509Certificate)chain[i];
+                                String tsaUrl = CertificateUtil.getTSAURL(cert);
+                                if (tsaUrl != null) {
+                                    tsaClient = new TSAClientBouncyCastle(tsaUrl);
+                                    break;
+                                }
+                            }
+                            List<CrlClient> crlList = new ArrayList<CrlClient>();
+                            crlList.add(new CrlClientOnline(chain));
+                            SignWithToken app = new SignWithToken();
+                            app.sign(SRC, DEST, chain, pk, DigestAlgorithms.SHA256,providerMSCAPI.getName(), CryptoStandard.CMS, "Test", "Ghent", crlList, ocspClient, tsaClient, 0);
+                        }
+            - 估计签名内容的大小
+                答：itext预估签名的大小。
+                        boolean succeeded = false;
+                        int estimatedSize = 10300;
+                        while (!succeeded) {
+                            try {
+                                System.out.println("Attempt: " + estimatedSize + " bytes");
+                                app.sign(SRC, DEST, chain, pk, DigestAlgorithms.SHA256, provider.getName(),CryptoStandard.CMS, "Test", "Ghent", null, ocspClient, tsaClient,estimatedSize);
+                                succeeded = true;
+                                System.out.println("Succeeded!");
+                            }catch(IOException ioe) {
+                                    System.out.println("Not succeeded: " + ioe.getMessage());
+                                    estimatedSize += 50;
+                            }
+                        }
+            - 总结
+                证书结构颁发签名所需。在pdf中嵌入证书撤销信息--3种方法。时间戳保证签名有效。使用USB令牌签名
+
+        第4章：外部创建签名
+            - 使用PKCS#11签署文件
+                问：使用HSM签署文档？使用USB令牌签署文档(第2部分:PKCS#11)？使用智能卡签署文件？
+                答：HSM解决大量文件的手工签署问题。
+                        LoggerFactory.getInstance().setLogger(new SysoLogger()); Properties properties = new Properties();
+                        properties.load(new FileInputStream(PROPS));
+                        char[] pass = properties.getProperty("PASSWORD").toCharArray();
+                        String pkcs11cfg = properties.getProperty("PKCS11CFG");
+                        BouncyCastleProvider providerBC = new BouncyCastleProvider();
+                        Security.addProvider(providerBC);
+
+                        FileInputStream fis = new FileInputStream(pkcs11cfg);
+                        Provider providerPKCS11 = new SunPKCS11(fis);   //新的provider进行签名
+                        Security.addProvider(providerPKCS11);
+
+                        KeyStore ks = KeyStore.getInstance("PKCS11");
+                        ks.load(null, pass);
+                        String alias = (String)ks.aliases().nextElement();
+                        PrivateKey pk = (PrivateKey)ks.getKey(alias, pass);
+                        Certificate[] chain = ks.getCertificateChain(alias);
+                        OcspClient ocspClient = new OcspClientBouncyCastle();
+                        TSAClient tsaClient = null;
+                        for (int i = 0; i < chain.length; i++) {
+                            X509Certificate cert = (X509Certificate)chain[i];
+                            String tsaUrl = CertificateUtil.getTSAURL(cert);
+                            if (tsaUrl != null) {
+                                tsaClient = new TSAClientBouncyCastle(tsaUrl);
+                                break;
+                            }
+                        }
+                        List<CrlClient> crlList = new ArrayList<CrlClient>();
+                        crlList.add(new CrlClientOnline(chain));
+                        SignWithPKCS11HSM app = new SignWithPKCS11HSM();
+                        app.sign(SRC, DEST, chain, pk, DigestAlgorithms.SHA256, providerPKCS11.getName(),CryptoStandard.CMS, "HSM test", "Ghent", crlList, ocspClient, tsaClient, 0);
+                    USB令牌签署，配置文件内容不同。可以通过USB令牌来获取插槽的索引
+                        public static final String DLL = "c:/windows/system32/dkck201.dll";
+                        String config = "name=ikey4000\n"+ "library=" + DLL + "\n"+ "slotListIndex = " + getSlotsWithTokens(DLL)[0];
+                        ByteArrayInputStream bais = new ByteArrayInputStream(config.getBytes());
+                        Provider providerPKCS11 = new SunPKCS11(bais);
+                        Security.addProvider(providerPKCS11);
+
+
+                        public static long[] getSlotsWithTokens(String libraryPath) throws IOException{
+                            CK_C_INITIALIZE_ARGS initArgs = new CK_C_INITIALIZE_ARGS();
+                            String functionList = "C_GetFunctionList";
+                            initArgs.flags = 0;
+                            PKCS11 tmpPKCS11 = null;
+                            long[] slotList = null;
+                            try {
+                                try {
+                                    tmpPKCS11 =PKCS11.getInstance(libraryPath, functionList, initArgs, false);
+                                }catch (IOException ex) {
+                                    ex.printStackTrace();
+                                    throw ex;
+                                }
+                            }catch (PKCS11Exception e) {
+                                try {
+                                    initArgs = null;
+                                    tmpPKCS11 =PKCS11.getInstance(libraryPath, functionList, initArgs, true);
+                                }catch (IOException ex) {
+                                    ex.printStackTrace();
+                                }catch (PKCS11Exception ex) {
+                                 ex.printStackTrace();
+                                }
+                            }
+                            try {
+                                slotList = tmpPKCS11.C_GetSlotList(true);
+                                for (long slot : slotList){
+                                    CK_TOKEN_INFO tokenInfo = tmpPKCS11.C_GetTokenInfo(slot);
+                                    System.out.println("slot: "+slot+"\nmanufacturerID: "+ String.valueOf(tokenInfo.manufacturerID) + "\nmodel: " + String.valueOf(tokenInfo.model));
+                                }
+                            } catch (PKCS11Exception ex) {
+                                ex.printStackTrace();
+                            }catch (Throwable t) {
+                                t.printStackTrace();
+                            }
+                            return slotList;
+                        }
+                    智能卡签署，就类似于身份证一样。读卡器连接电脑，自动出现证书。使用智能卡+PKCS#11进行签名如下：
+                        public static final String DLL = "c:/windows/system32/beidpkcs11.dll";
+                        public static void main(String[] args) throws IOException, GeneralSecurityException, DocumentException {
+                            LoggerFactory.getInstance().setLogger(new SysoLogger());
+                            String config = "name=beid\n" +"library=" + DLL + "\n" +"slotListIndex = " + getSlotsWithTokens(DLL)[0];
+                            ByteArrayInputStream bais = new ByteArrayInputStream(config.getBytes());
+                            Provider providerPKCS11 = new SunPKCS11(bais);
+                            Security.addProvider(providerPKCS11);
+                            BouncyCastleProvider providerBC = new BouncyCastleProvider();
+                            Security.addProvider(providerBC);
+                            KeyStore ks = KeyStore.getInstance("PKCS11");
+                            ks.load(null, null);
+                            Enumeration<String> aliases = ks.aliases();
+                            while (aliases.hasMoreElements()) {
+                                System.out.println(aliases.nextElement());
+                            }
+                            smartcardsign(providerPKCS11.getName(), ks, "Authentication");
+                            smartcardsign(providerPKCS11.getName(), ks, "Signature");
+                        }
+
+                        public static void smartcardsign(String provider, KeyStore ks, String alias) throws GeneralSecurityException, IOException, DocumentException {
+                            PrivateKey pk = (PrivateKey)ks.getKey(alias, null);
+                            Certificate[] chain = ks.getCertificateChain(alias);
+                            OcspClient ocspClient = new OcspClientBouncyCastle();
+                            List<CrlClient> crlList = new ArrayList<CrlClient>();
+                            crlList.add(new CrlClientOnline(chain));
+
+                            SignWithPKCS11SC app = new SignWithPKCS11SC();
+                            app.sign(SRC, String.format(DEST, alias), chain, pk,DigestAlgorithms.SHA256, provider, CryptoStandard.CMS, "Test", "Ghent", crlList, ocspClient, null, 0);
+                        }
+            - 使用javax.smartcardio调用智能卡签署文件
+                问：概述javax.smartcardio中最重要的类？使用smartcardsign从Belgian eID中提取数据？为验证而对数据进行签名？使用Belgian eID签署文件？
+                答：TerminalFactory创建CardTerminals，包含多个CardTerminal。如果包含智能卡，可以继续创建Card，进而connect()方法调用。
+                        之后创建CardChannel，调用transmission()发送CommandAPDU消息，并得到一个ResponseAPDU
+                    每个id卡包含三个数据文件：地址，照片，身份标识。每个国家的eId卡d的数据格式可能会有不同
+                        CardReaders readers = new CardReaders();
+                        for (CardTerminal terminal : readers.getReaders()) {
+                            System.out.println(terminal.getName());
+                        }
+                        for (CardTerminal terminal : readers.getReadersWithCard()) {
+                            System.out.println(terminal.getName());
+                            SmartCard card = new SmartCard(terminal);
+                            IdentityPojo id = BeIDFileFactory.getIdentity(card);
+                            System.out.println(id.toString());
+                            AddressPojo address = BeIDFileFactory.getAddress(card);
+                            System.out.println(address);
+                            PhotoPojo photo = BeIDFileFactory.getPhoto(card);
+                            FileOutputStream fos = new FileOutputStream(PHOTO);
+                            fos.write(photo.getPhoto());
+                            fos.flush();
+                            fos.close();
+                        }
+                    Begian eID的第二个秘钥存储库。用于不可否认的签名
+                        CardReaders readers = new CardReaders();
+                        for (CardTerminal terminal : readers.getReadersWithCard()) {
+                            SmartCardWithKey card = new SmartCardWithKey(terminal, BeIDCertificates.AUTHENTICATION_KEY_ID, "RSA");
+                            card.setPinProvider(new PinDialog(4));  //自定义对话框类，索要pin码
+                            byte[] signed = card.sign("ABCD".getBytes(), "SHA-256");
+                            System.out.println(new String(signed));
+
+                            X509Certificate cert =card.readCertificate(BeIDCertificates.AUTHN_CERT_FILE_ID);
+                            Cipher cipher = Cipher.getInstance("RSA");
+                            cipher.init(Cipher.DECRYPT_MODE, cert.getPublicKey());
+                            System.out.println(new String(cipher.doFinal(signed)));
+                        }
+                    代码举例：
+                        CardReaders readers = new CardReaders();
+                        SmartCardWithKey card = new BeIDCard(readers.getReadersWithCard().get(0));
+                        card.setSecure(true);
+                        Certificate[] chain = BeIDCertificates.getSignCertificateChain(card);
+                        Collection<CrlClient> crlList = new ArrayList<CrlClient>();
+                        crlList.add(new CrlClientOnline(chain));
+                        OcspClient ocspClient = new OcspClientBouncyCastle();
+                        SignWithBEID app = new SignWithBEID();
+                        app.sign(SRC, DEST, card, chain, CryptoStandard.CMS,"Test", "Ghent", crlList, ocspClient, null, 0);
+
+
+                        public void sign(String src, String dest,SmartCardWithKey card, Certificate[] chain, CryptoStandard subfilter, String reason, String location, Collection<CrlClient> crlList,OcspClient ocspClient, TSAClient tsaClient, int estimatedSize)throws GeneralSecurityException, IOException, DocumentException {
+                            PdfReader reader = new PdfReader(src);
+                            FileOutputStream os = new FileOutputStream(dest);
+                            PdfStamper stamper = PdfStamper.createSignature(reader, os, '\0');
+
+                            PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
+                            appearance.setReason(reason);
+                            appearance.setLocation(location);
+                            appearance.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig"); // Creating the signature
+
+                            ExternalSignature eid = new EidSignature(card, "SHA256", "BC");
+                            ExternalDigest digest = new BouncyCastleDigest();
+                            MakeSignature.signDetached(appearance, digest, eid, chain,crlList, ocspClient, tsaClient, estimatedSize, subfilter);
+                        }
+            - 用于签名的客户机/服务器架构
+                问：构建一个简单的签名服务器？使用在服务器上创建的签名在客户机上签名文档？使用在客户机上创建的签名在服务器上签名文档？选择正确的架构？
+                答：web.xml配置秘钥存储库，密码，私钥密码等信息，在servlet的doPost()中进行文档签名
+                   客户端发送请求到服务器，返回创建的签名，然后将签名签署文档
+                   预签名——客户机请求服务器提供散列。签名后——客户机将签名后的字节发送到服务器。
+                   共有4种架构：单客户端，单服务器端，两种服务器-客户端模式
+            - 总结
+                使用硬件模块创建签名作用于pdf文档，了解智能卡形式的身份证。4种常见的签名架构模式
+
+        第5章：已签署文件的验证
+            - 检查文件的完整性
+                问：列出文档中的签名？检查修订的完整性？
+                答：通过AcroFields类中的getSignatureNames()方法。
+                       public void verifySignatures(String path) throws IOException, GeneralSecurityException {
+                            System.out.println(path);
+                            PdfReader reader = new PdfReader(path);
+                            AcroFields fields = reader.getAcroFields();
+                            ArrayList<String> names = fields.getSignatureNames();
+                            for (String name : names) {
+                                System.out.println("===== " + name + " =====");
+                                verifySignature(fields, name);
+                            }
+                            System.out.println();
+                       }
+                   核心代码：AcroFields.verifySignature(name)
+                       public PdfPKCS7 verifySignature(AcroFields fields, String name) throws GeneralSecurityException, IOException {
+                            System.out.println("Signature covers whole document: "+ fields.signatureCoversWholeDocument(name));
+                            System.out.println("Document revision: " + fields.getRevision(name) + " of " + fields.getTotalRevisions());
+                            PdfPKCS7 pkcs7 = fields.verifySignature(name);
+                            System.out.println("Integrity check OK? " + pkcs7.verify());
+                            return pkcs7;
+                       }
+            - 从签名中检索信息
+                问：签名字段和字典中存储的信息的概述？检查签名？
+                答：AcroFields中获取字段信息，PdfPKCS7获取签名信息
+                        public SignaturePermissions inspectSignature(AcroFields fields, String name, SignaturePermissions perms) throws GeneralSecurityException, IOException {
+                            List<FieldPosition> fps = fields.getFieldPositions(name);
+                            if (fps != null && fps.size() > 0) {
+                                FieldPosition fp = fps.get(0);
+                                Rectangle pos = fp.position;
+                                if (pos.getWidth() == 0 || pos.getHeight() == 0) {
+                                    System.out.println("Invisible signature");
+                                }
+                                else {
+                                    System.out.println(String.format("Field on page %s; llx: %s, lly: %s, urx: %s; ury: %s", fp.page,pos.getLeft(), pos.getBottom(), pos.getRight(), pos.getTop()));
+                                }
+                            }
+
+                            PdfPKCS7 pkcs7 = super.verifySignature(fields, name);
+                            System.out.println("Digest algorithm: " + pkcs7.getHashAlgorithm());
+                            System.out.println("Encryption algorithm: " + pkcs7.getEncryptionAlgorithm());
+                            System.out.println("Filter subtype: " + pkcs7.getFilterSubtype());
+                            X509Certificate cert = (X509Certificate) pkcs7.getSigningCertificate();
+                            System.out.println("Name of the signer: " +CertificateInfo.getSubjectFields(cert).getField("CN"));
+
+                            if (pkcs7.getSignName() != null){
+                                System.out.println("Alternative name of the signer: " + pkcs7.getSignName());
+                            }
+                            SimpleDateFormat date_format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS");
+                            System.out.println("Signed on: " +date_format.format(pkcs7.getSignDate().getTime()));
+                            if (pkcs7.getTimeStampDate() != null) {
+                                System.out.println("TimeStamp: " + date_format.format(pkcs7.getTimeStampDate().getTime()));
+                                TimeStampToken ts = pkcs7.getTimeStampToken();
+                                System.out.println("TimeStamp service: " + ts.getTimeStampInfo().getTsa());
+                                System.out.println("TimeStamp verified? "+ pkcs7.verifyTimestampImprint());
+                            }
+                            System.out.println("Location: " + pkcs7.getLocation());
+                            System.out.println("Reason: " + pkcs7.getReason());
+                            PdfDictionary sigDict = fields.getSignatureDictionary(name);
+                            PdfString contact = sigDict.getAsString(PdfName.CONTACTINFO);
+
+                            if (contact != null){
+                                System.out.println("Contact info: " + contact);
+                            }
+                            perms = new SignaturePermissions(sigDict, perms);
+                            System.out.println("Signature type: " +(perms.isCertification() ? "certification" : "approval"));
+                            System.out.println("Filling out fields allowed: " +perms.isFillInAllowed());
+                            System.out.println("Adding annotations allowed: " +perms.isAnnotationsAllowed());
+                            for (FieldLock lock : perms.getFieldLocks()) {
+                                System.out.println("Lock: " + lock.toString());
+                            }
+                            return perms;
+                        }
+                查看签名是否完整，是否有修改，查看时间戳等元数据。
+            - 验证签名的证书
+                问：创建自己的根存储？根据密钥存储库验证签名？从证书中提取信息？检查使用CRLs和OCSP的证书是否被撤销？
+                答：Java中通常使用cacerts文件作为根存储。往存储库添加证书
+                        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                        ks.load(null, null);
+                        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                        ks.setCertificateEntry("cacert",cf.generateCertificate(new FileInputStream(CACERT)));
+                        ks.setCertificateEntry("adobe",cf.generateCertificate(new FileInputStream(ADOBE)));
+                        ks.setCertificateEntry("bruno",cf.generateCertificate(new FileInputStream(BRUNO)));
+                    存在对应证书则成功。核心方法verifyCertificates()
+                        Certificate[] certs = pkcs7.getSignCertificateChain();
+                        Calendar cal = pkcs7.getSignDate();
+                        List<VerificationException> errors =CertificateVerification.verifyCertificates(certs, ks, cal);
+                        if (errors.size() == 0){
+                            System.out.println("Certificates verified against the KeyStore");
+                        }else{
+                            System.out.println(errors);
+                        }
+                    检查证书是否依然有效，从中抽取信息
+                        public void showCertificateInfo(X509Certificate cert, Date signDate) {
+                            System.out.println("Issuer: " + cert.getIssuerDN());
+                            System.out.println("Subject: " + cert.getSubjectDN());
+                            SimpleDateFormat date_format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS");
+                            System.out.println("Valid from: " + date_format.format(cert.getNotBefore()));
+                            System.out.println("Valid to: " + date_format.format(cert.getNotAfter()));
+                            try{
+                                cert.checkValidity(signDate);
+                                System.out.println("The certificate was valid at the time of signing.");
+                            }catch(CertificateExpiredException e) {
+                                System.out.println("The certificate was expired at the time of signing.");
+                            }catch(CertificateNotYetValidException e) {
+                                System.out.println("The certificate wasn't valid yet at the time of signing.");
+                            }
+                            try {
+                                cert.checkValidity();
+                                System.out.println("The certificate is still valid.");
+                            }catch (CertificateExpiredException e) {
+                                System.out.println("The certificate has expired.");
+                            }catch (CertificateNotYetValidException e) {
+                                System.out.println("The certificate isn't valid yet.");
+                            }
+                        }
+                    检查签名证书的撤销状态。代码举例：
+                        X509Certificate signCert = (X509Certificate)certs[0];
+                        X509Certificate issuerCert = (certs.length > 1 ? (X509Certificate)certs[1] : null);
+                        System.out.println("=== Checking validity of the document at the time of signing ===");
+                        checkRevocation(pkcs7, signCert, issuerCert, cal.getTime());
+                        System.out.println("=== Checking validity of the document today ===");
+                        checkRevocation(pkcs7, signCert, issuerCert, new Date());
+
+                        //使用OCSP验证证书
+                        public void checkRevocation(PdfPKCS7 pkcs7,X509Certificate signCert, X509Certificate issuerCert, Date date) throws GeneralSecurityException, IOException {
+                            List<BasicOCSPResp> ocsps = new ArrayList<BasicOCSPResp>();
+                            if (pkcs7.getOcsp() != null){
+                                ocsps.add(pkcs7.getOcsp());
+                            }
+                            OCSPVerifier ocspVerifier = new OCSPVerifier(null, ocsps);
+                            List<VerificationOK> verification =ocspVerifier.verify(signCert, issuerCert, date);
+                            if (verification.size() == 0) {
+                                List<X509CRL> crls = new ArrayList<X509CRL>();
+                                if (pkcs7.getCRLs() != null) {
+                                    for (CRL crl : pkcs7.getCRLs())
+                                        crls.add((X509CRL)crl);
+                                    }
+                                CRLVerifier crlVerifier = new CRLVerifier(null, crls);
+                                verification.addAll(crlVerifier.verify(signCert, issuerCert, date));
+                            }
+                            if (verification.size() == 0) {
+                                System.out.println("The signing certificate couldn't be verified");
+                            }
+                            else {
+                                for (VerificationOK v : verification){
+                                    System.out.println(v);
+                                }
+                            }
+                        }
+            - PAdES-4:长期验证(LTV)
+                问：添加文档安全存储(DSS)和文档级时间戳？创建DSS选择需要添加哪些验证信息？使用文档级时间戳检查文档的完整性？验证LTV文档？
+                答：保证以前的签名文档现在是有效。使用子过滤器/ETSI.RFC3161。时间戳本身是进过签名的。
+                        public void addLtv(String src, String dest, OcspClient ocsp,CrlClient crl, TSAClient tsa)throws IOException, DocumentException, GeneralSecurityException {
+                            PdfReader r = new PdfReader(src);
+                            FileOutputStream fos = new FileOutputStream(dest);
+                            PdfStamper stp = PdfStamper.createSignature(r, fos, '\0', null, true);
+                            LtvVerification v = stp.getLtvVerification();
+                            AcroFields fields = stp.getAcroFields();
+                            List<String> names = fields.getSignatureNames();
+                            String sigName = names.get(names.size() - 1);
+                            PdfPKCS7 pkcs7 = fields.verifySignature(sigName);
+
+                            if (pkcs7.isTsp()){
+                                    v.addVerification(sigName, ocsp, crl,LtvVerification.CertificateOption.SIGNING_CERTIFICATE, LtvVerification.Level.OCSP_CRL, LtvVerification.CertificateInclusion.NO);
+                            }else {
+                                for (String name : names) {
+                                    v.addVerification(name, ocsp, crl, LtvVerification.CertificateOption.WHOLE_CHAIN, LtvVerification.Level.OCSP_CRL, LtvVerification.CertificateInclusion.NO);
+                                }
+                            }
+                            PdfSignatureAppearance sap = stp.getSignatureAppearance();
+                            LtvTimestamp.timestamp(sap, tsa, null);
+                        }
+                   在证书最终过期之时添加DSS很重要：
+                        SIGNING_CERTIFICATE:对于签名证书添加额外验证信息
+                        WHOLE_CHAIN:为链中的每个证书添加额外的验证。
+                   检查文档级别时间戳需要TSAClient tsa = new TSAClientBouncyCastle( tsaUrl, tsaUser, tsaPass, 6500, "SHA512");
+                   在上一个时间戳的基础上进行验证：
+                        public void validate(PdfReader reader)throws IOException, GeneralSecurityException {
+                            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                            ks.load(null, null);
+                            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                            ks.setCertificateEntry("adobe",cf.generateCertificate(new FileInputStream(ADOBE)));
+
+                            CertificateVerifier custom = new CertificateVerifier(null) {
+                                public List<VerificationOK> verify(X509Certificate signCert, X509Certificate issuerCert, Date signDate) throws GeneralSecurityException, IOException {
+                                    System.out.println(signCert.getSubjectDN().getName() +": ALL VERIFICATIONS DONE");
+                                    return new ArrayList<VerificationOK>();
+                                }
+                            };
+
+                            LtvVerifier data = new LtvVerifier(reader);
+                            data.setRootStore(ks);
+                            data.setCertificateOption(CertificateOption.WHOLE_CHAIN);
+                            data.setVerifier(custom);
+                            data.setOnlineCheckingAllowed(false);
+                            data.setVerifyRootCertificate(false);
+                            List<VerificationOK> list = new ArrayList<VerificationOK>();
+                            try {
+                                data.verify(list);
+                            }catch(GeneralSecurityException e) {
+                                System.err.println(e.getMessage());
+                            }
+                            System.out.println();
+                            if (list.size() == 0) {
+                                System.out.println("The document can't be verified");
+                            }
+                            for (VerificationOK v : list){
+                                System.out.println(v.toString());
+                            }
+                        }
+            - 总结
+                检查签名文档的不同修订的完整性和其他信息。多种方法验证用于签名的证书。文档安全存储延长文档的生命周期
+
+        链接：
+            证书颁发机构：
+                GlobalSign:
+                    https://www.globalsign.com/
+                    https://www.globalsign.com/pdf-signing/trial.html
+                CAcert:
+                    https://www.cacert.org
+
+
+

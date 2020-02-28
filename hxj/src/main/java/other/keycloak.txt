@@ -1,0 +1,157 @@
+1.学习keycloak
+    官网：https://www.keycloak.org
+    远程仓库：https://github.com/keycloak/keycloak/
+    最新版本：5.0.0
+    优点：最好用的单点登录应用(SSO),有专门的数据库
+    核心概念：
+        users：用户是一个可以登陆系统的实体，它可以拥有联系它们自身的属性，例如邮箱、用户名、地址、电话号码或生日等，可以为user分配组别或者角色。
+        authentication(认证)：相当于密码，可以验证和识别一个user。
+        authorization(授权)：给予用户访问的过程。
+        credentials：证书，可以供keycloak验证用户的东西，例如密码、一次性密码、证书、指纹等。
+        roles：相当于用户的一个分类 ，一个组织可能有Admin\user\manager\emplee等角色，应用程序经常会分配权限给角色，而不是用户，因为用户太难管理。
+        user role mapping：定义了一个用户及角色的关系，一个用户可以属于零个或多个角色，用户与角色的映射关系，这样就可以决定用在各种资源访问的权限管理。
+        composite roles：复合角色可以包含其他的角色，用户拥有了复合角色就相当于拥有了它下面的所有子角色。
+        groups：组可以一组的用户，也可以将角色映射到角色中，用户可以成为组员后继承用组的角色
+        realms：领域，领域管理着一批，用户、证书、角色、组等，一个用户只能属于且能登陆到一个域，域之间是互相独立的，域只能管理在它下面的用户。
+        clients：客户端是一个实体，可以请求keycloak对用户进行身份验证，大部分情况下，客户端是应用或服务希望使用keycloak来保护自己和提供一个单点登录的解决方案。客户端也可以是一个实体，请求身份信息或一个访问信息，这样就可以调用其他keycloak保护的应用或服务了。
+    基本步骤：
+        0.登录管理员后台：http://localhost:8080/auth/admin/
+        1.创建realm和user。
+大部分是管理员后台的操作，暂时放弃......
+
+    操作步骤中的注意事项：
+        1.从keycloak导出realm的配置信息，然后导入回去时：
+            对于文件中的role部分，如果containerid==最上层id，则不做操作
+            对于文件中的client部分，如果containerid != 最上层id，则删除该id和containerid
+        2.导入导出配置通过API方法:
+            前缀：http://localhost:8080/auth/admin/realms
+            导出realm：POST /{realm}/partial-export
+            导入realm：POST / 请求体为json
+            导入client：POST /clients 请求体为json
+
+        3.更改数据库：将keycloak用于存储验证用户信息的数据库进行修改。主要还是配置文件
+            3.1 jdbc驱动修改为postgre。【主要是将keycloak的下载程序位置找到】
+                在路径$KC_HOME/modules/system/layers/keycloak/org/下：
+                    创建postsql/main目录，
+                    在目录中存放合适的jdbc驱动程序，
+                    在目录下创建module.xml。内容格式：
+                        <?xml version="1.0" ?>
+                        <module xmlns="urn:jboss:module:1.3" name="org.postgresql">
+                            <resources>
+                                <resource-root path="postgresql-9.4.1212.jar"/>
+                            </resources>
+                            <dependencies>
+                                <module name="javax.api"/>
+                                <module name="javax.transaction.api"/>
+                            </dependencies>
+                        </module>
+
+            3.2 声明并加载JDBC驱动程序：
+                    编辑服务器的文件：$KC_HOME/standalone/configuration/standalone.xml
+                    在subsystem块下添加配置：
+                        <driver name="postgresql" module="org.postgresql">
+                            <xa-datasource-class>org.postgresql.xa.PGXADataSource</xa-datasource-class>
+                        </driver>
+
+            3.3 更新Keycloak数据源：
+                    还是在standalone.xml文件中，替换数据源配置：
+                        <datasource jndi-name="java:jboss/datasources/KeycloakDS" pool-name="KeycloakDS" enabled="true" use-java-context="true">
+                           <connection-url>jdbc:postgresql://localhost:5432/keycloak</connection-url>
+                           <driver>postgresql</driver>
+                           <pool>
+                               <max-pool-size>20</max-pool-size>
+                           </pool>
+                           <security>
+                               <user-name>postgres</user-name>
+                               <password>postgres</password>
+                           </security>
+                       </datasource>
+
+            3.4 数据库配置：
+                    还是在standalone.xml文件中修改：
+                    <subsystem xmlns="urn:jboss:domain:keycloak-server:1.1">
+                        ...
+                        <spi name="connectionsJpa">
+                         <provider name="default" enabled="true">
+                             <properties>
+                                 <property name="dataSource" value="java:jboss/datasources/KeycloakDS"/>
+                                 <property name="initializeEmpty" value="false"/>
+                                 <property name="migrationStrategy" value="manual"/>
+                                 <property name="migrationExport" value="${jboss.home.dir}/keycloak-database-update.sql"/>
+                             </properties>
+                         </provider>
+                        </spi>
+                        ...
+                    </subsystem>
+
+        4.修改roles后的相关问题：
+            问题1: 角色修改后，对用户使用会造成相关影响，特别是使用refresh_token去获取access_token时，会产生一些影响
+
+            具体问题影响：（类似与测试情况）
+                1.创建新用户,没有赋予任何角色：
+                    可以使用API进行登录获取access_token: 指定资源空
+                    使用access_token访问查询用户列表功能：无
+
+                2.给用户添加系统默认角色“view-users”:
+                    通过refresh_token去获取access_token
+                    使用access_token访问查询用户列表功能：指定资源空
+
+                3.在client里面添加角色：
+                  在client（admin-cli）里面添加用户角色（manage-material），并给用户赋予该角色
+                  在client里面新增角色
+                  给用户赋予角色
+                    使用refresh去获取access_token：指定资源有角色
+                    使用access_token访问查询用户列表功能：有值
+
+                4.添加group以及roles:
+                  清空用户的原有角色
+                  用refresh_token去获取access_token,并用access_token去访问用户列表查询: 指定资源有角色,但是报400，需要重新登录
+                  用户登录，获取新的access_token和refresh_token：有最新的token
+                  添加group,并给group赋予系统默认角色（view-users）以及client角色:
+                  给用户分配组
+                  查看用户角色: 用户拥有了组的角色。
+                    用refresh_token去获取access_token,并用access_token去访问用户列表：指定资源有角色
+                  client端添加角色
+                  Group端添加角色role1
+                    refresh_token刷新，获取新的access_token：指定资源有角色，有新角色
+                  删除group里面的role1角色
+                  使用refresh_token刷新： 报400，用户不再拥有客户端的的角色role1，需要重新登录
+
+        5.使用API方式操作keycloak：可以专门开一个项目测试这些API
+            5.1 资源：
+                    用户：
+                        登录：返回一个AccessToken，解析token，找到key(“sub”)，值就是用户ID
+                        登出：删除该用户的所有sesion,然后通知能够管理url客户端，该用户session无效了。
+                            删除所有session：POST /auth/admin/{realm}/users/{id}/logout
+                            删除一个session: DELETE /auth/admin/{realm}/sessions/{session}
+                                其中session值是AccessToken里面session_state对应的值
+                            个人登出：POST /auth/realms/{realm}/protocol/openid-connect/logout
+
+                        新建用户：
+                        获取用户信息：
+                            根据ID查找用户：GET /auth/admin/{realm}/users/{id}
+                            根据用户名查找用户：GET /auth/admin/{realm}/users?username={username}
+                            获取用户信息（个人）：GET /auth/realms/{realm}/protocol/openid-connect/userinfo
+                        更新用户信息：
+                            PUT /auth/admin/{realm}/users/{id}
+                        删除用户：
+                            DELETE /auth/admin/{realm}/users/{id}
+                        重置密码：PUT /auth/admin/{realm}/users/{id}/reset-password
+
+                    组：查看组时，只要给用户添加 query-groups 权限，如果想要新增修改删除时，需要给用户添加 realm-admin 权限。
+                        新建组(部门)：POST /auth/admin/{realm}/groups
+                        查看组(部门)信息：
+                            GET /auth/admin/{realm}/groups
+                            GET /auth/admin/{realm}/groups/{id}
+                        更新组(部门)信息：PUT /auth/admin/{realm}/groups/{id} 忽略子组
+                        删除组(部门)：DELETE /auth/admin/{realm}/groups/{id}  包括子组
+                        设置或创建子组(部门)信息：POST /auth/admin/{realm}/groups/{id}/children
+                        获取组(部门)下的用户(员工)列表: GET /{realm}/groups/{id}/members
+
+            5.2 定义：API中需要的各种参数定义。
+
+
+2.感悟：
+    keycloak：是一个服务器，也是一个数据库。存储用户名和密码。核心对象OAuth2Auth
+    别人项目在初始化的时候，往keycloak中存入用户名和密码。url=keycloak地址，realm=用户名，credentials=密码
+    当别人请求它们的项目时，它们根据传来的relam用户名去keycloak中查询是否存在，然后获取密码，只有有密码才能继续进行后续操作

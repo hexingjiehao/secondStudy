@@ -1,0 +1,264 @@
+1.数据库的学习：
+    0.sql语句调优的策略：
+        每条sql语句都是独立的,当进行查询的时候，最好不要用到子查询。
+        可以先按照正常思维写出复杂的过滤条件。再根据离散数据的合并思想，简化sql语句。尽量做到给定多少条件，就只使用最少的字段进行过滤。
+    1.oracle:
+        常用函数：
+            1.字符函数：
+                concat(str1,str2)：字符串拼接
+                initcap(str)：单词首字母大写函数
+                lower(str)/upper(str): 字符转化为小写/大写
+                replace(srcStr,findStr,repStr): 替换字符串中的制定字符
+                trim(desStr,findStr): 删除字符串两边的指定字符串
+                substr(desStr,startIndex,number): 截取指定范围的字符串
+                length(str): 返回字符串长度
+            2.数学函数：
+                abs(x): 数字的绝对值
+                ceil(x)/floor(x): 返回>=的最小整数值 / <=的最大整数值
+                mod(x,y): 返回x%y的余数
+                power(x,y)/sqrt(x): 返回x的y次幂/ x的平方根
+                round(x,num):四舍五入,保留小数点左右几位
+            3.日期函数：
+                SYSDATE：获取当前日期
+            4.转换函数：
+                to_char(date,format): 转化为字符串
+                to_date(str,format): 转化为日期
+            5.分组统计函数：
+                avg(column): 平均值
+                count(*)：记录数
+                max(column)/min(column): 最大值/最小值
+                sum(column): 求和
+            6.集合函数：略
+            7.对象函数：略
+            8.其他函数：
+                decode(column,cmpStr1,res1,cmpStr2,res2,...,default)：  逐个比较,相同则取值.否则取默认值
+                nvl(column,value1):判断是否为null,不是才返回value1
+                nvl2(column,value1,value2):判断不是null,返回value1,否则返回value2
+
+        分页操作：rownum。row_number()。--(起始下标，,每页大小,排序字段名)
+            select a.*,ROWNUM from table a where ROWNUM<=(startIndex+pageSize);
+            select t.*,row_number() over(order by money) as rownumber from table;
+        sql优化：
+            执行过程：
+                1.client提交sql
+                2.计算sql的hash值
+                3.判断sql缓存区中是否有相同hash值
+                4.没有缓存
+                    4.1生成sql执行计划
+                    4.2将sql执行计划放入sql缓存区
+                5.有缓存
+                    5.1逐个链表确认是否是相同sql
+                    5.2取出缓存的sql执行计划
+                6.执行sql
+                7.返回数据
+            法则：
+                1.增加资源
+                2.减少cpu及内存开销
+                3.减少网络传输
+                4.减少磁盘访问
+            措施：
+                1.字段加索引
+                2.临时表
+                3.复杂sql拆分为多个sql
+                4.使用DECODE来减少处理时间
+        distinct关键字：
+            只能修饰在所有字段最前面，否则无效，且多个字段时是组合过滤
+        row_number()函数和over()函数：
+            row_number()进行表记录标号，over()跟在后面进行排序和分组
+            select row_number() over(partition by course order by score) as t from  student :查询数据，按照课程分组，按照分数排序
+        常用的sql示例：
+            删除重复数据并保留id值最小的记录：
+                1.用rowid方法:
+                    查数据：
+                    　　select * from table1 a where rowid =(select min(rowid)
+                    　　from table1 b where a.name1=b.name1……)
+                    删数据：(推荐)
+                    　　delete from table1 a where rowid !=(select min(rowid)
+                    　　from table1 b where a.name1=b.name1)
+                2.用group by方法
+                    　查数据：
+                    　　select count(num),min(name) from student
+                        group by num having count(num) >1
+                    　删数据：
+                    　　delete from student
+                        group by num having count(num) >1 ----这里删除了所有重复的记录
+                3.用distinct方法:使用创建临时表的方法
+                    create table table_new as select distinct * from table1
+                    truncate table table1;
+                    insert into table1 select * from table_new;----这里没有要求最值
+    2.mysql:
+        常用函数：(只列举和oracle不一样的)
+            字符函数：
+                substring(str,pos): 从字符串指定位置向右返回字符串
+                reverse(str): 字符串反转
+            数学函数：
+                ceiling(X):返回>=X的最小整数
+            日期函数：
+                now(): 当前时间
+                dayofweek('yyyy-mm-dd')： 放回指定时间是星期几。2=星期一
+            条件判断函数：
+                SELECT CASE column1 WHEN cmp1 THEN value1 WHEN cmp2 THEN valu2 ELSE default END： 等价于if/else
+                IF( exp ,value1,value2 ): 如果表达式成立，返回value1否则返回value2
+            系统信息函数:
+                charset(str): 返回字符串的字符集
+            加密函数:
+                password(str): 加密
+                MD5(str): 加密
+                encode(str,salt)/decode(str,salt) : 使用盐加密解密
+            格式化函数：
+                format(num, 2) :保留小数点后几位
+                convert(str,using gbk) : 将字符串转化为指定字符集的字符串
+
+
+        分页操作：limit。(起始下标,每页的大小)
+            select * from table limit startIndex,pageSize;
+        sql优化：
+            1.字段加索引
+            2.临时表
+            3.复杂sql拆分为多个sql
+
+    3.sqlserver:
+        常用函数：
+        分页操作：top,row_number()--(显示记录数)
+            select top pageSize o.* from table;
+            select row_number() over(order by orderColumn) as rownumber,* from table;
+
+    4.mongodb:
+        特点：
+            mongodb侧重于高数据写入性能，而非事务安全。
+            mongodb的副本集配置容易保证数据的高可用性。
+            数据量大且表结构不定的时候。
+            基于位置的数据查询，mongodb支持二维空间索引。
+            2000条/秒的数据写入，算是速度较快了。
+        适用场景： (和sql有关且复杂的系统不适合mongo,比如高度复杂的sql事务)
+            网站数据： 实时数据的操作、复制及高度伸缩性。
+            缓存： 可用作缓存，持久化数据
+            大尺寸低价值数据：  以往的关系数据库存储昂贵的数据
+            高伸缩性场景： 集群数据库，支持mapReduce
+            对象或者json数据的存储： BSON格式数据适合文档化格式的存储和查询
+
+
+
+2.String类的深入研究：
+    常用函数：
+        charAt(num): 查找指定位置的字符
+        getBytes(str): 将字符串转化为byte[]
+        equals(str): 比较字符串地址或者内容值
+        compareTo(str): 比较字符串的大小,字典序和长度，负数为小
+        hashcode(): 字符串的hash值,31的倍数
+    相似类的比较：
+        String: 速度最慢，不可变字符串常量。不断创建并回收。适用于少量字符串
+        StringBuilder: 速度最快，可变字符串变量，直接操作，线程不安全，没有synchronized。大量单线程
+        StringBuffer: 速度快，可变字符串变量，直接操作，线程安全，有synchronized锁方法。大量并发多线程
+
+3.系统之间的数据传输：
+    Socket方式：基于udp/tcp传输层协议
+        http调用：数据接口
+        java远程调用：rpc协议,springcloud,dubbo
+        webservices: wsdl
+    ftp/文件共享服务器：(上传下载交互数据)
+    数据库共享：共用同一个服务器的数据
+    message方式：
+        消息队列：rabbitmq
+
+4.数据库的大数据量的稳定插入：(最好有代码)
+    我的方法：
+        没有事务控制，
+        当执行操作失败时,在异常处理中将结果写入sql语句到文本，
+        然后定时执行文本。如果文本的批量执行出错，在将文本的sql逐条的执行。报错的在异常中过滤掉，知道正常执行的执行完毕
+    行业惯例的处理方法：
+        大数据的概念：可能一个人访问网站，但是需要访问数据库种的上百万的数据，需要用到大数据的工具，比如storm,spark,hadoop等。这种是大数据
+        高并发的概念：可能数据库里面就只有1条记录，但是同一时间里有上百万的人访问。怎么确保数据的一致性问题。需要用到多线程和锁机制等。这种是高并发问题
+            并发伴随着多线程，同时多线程也伴随者数据的同步问题。解决方案是:锁=java代码层面的锁+数据库层面的锁
+            java同步锁：synchronized+volatile+final+lock+condition+cas算法
+            数据库的锁机制：悲观锁(传统物理锁)+乐观锁。都是关于写锁
+                数据的修改来源：java代码的修改+人为通过客户端修改
+                悲观锁举例：
+                    效果：for update锁住指定记录后，另外系统修改记录时会阻塞住，直到进行了commit; 但是查询是不会阻塞的
+                    定义：select * from account where name=”Erica” for update：该sql在本次事务提交之前自动释放数据库层面的锁之前,外界无法修改这些记录。
+                    hibernate的实现：  query.setLockMode("user",LockMode.UPGRADE);
+                    sql语句层面实现： 在sql语句的最后加上(mysql库)for update/(oracle库)for update nowait。悲观锁加锁成功。
+                    应用代码中设置这些物理锁：Criteria.setLockMode
+                                           Query.setLockMode
+                                           Session.lock
+                    注意事项：加物理锁需要在事务中间，即begin和commit中间。否则锁无效
+                             根据select的过滤条件判断究竟是锁全部数据(锁表)还是锁一部分的记录(锁行)
+                乐观锁举例：(更相当于一种算法技巧)
+                    适用场景：事务比较长的操作
+                    底层实现：基于数据版本Version记录机制实现。基于表操作，添加version字段，读取数据时，将此版本号一同读出，之后更新时，对此版本号加一。
+                             如果此时有另一个用户操作相同记录，如果版本号小于数据库中的版本号，则操作过期，数据库驳回请求。
+                             可能存在人为通过客户端修改数据的情况，造成脏读。因此可以将乐观锁应用于存储过程，对外提供存储过程，不提供表。
+                    hibernate的实现：在xxx.hbm.xml中的bean配置中增加<version column="version" name="version"  />配置
+                    mybatis的实现：在update语句中附带version字段的过滤
+                                  update account_wallet set user_amount = #{userAmount,jdbcType=DECIMAL},
+                                         version = version + 1
+                                         where id =#{id,jdbcType=INTEGER} and version = #{version,jdbcType=INTEGER}
+                    注意事项:加物理锁需要在事务中间，即begin和commit中间。否则锁无效
+                    具体代码：int target = accountWalletService.updateAccountWallet(wallet);这里没有增加事务
+            高并发的插入数据问题：(先查找，有则update,无则insert,加unique约束)
+                1.使用缓存：原子操作插入记录，确保后面的save只有1个线程
+                    插入成功则删除缓存，确保空间足够，衍生出的数据重复问题。如何安全的删除缓存：
+                        添加标志位。在 save之前修改标志位，finally中判断标志位后再删除
+                        public void doTestForInsert(Order order){
+                               String key=null;
+                               boolean needDel=false;
+                               try{
+                                   Order orderInDB = orderDao.findByName(order.getOrderNo());
+                                   //查DB，如果数据库已经有则抛出异常
+                                   if(null != orderInDB)
+                                      throw new Exception("the order has been exist!");
+                                   key=order.getOrderNo();
+                                   //插缓存，原子性操作，插入失败 表明已经存在
+                                   if(!MemcacheUtil.add(key, order, MemcacheUtil.getExpiry(UNIT.MINUTE, 1)))
+                                      throw new Exception("the order has been exist!");
+                                   needDel=true;
+                                   //插DB
+                                   orderDao.save(order);
+                               }catch (Exception e) {
+                                   e.printStackTrace();
+                               }finally{
+                                   if(needDel)
+                                      MemcacheUtil.del(key);
+                               }
+                        }
+                2.使用异常机制：insert失败，则在catch中执行update操作...(不彻底)
+                    多台服务器之间，在代码块上增加synchronized:
+                    if (该订单在数据库表中存在) {
+                        update();
+                    } else {
+                        synchronized (this) {
+                            if (该订单在数据库表中存在) {
+                                update();
+                            } else {
+                                try {
+                                    insert();
+                                    } catch (InvocationTargetException e) {
+                                    update();
+                                }
+                            }
+                        }
+                    }
+        大数据和高并发的结合：不仅数据库有上百万的数据，而且同一时间有上百万的用户访问，每个用户访问需要的数据量是上百万的。这种最复杂。
+    大数据量的批量插入方法：
+        1.原生sql：简单的事务包含起来。conn.setAutoCommit(false)->pst.executeBatch()-> conn.commit();
+        2.mybatis: 和数据库相关sql。<foreach collection="list" index="" item="item" separator="union all">
+        进阶操作：高并发插入批量数据--使用多线程,将插入操作放在线程的run方法中
+            可能出现的问题：多条数据的id重复：(解决办法如下)
+                            mysql中insert语句中添加ignore关键字,前提是逐渐要加逐渐或者唯一索引
+                            使用先查找，再插入思想。使用synchronized锁定插入语句块。如果存在可用异常处理
+                          插入的效率低下：(解决办法如下)
+                            使用多线程,将拆分list,分开插入。
+            代码实验后的效果：jdbc+mysql+10个线程+10万数据=花费50秒左右，将近1800~2000条/秒
+                            用到了ignore,用到了多线程，用到了addBatch(),用到了ExecutorService线程池,用到了CountDownLatch计数器
+
+
+5.常见的sql查询语句的区别：
+    count(*): 统计记录数
+    count(1)/count(列名): 统计记录数，但是会忽略值为NULL的记录
+
+6.数据库事务：
+    4个特性：
+        原子性(Atomicity)：整个事务中的所有操作，要么全部完成，要么全部不完成，不可能停滞在中间某个环节
+        一致性(Consistency)：事务必须始终保持系统处于一致的状态，不管在任何给定的时间并发事务有多少。
+        隔离性(Isolation)：隔离状态执行事务，使它们好像是系统在给定时间内执行的唯一操作
+        持久性(Durability)：在事务完成以后，该事务对数据库所作的更改便持久的保存在数据库之中，并不会被回滚。

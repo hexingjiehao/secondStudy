@@ -1,0 +1,562 @@
+1.使用docker-compose部署zeebe和它的监视器
+    1.官网地址：https://github.com/zeebe-io/zeebe-docker-compose
+    2.使用命令行部署bpmn流程图：🌿🌿🌿
+        2.1 可以在容器启动时执行命令，通过shell命令就将bpmn流程文件进行部署。
+                系统和对应命令：Operating System	zbctl binary
+                                Linux	            bin/zbctl
+                                OS X	            bin/zbctl.darwin
+                                Windows	            bin/zbctl.exe
+                具体命令：cd zeebe-docker-compose
+                         bin/zbctl deploy ../path/to/your-file.bpmn
+        2.2 进入部署的docker容器中：🌿🌿🌿这样就可以执行上面的命令来初始化流程了。和volumn进行搭配使用
+                docker exec -it 容器名 bash
+    3.一些重要命令：
+        docker volumn ls: 列出持久化卷
+        docker volume rm operate_zeebe_data：删除持久化卷
+        docker volume rm operate_zeebe_elasticsearch_data
+
+    4.真正重要的部署docker-compose文件：🌿🌿🌿🌿🌿
+        4.1 只有zeebe的启动，单个broker
+                version: "2"
+
+                services:
+                  zeebe:
+                    restart: always
+                    container_name: zeebe_broker
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                    ports:
+                      - "26500:26500"
+                      - "9600:9600"
+        4.2 zeebe的集群部署，3个节点的配置。需要将官方的zeebe.cfg.toml放在docker-compose.yml的相同目录下
+                version: "2"
+
+                networks:
+                  zeebe_network:
+                    driver: bridge
+
+                services:
+                  node0:
+                    container_name: zeebe_broker_1
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_NODE_ID=0
+                      - ZEEBE_PARTITIONS_COUNT=2
+                      - ZEEBE_REPLICATION_FACTOR=3
+                      - ZEEBE_CLUSTER_SIZE=3
+                      - ZEEBE_CONTACT_POINTS=node0:26502
+                    ports:
+                      - "26500:26500"
+                    volumes:
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+
+                  node1:
+                    container_name: zeebe_broker_2
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_NODE_ID=1
+                      - ZEEBE_PARTITIONS_COUNT=2
+                      - ZEEBE_REPLICATION_FACTOR=3
+                      - ZEEBE_CLUSTER_SIZE=3
+                      - ZEEBE_CONTACT_POINTS=node0:26502
+                    volumes:
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+                    depends_on:
+                      - node0
+
+                  node2:
+                    container_name: zeebe_broker_3
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_NODE_ID=2
+                      - ZEEBE_PARTITIONS_COUNT=2
+                      - ZEEBE_REPLICATION_FACTOR=3
+                      - ZEEBE_CLUSTER_SIZE=3
+                      - ZEEBE_CONTACT_POINTS=node0:26502
+                    volumes:
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+                    depends_on:
+                      - node1
+        4.3 zeebe+operate+elasticsearch+kibana的部署: 需要增加额外两个配置文件zeebe.cfg.toml和application.yml。operate的登录名和密码：demo/demo
+                version: "2"
+
+                networks:
+                  zeebe_network:
+
+                volumes:
+                  zeebe_data:
+                  zeebe_elasticsearch_data:
+
+                services:
+                  elasticsearch:
+                    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.7.1
+                    ports:
+                      - "9200:9200"
+                    environment:
+                      - discovery.type=single-node
+                      - cluster.name=elasticsearch
+                      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+                    volumes:
+                      - zeebe_elasticsearch_data:/usr/share/elasticsearch/data
+                    networks:
+                      - zeebe_network
+
+                  zeebe:
+                    image: camunda/zeebe:0.21.1
+                    ports:
+                      - "26500:26500"
+                      - "9600:9600"
+                    volumes:
+                      - zeebe_data:/usr/local/zeebe/data
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    depends_on:
+                      - elasticsearch
+                    networks:
+                      - zeebe_network
+
+                  operate:
+                    image: camunda/operate:1.1.0
+                    ports:
+                      - "8080:8080"
+                    volumes:
+                      - ./application.yml:/usr/local/operate/config/application.yml
+                    depends_on:
+                      - elasticsearch
+                      - zeebe
+                    networks:
+                      - zeebe_network
+
+                  kibana:
+                    image: docker.elastic.co/kibana/kibana-oss:6.7.1
+                    ports:
+                      - "5601:5601"
+                    depends_on:
+                      - elasticsearch
+                      - zeebe
+                      - operate
+                    networks:
+                      - zeebe_network
+            4.3.1 zeebe.cfg.toml文件的内容：
+                    [[exporters]]
+                    id = "elasticsearch"
+                    className = "io.zeebe.exporter.ElasticsearchExporter"
+                    [exporters.args]
+                    url = "http://elasticsearch:9200"
+                    [exporters.args.bulk]
+                     delay = 5
+                     size = 1_000
+
+                     [exporters.args.index]
+                     prefix = "zeebe-record"
+                     createTemplate = true
+
+                     command = false
+                     event = true
+                     rejection = false
+
+                     deployment = true
+                     incident = true
+                     job = true
+                     message = false
+                     messageSubscription = false
+                     raft = false
+                     workflowInstance = true
+                     workflowInstanceSubscription = false
+            4.3.2 application.yml文件的内容：
+                    # Operate configuration file
+
+                    camunda.operate:
+                      elasticsearch:
+                        clusterName: elasticsearch
+                        host: elasticsearch
+                        port: 9200
+
+                      zeebe:
+                        brokerContactPoint: zeebe:26500
+
+                      zeebeElasticsearch:
+                        clusterName: elasticsearch
+                        host: elasticsearch
+                        port: 9200
+                        prefix: zeebe-record
+
+                    logging:
+                      level:
+                        ROOT: INFO
+                        org.camunda.operate: DEBUG
+
+                    management.endpoints.web.exposure.include: health,info,conditions,configprops,prometheus
+        4.4 zeebe+simple-monitor监视器的使用，需要额外的导出jar包:zeebe-hazelcast-exporter-0.6.0-jar-with-dependencies.jar
+                version: "2"
+
+                networks:
+                  zeebe_network:
+                    driver: bridge
+
+                services:
+                  zeebe:
+                    container_name: zeebe_broker
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                    ports:
+                      - "26500:26500"
+                      - "9600:9600"
+                      - "5701:5701"
+                    volumes:
+                      - ./zeebe-hazelcast-exporter-0.6.0-jar-with-dependencies.jar:/usr/local/zeebe/lib/zeebe-hazelcast-exporter.jar
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+
+                  monitor:
+                    container_name: zeebe_monitor
+                    image: camunda/zeebe-simple-monitor:0.16.0
+                    environment:
+                      - io.zeebe.monitor.connectionString=zeebe:26500
+                      - io.zeebe.monitor.hazelcast.connection=zeebe:5701
+                    ports:
+                      - "8082:8080"
+                    depends_on:
+                      - zeebe
+                    restart: always
+                    networks:
+                      - zeebe_network
+            4.4.1 zeebe.cfg.toml文件的内容：
+                    [[exporters]]
+                    id = "hazelcast"
+                    className = "io.zeebe.hazelcast.exporter.HazelcastExporter"
+
+                      [exporters.args]
+                      # comma separated list of io.zeebe.protocol.record.ValueType
+                      enabledValueTypes = "JOB,WORKFLOW_INSTANCE,DEPLOYMENT,INCIDENT,TIMER,VARIABLE,MESSAGE,MESSAGE_SUBSCRIPTION,MESSAGE_START_EVENT_SUBSCRIPTION"
+                      updatePosition = true
+        4.5 zeebe+eventstore组合使用，eventstore是一个事件存储导出器🌿🌿🌿🌿🌿
+            可以通过网页访问：http://localhost:2113。用户名密码：admin / changeit
+            这里也许需要一个额外的导出器zeebe-eventstore-exporter-1.0-SNAPSHOT.jar
+                version: "2"
+
+                networks:
+                  zeebe_network:
+                    driver: bridge
+
+                services:
+                  eventstore:
+                    container_name: eventstore
+                    image: eventstore/eventstore
+                    ports:
+                      - "2113:2113"
+                      - "1113:1113"
+                    networks:
+                      - zeebe_network
+
+                  zeebe:
+                    container_name: zeebe_broker
+                    image: camunda/zeebe:0.19.0
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - EVENT_STORE_EXPORTER_URL=http://eventstore:2113
+                      - EVENT_STORE_EXPORTER_BATCH_TIME_MILLI=300
+                      - EVENT_STORE_EXPORTER_BATCH_SIZE=100
+                      - EVENT_STORE_EXPORTER_STREAM_NAME=zeebe
+                    ports:
+                      - "26500:26500"
+                    volumes:
+                      - ./zeebe-eventstore-exporter-1.0-SNAPSHOT.jar:/usr/local/zeebe/lib/zeebe-eventstore-exporter-1.0-SNAPSHOT.jar
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+                    depends_on:
+                      - eventstore
+            4.5.1 zeebe.cfg.toml文件的内容：
+                    [[exporters]]
+                    id = "eventstore"
+                    className = "io.zeebe.EventStoreExporter"
+        4.6 zeebe+debug的过滤导出器，需要额外的jar包：zeebe-filtered-debug-exporter-1.0-SNAPSHOT.jar
+                version: "2"
+
+                networks:
+                  zeebe_network:
+                    driver: bridge
+
+                services:
+                  zeebe:
+                    container_name: zeebe_broker
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                    ports:
+                      - "26500:26500"
+                    volumes:
+                      - ./zeebe-filtered-debug-exporter-1.0-SNAPSHOT.jar:/usr/local/zeebe/lib/zeebe-filtered-debug-exporter.jar
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+            4.6.1 zeebe.cfg.toml文件的内容：
+                    [[exporters]]
+                    id="debug"
+                    className="io.zeebe.FilteredDebugExporter"
+                    [exporters.args]
+                      logLevel = "debug"
+                      prettyPrint = false
+        4.7 zeebe+operate+simple-monitor+kibana三个监视器的组合使用：需要上述的额外jar包zeebe-hazelcast-exporter-0.6.0-jar-with-dependencies.jar
+                version: "2"
+
+                volumes:
+                  zeebe_data:
+                  zeebe_elasticsearch_data:
+
+                networks:
+                  zeebe_network:
+                    driver: bridge
+
+                services:
+                  elasticsearch:
+                    container_name: elasticsearch
+                    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.7.1
+                    ports:
+                        - "9200:9200"
+                    environment:
+                        - discovery.type=single-node
+                        - cluster.name=elasticsearch
+                        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+                    volumes:
+                        - zeebe_elasticsearch_data:/usr/share/elasticsearch/data
+                    networks:
+                        - zeebe_network
+
+                  zeebe:
+                    container_name: zeebe_broker
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                    ports:
+                      - "26500:26500"
+                      - "9600:9600"
+                      - "5701:5701"
+                    volumes:
+                      - ./zeebe-hazelcast-exporter-0.6.0-jar-with-dependencies.jar:/usr/local/zeebe/lib/zeebe-hazelcast-exporter.jar
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    depends_on:
+                      - elasticsearch
+                    networks:
+                      - zeebe_network
+
+                  operate:
+                    container_name: operate
+                    image: camunda/operate:1.1.0
+                    ports:
+                    - "8080:8080"
+                    volumes:
+                    - ./application.yml:/usr/local/operate/config/application.yml
+                    depends_on:
+                      - elasticsearch
+                      - zeebe
+                    networks:
+                    - zeebe_network
+
+                  kibana:
+                    container_name: kibana
+                    image: docker.elastic.co/kibana/kibana-oss:6.7.1
+                    ports:
+                    - "5601:5601"
+                    depends_on:
+                      - elasticsearch
+                      - zeebe
+                      - operate
+                    networks:
+                    - zeebe_network
+
+                  monitor:
+                    container_name: zeebe_monitor
+                    image: camunda/zeebe-simple-monitor:0.16.0
+                    environment:
+                      - io.zeebe.monitor.connectionString=zeebe:26500
+                      - io.zeebe.monitor.hazelcast.connection=zeebe:5701
+                    ports:
+                      - "8082:8080"
+                    depends_on:
+                      - zeebe
+                    restart: always
+                    networks:
+                      - zeebe_network
+            4.7.1 zeebe.cfg.toml文件的内容：
+                    [[exporters]]
+                    id = "elasticsearch"
+                    className = "io.zeebe.exporter.ElasticsearchExporter"
+                    [exporters.args]
+                    url = "http://elasticsearch:9200"
+                    [exporters.args.bulk]
+                     delay = 5
+                     size = 1_000
+
+                     [exporters.args.index]
+                     prefix = "zeebe-record"
+                     createTemplate = true
+
+                     command = false
+                     event = true
+                     rejection = false
+
+                     deployment = true
+                     incident = true
+                     job = true
+                     message = false
+                     messageSubscription = false
+                     raft = false
+                     workflowInstance = true
+                     workflowInstanceSubscription = false
+
+                    [[exporters]]
+                    id = "hazelcast"
+                    className = "io.zeebe.hazelcast.exporter.HazelcastExporter"
+
+                      [exporters.args]
+                      # comma separated list of io.zeebe.protocol.record.ValueType
+                      enabledValueTypes = "JOB,WORKFLOW_INSTANCE,DEPLOYMENT,INCIDENT,TIMER,VARIABLE,MESSAGE,MESSAGE_SUBSCRIPTION,MESSAGE_START_EVENT_SUBSCRIPTION"
+                      updatePosition = true
+            4.7.2 application.yml文件的内容：
+                    # Operate configuration file
+
+                    camunda.operate:
+                      elasticsearch:
+                        clusterName: elasticsearch
+                        host: elasticsearch
+                        port: 9200
+
+                      zeebe:
+                        brokerContactPoint: zeebe:26500
+
+                      zeebeElasticsearch:
+                        clusterName: elasticsearch
+                        host: elasticsearch
+                        port: 9200
+                        prefix: zeebe-record
+
+                    logging:
+                      level:
+                        ROOT: INFO
+                        org.camunda.operate: DEBUG
+
+                    management.endpoints.web.exposure.include: health,info,conditions,configprops,prometheus
+        4.8 单独的网关模式：3个集群zeebe外加1个网管zeebe，主要是配置zeebe.cfg.toml和gateway.cfg.toml。暂时里面为空
+                version: "2"
+
+                networks:
+                  zeebe_network:
+                    driver: bridge
+
+                services:
+
+                  gateway:
+                    container_name: gateway
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_STANDALONE_GATEWAY=true
+                      - ZEEBE_GATEWAY_CONTACT_POINT=node0:26502
+                      - ZEEBE_GATEWAY_CLUSTER_PORT=26502
+                      - ZEEBE_GATEWAY_CLUSTER_HOST=gateway
+                    ports:
+                      - "26500:26500"
+                    volumes:
+                      - ./gateway.cfg.toml:/usr/local/zeebe/conf/gateway.cfg.toml
+                    networks:
+                      - zeebe_network
+
+                  node0:
+                    container_name: zeebe_broker_1
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_NODE_ID=0
+                      - ZEEBE_PARTITIONS_COUNT=2
+                      - ZEEBE_REPLICATION_FACTOR=3
+                      - ZEEBE_CLUSTER_SIZE=3
+                      - ZEEBE_CONTACT_POINTS=node0:26502
+                    ports:
+                      - "26600:26500"
+                    volumes:
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+
+                  node1:
+                    container_name: zeebe_broker_2
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_NODE_ID=1
+                      - ZEEBE_PARTITIONS_COUNT=2
+                      - ZEEBE_REPLICATION_FACTOR=3
+                      - ZEEBE_CLUSTER_SIZE=3
+                      - ZEEBE_CONTACT_POINTS=node0:26502
+                    volumes:
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+                    depends_on:
+                      - node0
+
+                  node2:
+                    container_name: zeebe_broker_3
+                    image: camunda/zeebe:0.21.1
+                    environment:
+                      - ZEEBE_LOG_LEVEL=debug
+                      - ZEEBE_NODE_ID=2
+                      - ZEEBE_PARTITIONS_COUNT=2
+                      - ZEEBE_REPLICATION_FACTOR=3
+                      - ZEEBE_CLUSTER_SIZE=3
+                      - ZEEBE_CONTACT_POINTS=node0:26502
+                    volumes:
+                      - ./zeebe.cfg.toml:/usr/local/zeebe/conf/zeebe.cfg.toml
+                    networks:
+                      - zeebe_network
+                    depends_on:
+                      - node1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
