@@ -10,7 +10,9 @@ public abstract class BeanUtils {
     @SuppressWarnings("unchecked")
     public static <T> T cloneTo(T src) throws RuntimeException {
 
+        //这个是一个中间管道
         ByteArrayOutputStream memoryBuffer = new ByteArrayOutputStream();
+
         ObjectOutputStream out = null;
         ObjectInputStream in = null;
         T dist = null;

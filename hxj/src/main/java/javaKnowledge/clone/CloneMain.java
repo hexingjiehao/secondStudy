@@ -49,7 +49,7 @@ public class CloneMain {
         System.out.println(companyThree==companyOne);            //false
         System.out.println(companyThree.equals(companyOne));    //true
 
-        System.out.println(companyThree.getUser()==companyOne.getUser());            //true ? 这里为什么不是false呢
+        System.out.println(companyThree.getUser()==companyOne.getUser());            //false
         System.out.println(companyThree.getUser().equals(companyOne.getUser()));    //true
     }
 
