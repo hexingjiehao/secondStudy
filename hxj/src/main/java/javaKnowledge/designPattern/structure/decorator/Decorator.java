@@ -6,6 +6,8 @@ import javaKnowledge.designPattern.create.simpleFactory.CommonInterface;
  * Created by xiongjie on 2018/11/18.
  *
  * AOP编程就是使用装饰者模式
+ *
+ * 本质是：自己实现接口，同时将接口作为自己的成员
  */
 public class Decorator implements CommonInterface {
 

@@ -5,6 +5,7 @@ import javaKnowledge.designPattern.structure.decorator.Source;
 
 /**
  * Created by xiongjie on 2018/11/18.
+ * 代理模式的本质：将继承接口，并将实现类作为自己的成员
  */
 public class Proxy implements CommonInterface {
 

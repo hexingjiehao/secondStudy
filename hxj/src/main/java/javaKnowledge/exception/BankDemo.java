@@ -11,8 +11,7 @@ public class BankDemo {
         Object o=new Object();
         System.out.println("Depositing $500...");
         c.deposit(500.00);
-        try
-        {
+        try {
             System.out.println("Withdrawing $100...");
             c.withdraw(100.00);
             System.out.println("Withdrawing $600...");

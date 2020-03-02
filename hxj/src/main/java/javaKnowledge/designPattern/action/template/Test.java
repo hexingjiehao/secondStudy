@@ -5,6 +5,8 @@ import javaKnowledge.designPattern.action.strategy.Plus;
 
 /**
  * Created by xiongjie on 2018/11/18.
+ * 本质是：同时继承抽象类和实现接口
+ *        有点像变体般的switch
  */
 public class Test {
 

@@ -6,6 +6,7 @@ import java.util.Vector;
  * Created by xiongjie on 2018/11/18.
  *
  * 享元模式有单例，共享变量，有多线程,有池子
+ * 本质是：使用锁来获取和释放集合池子
  */
 public class ConnectionPool {
 

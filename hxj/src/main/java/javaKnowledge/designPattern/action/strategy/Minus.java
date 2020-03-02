@@ -2,6 +2,7 @@ package javaKnowledge.designPattern.action.strategy;
 
 /**
  * Created by xiongjie on 2018/11/18.
+ * 本质是：同时继承抽象类实现接口
  */
 public class Minus extends AbstractCalc implements Cacl {
 

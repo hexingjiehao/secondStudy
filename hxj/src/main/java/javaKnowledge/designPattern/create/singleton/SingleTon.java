@@ -2,6 +2,7 @@ package javaKnowledge.designPattern.create.singleton;
 
 /**
  * Created by xiongjie on 2018/11/18.
+ * 本质是：私有构造方法，静态同步获取对象方法
  */
 public class SingleTon {
 

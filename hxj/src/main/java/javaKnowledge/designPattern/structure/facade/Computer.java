@@ -2,6 +2,7 @@ package javaKnowledge.designPattern.structure.facade;
 
 /**
  * Created by xiongjie on 2018/11/18.
+ * 外观模式的本质：类似于切面编程。将对象作为自己成员，自己也实现被调用方法。在实际调用的前后端增加点东西。
  */
 public class Computer {
 
