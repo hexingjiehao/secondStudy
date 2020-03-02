@@ -30,7 +30,7 @@ public class WaitNotify {
                 while(flag){
                     try {
                         System.out.println(Thread.currentThread().getName()+" flag is "+flag+" waiting "+ LocalTime.now());
-                        lock.wait();
+                        lock.wait();    //lock.wait将会释放锁，然后该线程从运行态转化为就绪状态
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

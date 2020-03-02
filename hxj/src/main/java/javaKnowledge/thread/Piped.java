@@ -7,6 +7,7 @@ import java.io.PipedWriter;
 
 /**
  * Created by xiongjie on 2018/10/27.
+ * 这是从控制台进行阻塞的读写操作
  */
 public class Piped {
 

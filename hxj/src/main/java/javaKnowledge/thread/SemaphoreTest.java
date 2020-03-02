@@ -7,6 +7,8 @@ import java.util.concurrent.Semaphore;
 /**
  * Created by xiongjie on 2018/10/29.
  * 测试信号量的并发使用
+ *
+ * 信号量就好比线程池，我有，你就能继续跑，没有就阻塞等着。
  */
 public class SemaphoreTest {
 

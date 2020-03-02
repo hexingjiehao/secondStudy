@@ -64,6 +64,7 @@ public class ConCurrencyTest {
         for (long j=0;j<count;j++) {
             System.out.println("main thread is running,value="+j);
         }
+        //thread.join的作用更像是插队。
         thread.join();
         long time=System.currentTimeMillis()-start;
         System.out.println("concurrency take time is "+time+" ms");

@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class MapThreadLocal {
 
-    //此时绑定再main线程上,类似于getSet方法
+    //此时绑定在main线程上,类似于getSet方法
     private static final ThreadLocal<Long> threadlocal=new ThreadLocal<Long>(){
         @Override
         protected Long initialValue() {

@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 public class SafeStopThread {
 
     /**
-     * 使用interrupt和标记位判断安全终止线程
+     * 使用interrupt和标记位判断安全终止线程。中断方法有时候并不能让线程终止，只是标记状态。安全停止，还是要线程内部执行完成才行。
      * @param args
      */
     public static void main(String[] args) throws InterruptedException {
