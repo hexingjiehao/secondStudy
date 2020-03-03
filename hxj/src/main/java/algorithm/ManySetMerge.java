@@ -33,6 +33,7 @@ public class ManySetMerge {
                 int bleft=b.left; int bright=b.right;
                 int vleft=border.left; int vright=border.right;
 
+                //判断两个箱子是否能合并，关键是有序的
                 Border cur=null;
                 if(flag==true){
                     result.add(b);cur=b;

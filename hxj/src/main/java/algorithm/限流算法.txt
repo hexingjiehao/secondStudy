@@ -89,7 +89,7 @@
         2.可以被消费数量
     本质：降低流量保证应用的高可用
     单个应用限流：RateLimiter实现令牌桶
-    分布式环境的限流：redi或者infinispan
+    分布式环境的限流：redis或者infinispan
     应用场景：一般用于接口的限流，限制http请求。
 
 

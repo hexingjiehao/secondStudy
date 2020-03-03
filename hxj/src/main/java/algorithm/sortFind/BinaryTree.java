@@ -229,7 +229,7 @@ public class BinaryTree {
     }
 
     /**
-     * 深度优先遍历
+     * 深度优先遍历----也是根左右的遍历方式
      * @param node
      */
     public static void depthOrderTraverse(Node node) {

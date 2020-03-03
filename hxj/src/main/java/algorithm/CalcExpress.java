@@ -26,6 +26,7 @@ public class CalcExpress {
         Stack opStack=new Stack();
         for(char s:arr){
             if(s>='0' && s<='9'){
+                //这样只能处理个位数的操作
                 numStack.push(Integer.parseInt(s+""));
             }else if(opStack.isEmpty() ){
                 opStack.push(s);
