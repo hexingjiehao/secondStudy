@@ -10,19 +10,19 @@
             version: '2.1'
             services:
                 mysql:
-                    network_mode: "bridge"
+                    image: "mysql:5.5"
+                    restart: always
+                    ports:
+                        - "3306:3306"
                     environment:
                         MYSQL_ROOT_PASSWORD: "123456"       //表示root用户的密码
                         MYSQL_USER: 'admin'
                         MYSQL_PASS: '123456'
-                    image: "mysql:5.5"
-                    restart: always
                     volumes:
                         - "./db:/var/lib/mysql"
                         - "./my.cnf:/etc/my.cnf"
                         - "./init:/docker-entrypoint-initdb.d/"
-                    ports:
-                        - "3306:3306"
+                    network_mode: "bridge"
         my.cnf:
             [mysqld]
             user=mysql
@@ -46,7 +46,7 @@
             insert into user values(1, "zhangsan","test12345@qq.com","passwd","avaterpath");
             insert into user values(2, "lisi","12345test@qq.com","passwd","avaterpath");
     3.执行命令：
-        docker-compose pull: 将mysql的惊喜那个拉取下来
+        docker-compose pull: 将mysql的那个镜像拉取下来
         docker-compose up -d: 后台启动docker中的mysql容器
     4.部署mysql8.0版本：增加了额外的命令配置，可以通过navicat进行连接
         version: '2.1'

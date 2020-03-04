@@ -45,7 +45,7 @@
                         BOOTSTRAP: 设置内部系统分区的副本元素
                         ZEEBE_CONTACT_POINTS: 设置集群中其他brokers的连接点
                         DEPLOY_ON_KUBERNETES: 取值微true/false
-                注意：使用虚拟机虚拟该docker容器，至少需要分撇4GB的内存😺😺😺😺😺
+                注意：使用虚拟机虚拟该docker容器，至少需要分配4GB的内存😺😺😺😺😺
                     以下是docker-machine来运行docker容器：docker-machine也是需要安装的
                         docker-machine create --driver virtualbox --virtualbox-memory 4000 zeebe
                         docker-machine ls
@@ -72,7 +72,7 @@
                 创建一个工作流实例:
                     ./bin/zbctl create instance order-process --variables '{"orderId": 1234}'
                 完成一个工作流实例：
-                    需要微每个job创建一个worker
+                    需要为每个job创建一个worker
                     ./bin/zbctl create worker payment-service --handler cat &
                     ./bin/zbctl create worker inventory-service --handler cat &
                     ./bin/zbctl create worker shipment-service --handler cat &
@@ -410,6 +410,7 @@
                         .send()
                         .join();
 
+                    //这个操作表示该job问题解决，请继续往下执行🌿🌿🌿🌿🌿
                     client.newResolveIncidentCommand(incident.getKey())
                         .send()
                         .join();

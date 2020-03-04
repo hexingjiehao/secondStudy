@@ -35,7 +35,7 @@ postgres的in查询的效率问题：参考地址：https://www.cnblogs.com/zp90
 非常重要：⚠️⚠️⚠️⚠️⚠️
     1.在postgres的命令行中使用数组的方法：regexp_split_to_array('M437,M438',',')
         SELECT count(1) from material.material where realm_id=10001 and number = ANY(regexp_split_to_array('M437,M438',','));
-    2.在java中将数组传入postgres的调用方法：只能串字符串进去，使用逗号连接即可(,)
+    2.在java中将数组传入postgres的调用方法：只能传字符串进去，使用逗号连接即可(,)
         Java：
             String result="";
             int materialCount=numberList.size();

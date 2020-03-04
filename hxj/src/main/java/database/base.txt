@@ -8,7 +8,7 @@
                 concat(str1,str2)：字符串拼接
                 initcap(str)：单词首字母大写函数
                 lower(str)/upper(str): 字符转化为小写/大写
-                replace(srcStr,findStr,repStr): 替换字符串中的制定字符
+                replace(srcStr,findStr,repStr): 替换字符串中的指定字符
                 trim(desStr,findStr): 删除字符串两边的指定字符串
                 substr(desStr,startIndex,number): 截取指定范围的字符串
                 length(str): 返回字符串长度
@@ -44,11 +44,11 @@
                 2.计算sql的hash值
                 3.判断sql缓存区中是否有相同hash值
                 4.没有缓存
-                    4.1生成sql执行计划
-                    4.2将sql执行计划放入sql缓存区
+                    4.1 生成sql执行计划
+                    4.2 将sql执行计划放入sql缓存区
                 5.有缓存
-                    5.1逐个链表确认是否是相同sql
-                    5.2取出缓存的sql执行计划
+                    5.1 逐个链表确认是否是相同sql
+                    5.2 取出缓存的sql执行计划
                 6.执行sql
                 7.返回数据
             法则：
@@ -125,7 +125,7 @@
 
     4.mongodb:
         特点：
-            mongodb侧重于高数据写入性能，而非事务安全。
+            mongodb侧重于很高的数据写入性能，而非事务安全。
             mongodb的副本集配置容易保证数据的高可用性。
             数据量大且表结构不定的时候。
             基于位置的数据查询，mongodb支持二维空间索引。
@@ -165,9 +165,9 @@
     我的方法：
         没有事务控制，
         当执行操作失败时,在异常处理中将结果写入sql语句到文本，
-        然后定时执行文本。如果文本的批量执行出错，在将文本的sql逐条的执行。报错的在异常中过滤掉，知道正常执行的执行完毕
+        然后定时执行文本。如果文本的批量执行出错，在将文本的sql逐条的执行。报错的在异常中过滤掉，直到正常执行的执行完毕
     行业惯例的处理方法：
-        大数据的概念：可能一个人访问网站，但是需要访问数据库种的上百万的数据，需要用到大数据的工具，比如storm,spark,hadoop等。这种是大数据
+        大数据的概念：可能一个人访问网站，但是需要访问数据库中的上百万的数据，需要用到大数据的工具，比如storm,spark,hadoop等。这种是大数据
         高并发的概念：可能数据库里面就只有1条记录，但是同一时间里有上百万的人访问。怎么确保数据的一致性问题。需要用到多线程和锁机制等。这种是高并发问题
             并发伴随着多线程，同时多线程也伴随者数据的同步问题。解决方案是:锁=java代码层面的锁+数据库层面的锁
             java同步锁：synchronized+volatile+final+lock+condition+cas算法
@@ -182,7 +182,7 @@
                                            Query.setLockMode
                                            Session.lock
                     注意事项：加物理锁需要在事务中间，即begin和commit中间。否则锁无效
-                             根据select的过滤条件判断究竟是锁全部数据(锁表)还是锁一部分的记录(锁行)
+                             数据(锁表)还是锁一部分的记录(锁根据select的过滤条件判断究竟是锁全部行)
                 乐观锁举例：(更相当于一种算法技巧)
                     适用场景：事务比较长的操作
                     底层实现：基于数据版本Version记录机制实现。基于表操作，添加version字段，读取数据时，将此版本号一同读出，之后更新时，对此版本号加一。
@@ -208,7 +208,7 @@
                                    if(null != orderInDB)
                                       throw new Exception("the order has been exist!");
                                    key=order.getOrderNo();
-                                   //插缓存，原子性操作，插入失败 表明已经存在
+                                   //插入缓存，原子性操作，插入失败 表明已经存在
                                    if(!MemcacheUtil.add(key, order, MemcacheUtil.getExpiry(UNIT.MINUTE, 1)))
                                       throw new Exception("the order has been exist!");
                                    needDel=true;
@@ -244,7 +244,7 @@
         2.mybatis: 和数据库相关sql。<foreach collection="list" index="" item="item" separator="union all">
         进阶操作：高并发插入批量数据--使用多线程,将插入操作放在线程的run方法中
             可能出现的问题：多条数据的id重复：(解决办法如下)
-                            mysql中insert语句中添加ignore关键字,前提是逐渐要加逐渐或者唯一索引
+                            mysql中insert语句中添加ignore关键字,前提是主键。要加主键或者唯一索引
                             使用先查找，再插入思想。使用synchronized锁定插入语句块。如果存在可用异常处理
                           插入的效率低下：(解决办法如下)
                             使用多线程,将拆分list,分开插入。

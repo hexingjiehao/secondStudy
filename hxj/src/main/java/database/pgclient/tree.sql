@@ -1,5 +1,6 @@
 -- PostgreSQL 递归查询 - 树型数据按路径分组输出
 -- 参考文档：https://blog.csdn.net/weixin_34246551/article/details/90584507
+--         https://www.qiuzhi99.com/articles/postgresql-de-ltree-cha-jian-qi
 
 ----------------------------------------------- Miscellaneous Definition -----------------------------------------------
 -- 创建树扩展
@@ -23,7 +24,7 @@ CREATE TABLE department
 
 
 --------------------------------------------------- Index Definition ---------------------------------------------------
--- 创建path字段的索引
+-- 创建path字段的索引。gist()是专门为树结构使用的索引
 CREATE INDEX department_path_gist_idx ON department USING gist (path);
 
 
@@ -60,7 +61,7 @@ LANGUAGE PLPGSQL;
 
 
 -- 检查部门的标题是否唯一，在进行一系列修改操作时
--- subpath(ltree,offset,len):表示从某个位置开始，截取的长度。如果为负数，从右边开始，直到最后位置
+-- subpath(ltree,start,end): 截取的值不包括小数点，而且是【start，end)这种左闭右开格式
 CREATE OR REPLACE FUNCTION check_department_title_unique(v_department BIGINT, v_parent_path LTREE, v_title TEXT)
     RETURNS VOID AS
 $$
@@ -90,6 +91,7 @@ BEGIN
     SELECT path INTO STRICT current_path FROM department WHERE department_id = v_department;
 
     -- 检查新的部门是否是自己的子部门，<@有可能是包含关系。找到新部门，并且判断新部门的path是否左包含旧部门的全部
+    -- a <@ b:  表示a这个元素是b这个元素的的后代节点
     PERFORM 1
     FROM department
     WHERE path <@ current_path
@@ -222,6 +224,7 @@ BEGIN
     END IF;
 
     -- 禁止删除有子节点的部门。这里有取巧的部分，找到一个就行了
+    -- ltree2text()：表示将树结构类型转化为字符串类型
     PERFORM 1 FROM department WHERE ltree2text(subpath(path, -2, -1)) = v_department :: TEXT;
     IF found THEN
         RAISE EXCEPTION '400: 禁止删除还有子部门存在的部门';
