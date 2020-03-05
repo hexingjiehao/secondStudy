@@ -1,7 +1,7 @@
 1.ajax的发展学习：
     定义：异步的javascript和xml。可与服务器进行异步(多进程)或者同步(单进程)交互
     特点：页面无刷新。就是封装一个http请求发送给服务端。http协议中有什么字段，就怎么封装
-    发展史：IE5伴生XMLHttp对象，gmail发布引起人们堆ajax和javascript重视
+    发展史：IE5伴生XMLHttp对象，gmail发布引起人们对ajax和javascript重视
     核心：XMLHttpRequest对象
     生命周期：
         client发请求给server,server处理后传输数据给client。如果无ajax,请求过程中client阻塞，这是不友好的。
