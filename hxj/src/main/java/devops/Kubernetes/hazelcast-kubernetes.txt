@@ -1,4 +1,4 @@
-1.学习Hazelcast发现插件在Kubernetes
+1.学习Hazelcast-Kubernetes插件和部署
     1.嵌入模式依赖：
         dependency>
           <groupId>com.hazelcast</groupId>

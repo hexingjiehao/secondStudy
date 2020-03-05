@@ -449,7 +449,7 @@
                         org.camunda.operate: DEBUG
 
                     management.endpoints.web.exposure.include: health,info,conditions,configprops,prometheus
-        4.8 单独的网关模式：3个集群zeebe外加1个网管zeebe，主要是配置zeebe.cfg.toml和gateway.cfg.toml。暂时里面为空
+        4.8 单独的网关模式：3个集群zeebe外加1个网关zeebe，主要是配置zeebe.cfg.toml和gateway.cfg.toml。暂时里面为空
                 version: "2"
 
                 networks:
