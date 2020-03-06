@@ -2,7 +2,7 @@
     官网地址：https://infinispan.org。文档地址：http://infinispan.org/documentation/。
              最新版本是10.0,最新稳定版本是9.4。可以单独下载软件，也可以通过maven导入核心代码
     基本概念：它是分布式内存键值存储系统，也是一个小数据库，拥有数据库的特性和锁等。部署模式有嵌入式和c/s模式。主要学习嵌入式模式。
-             它是java.util.ConcurrentHasMap的一个扩展
+             它是java.util.ConcurrentHasMap的一个扩展。和redis是同一种东西。
         ：嵌入式模式
             【Infinispan实例和应用程序运行在相同的JVM中。如Infinispan运行在集群模式下，则每个应用程序中内嵌的Infinispan实例同时作为集群中的一个节点】
     实战教程：
@@ -43,8 +43,9 @@
                 ：永久性的创建缓存，解决重启后缓存消失的问题。Cache<String, String> myCache = manager.administration().withFlags(AdminFlag.PERMANENT).createCache("myCache", "myTemplate");
 
             :缓存API。都是一些put()等操作，putForExternalRead()可用于分布式存储key-value，冲突时其中一个自动失败。
-                监听器注解可以自动自动在缓存的CRUD操作中触发响应的操作。使用注解来使监听器是异步的，防止阻塞线程。
-                异步API方法：Cache.put() , Cache.remove()；   异步的API方法：Cache.putAsync() , Cache.removeAsync()；
+                监听器注解可以自动在缓存的CRUD操作中触发响应的操作。使用注解来使监听器是异步的，防止阻塞线程。
+                同步API方法：Cache.put() , Cache.remove()；
+                异步的API方法：Cache.putAsync() , Cache.removeAsync()；
                 异步方法在集群方式下自动并行操作put()等方法。
                 树状API模式：层级关系中存储数据，主要是URL路径的组成。代码举例treeCache.put("/persons/john", "surname", "Smith");
                 树状节点的移动操作，锁住所有相关节点，尤其是子节点
@@ -68,7 +69,7 @@
 
             ：编组Marshalling。可以将java对象转化为可以通过网络传输的格式数据。
 
-            ：事务Transactions。有一个事务管理器。代码和xml可以相互替换，达到同样的配置功能。在多次读取同一个key的时候，设置可重复度的隔离级别
+            ：事务Transactions。有一个事务管理器。代码和xml可以相互替换，达到同样的配置功能。在多次读取同一个key的时候，设置可重复读的隔离级别
                 事务锁--悲观事务缓存和乐观事务缓存？悲观用于争用的写操作；乐观用于读取的读操作
 
             ：锁定和并发性。主要是其中配置的级别
@@ -131,7 +132,7 @@
 
     4.快速开始文档：⚠️⚠️️⚠️
         主要是命令行操作。
-        1.：infinispan可以作为嵌入式缓存。（默认，默认只是作为一个数据结构存储，应用停止则数据丢失）
+        1.：infinispan可以作为嵌入式缓存。（默认只是作为一个数据结构存储，应用停止则数据丢失）
         2.：infinispan可以作为嵌入式数据网格。（作为集群操作，使用jgroup作为网络传输，所有缓存共享jgroup频道，并且在上复用RPC消息）
             ：在使用mvn命令启动时，需要增加参数-Djava.net.preferIPv4Stack=true。因为jgroup配置使用IPv4多播地址。
             ：分布式模式的复制模式区别，分布式模式不是每个节点都能够看到修改
@@ -197,7 +198,7 @@
 
     6.java+infinispan整合文档：具体配置文件参考infinispan_javadoc目录下的txt文件。
 
-    7.配置schema+infinispan模式文档：9中主要的配置。(URL,URN都是URI的子集，都是用于在网络上查找地址),具体配置文件参考infinispan_schema目录下的xml文件。
+    7.配置schema+infinispan模式文档：9种主要的配置。(URL,URN都是URI的子集，都是用于在网络上查找地址),具体配置文件参考infinispan_schema目录下的xml文件。
         9.4版本：【特别多的配置，至少包含5层】
         cli命令行整合:
         jdbc数据库整合:
