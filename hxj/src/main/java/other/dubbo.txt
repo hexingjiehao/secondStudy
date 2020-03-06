@@ -561,7 +561,7 @@
                         }
                         asyncContext.write("Hello " + name + ", response from provider.");
                     }).start();
-            本地伪装【熔断操作】：
+            本地伪装【熔断操作】：🌹🌹🌹mock后的操作表示模式的熔断操作
                 <dubbo:reference interface="com.foo.BarService" mock="true" />
                 <dubbo:reference interface="com.foo.BarService" mock="com.foo.BarServiceMock" />
                 高级用法：
@@ -591,8 +591,8 @@
                     <dubbo:protocol name="dubbo" lazy="true" />
                     <dubbo:reference id="xxxService" interface="com.xxx.XxxService" sticky="true" />    //保证有状态服务连接同一个服务提供者
             令牌验证：设置消费者和提供者的权限🌿🌿🌿🌿🌿
-                1.提供这产生令牌，发送到注册中心
-                2.消费者请求服务，注册中心发送令牌和消费者
+                1.提供者产生令牌，发送到注册中心
+                2.消费者请求服务，注册中心发送令牌给消费者
                 3.消费者发送令牌和请求给提供者
                 4.提供者验证令牌并返回响应信息
 

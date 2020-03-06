@@ -120,7 +120,7 @@
                        Signature = HMAC-SHA1(SignKey,StringToSign)
         操作列表：有service操作，存储桶操作，对象操作。😢😢😢没有找到修改对象的名字操作
             ⚠️⚠️⚠️GET Bucket(List Object)：获取Bucket下的部分或者全部Object
-            关键是解析xml文件。文档格式是前段程序员看的。
+            关键是解析xml文件。文档格式是前端程序员看的。
 
     10.开发者指南：
         1.创建请求：匿名请求和签名请求。http头部是否有Authorization字段。一般使用子账户发起请求和管理资源。

@@ -78,7 +78,7 @@
             }
 
             执行器：public class Executor implements Watcher, Runnable, DataMonitor.DataMonitorListener
-        5.使用zookeeper实现消息队列的代码教程：
+        5.使用zookeeper实现消息队列的代码教程：🌹🌹🌹信号量的本质是对象锁
             zookeeper server 运行中：信号量
             static ZooKeeper zk = null;
             static Integer mutex;

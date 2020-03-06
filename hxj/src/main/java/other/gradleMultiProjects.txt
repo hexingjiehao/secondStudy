@@ -8,7 +8,7 @@
     定义公共行为：setting.gradle中include '子项目名'。
                 gradle允许任何构建脚本访问任何项目
     命令：使用gradle -q 执行任务时，全部子项目的相同任务都会执行。
-         根项目和子项目的同名任务不会覆盖，先执行根项目，再执行子项目
+         根项目和子项目的同名任务不会覆盖，先执行根项目，再执行子项目【类似于子类构造函数的执行】
     多项目构建中的API：project(':子项目')
                      allprojects()
     子项目配置：subprojects {  }
@@ -17,7 +17,7 @@
                          println "- I'm the largest animal that has ever lived on this planet."
                      }
                    }
-    过滤函数：比如再某个项目初始化前不执行某些操作等
+    过滤函数：比如在某个项目初始化前不执行某些操作等
         configure(){}:
         子项目中声明属性：ext.属性
     多项目构建的执行规则：gradle -q 任务名

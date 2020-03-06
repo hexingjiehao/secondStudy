@@ -6,8 +6,8 @@ import java.lang.management.ManagementFactory;
 public class JMXTest {
 
     public static void main(String[] args) throws Exception{
-        standardMBean();
-//        dynamicMBean();
+//        standardMBean();
+        dynamicMBean();
     }
 
 
