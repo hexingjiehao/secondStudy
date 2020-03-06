@@ -31,9 +31,8 @@ OSI七层协议模型：                                业界五层模型：   
             4次挥手：
                 1.client发请求FIN=1，seq=u
                 2.Server响应ACK=1,ack=u+1,并发请求seq=v，最后发一次数据。
-                3.Server最后发数据给client
-                4.Server再次确认响应ACK=1,ack=u+1,然后发请求FIN=1,seq=w
-                5.client响应并发送1个序号ACK=1,ack=w+1,seq=u+1
+                3.Server再次确认响应ACK=1,ack=u+1,然后发请求FIN=1,seq=w
+                4.client响应并发送1个序号ACK=1,ack=w+1,seq=u+1
         数据的可靠性保证：
             校验和
             序列号和确认应答
@@ -61,7 +60,7 @@ OSI七层协议模型：                                业界五层模型：   
             HTTP 1.1：(应用广泛)
                 keepalive连接：允许HTTP设备在1次请求事务处理结束之后将TCP连接保持在打开的状态，以便未来的HTTP请求重用现在的连接，直到客户端或服务器端决定将其关闭为止
                 chunked编码传输：将正文实体分块传送并逐块标明长度,直到长度为0块表示传输结束
-                字节范围请求：支持传送内容的一部分。设置请求中range头域来实现。在响应消息中Content-Range头域处理，成功则则响应码206
+                字节范围请求：支持传送内容的一部分。设置请求中range头域来实现。在响应消息中Content-Range头域处理，成功则响应码206
                 Pipelining（请求流水线）：在1个连接中,支持client一次性发送多个请求，Server一次性返回多个请求。之前是请求-响应-再请求这样循环
                 请求消息和响应消息都应支持Host头域：
                     在一台物理服务器上可以存在多个虚拟主机（Multi-homed Web Servers），并且它们共享一个IP地址。因此，Host头的引入就很有必要了。
@@ -182,14 +181,14 @@ OSI七层协议模型：                                业界五层模型：   
     MQ: 延迟消息通讯,发出消息存储到容器，特定条件出发，发送给接收端
     RPC：远程过程调用协议.springcloud和dubbo框架用到。消息实时接收,实时处理。同步场合
         通过网络从远程计算机程序上请求服务。c/s模式。传递的是进程参数
-        应用场景：义务庞大，开始拆分Service组件，互相之间可以调用。应用程序之间的通讯手段。
+        应用场景：业务庞大，开始拆分Service组件，互相之间可以调用。应用程序之间的通讯手段。
                  主要是为了拆分代码，解耦逻辑
                  服务化,微服务,和分布式系统架构的场景
         原理：(对称性,代理,远端API,RpcConnector,RpcChannel)
             User->User-stub->UserRPCRuntime---network transalate--ServerRPCRuntime->Server-stub-Server
         RPC框架核心：
             服务暴露：
-                IDL文件,WSDL文件,服务接口,数据结构，,服务定义文件
+                IDL文件,WSDL文件,服务接口,数据结构,服务定义文件
                 通过代码生成器生成stub代码
                 java通过多态,接口的多样实现，用标记位
             远程代理对象：
@@ -233,7 +232,7 @@ OSI七层协议模型：                                业界五层模型：   
                 .executeQuery()：执行查询sql
                 .executeUpdate():执行插，改，删操作sql
                 PreparedStatement的优缺点：
-                    优点：防止sql注入，自动欧冠对特殊字符转义。动态查询。执行更快
+                    优点：防止sql注入，自动对特殊字符转义。动态查询。执行更快
                     缺点：不能执行in查询
             ResultSet:结果集
                 类型：
@@ -263,23 +262,26 @@ OSI七层协议模型：                                业界五层模型：   
                 type：对象类型。javax.sql.DataSource
 
          数据库隔离级别：(保证数据一致性。锁机制)
-            脏读：
+            脏读：🌹🌹🌹数据库修改了记录，并不一定代表着提交了。其他操作依然可以看到该条修改操作，但是不知道是否提交了。
                 A: 更新数据未提交
                 B：读刚更新的值
                 原因：A可能回滚,导致B读的数据无效
             不可重复读：(前后值不一致)
                 A：读数据X,处理逻辑
                 B: 修改数据X
-                A：再读X,发现值对不上了
+                A：自己再读X,发现值对不上了
+                原因：B在A读取的过程中修改了数据。无论是否提交
             幻读：(前后sql返回数量不一致)
                 A:根据条件t查询sql,得到N条记录
                 B:在条件t中insert了1条数据
-                A:再更具条件t查sql,两次的数量对不上了
+                A:再根据条件t查sql,两次的数量对不上了
+
+            🌹🌹🌹：以下的这些是因为java或者sql中有自动的代码重排序功能。各种事务，就像是屏障，阻止他们进行重排序操作，也就是防止可见行。
             TRANSACTION_NONE：不支持事务
             TRANSACTION_READ_UNCOMMITTED(未提交读): 支持事务
-            TRANSACTION_READ_COMMITTED(提交读)：	支持事务,阻止脏读
-            TRANSACTION_REPEATABLE_READ(重复读): 支持事务,阻止脏读,阻止不可重复读
-            TRANSACTION_SERIALIZABLE(串行化): 支持事务,阻止脏读,阻止不可重复读,阻止幻读
+            TRANSACTION_READ_COMMITTED(提交读)：	支持事务,阻止脏读。也就是只有别人提交了操作，别人才能看到操作，才能往下继续读操作。是防止他人读的《写屏障》
+            TRANSACTION_REPEATABLE_READ(重复读): 支持事务,阻止脏读,阻止不可重复读。是一个防止他人写的《读屏障》，读屏障也保障了写屏障。记录的是值
+            TRANSACTION_SERIALIZABLE(串行化): 支持事务,阻止脏读,阻止不可重复读,阻止幻读。也是是一个他人写的《读屏障》，读屏障也保障了写屏障。记录的是数量
          常用JDBC异常：
             java.sql.SQLException:基类。
             java.sql.BatchUpdateException:批处理异常
@@ -319,8 +321,8 @@ OSI七层协议模型：                                业界五层模型：   
                     2. 一个或多个参与者执行事务失败 或者 协调者等待超时
                         协调者通知rollback-->all参与者rollback,释放资源-->all参与者反馈rollback结果给协调者
          JDBC的锁类型：
-            乐观锁：只有当更新数据的时候才会锁定记录。解决脏读
-            悲观锁：从查询到更新和提交整个过程都会对数据记录进行加锁。解决脏读,可重复读，幻读
+            乐观锁：只有当更新数据的时候才会锁定记录。解决脏读。使用的是写屏障，具体的操作事务是：提交读事务
+            悲观锁：从查询到更新和提交整个过程都会对数据记录进行加锁。解决脏读,可重复读，幻读。使用的是读屏障，具体的操作事务是：串行化事务
 
     SOAP：简单对象访问协议。soap=http+xml。Soap建立在http上，是用http传送xml而已。用于webservice服务
           Envelope: 标记为soap消息
