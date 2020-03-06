@@ -9,7 +9,7 @@
                 String                PdfString           两种书写方式：(字符...)和<16进制数>
                 Name                  PdfName             是由一系列字符唯一定义的原子符号。前缀/  类似与变量名
                 Array                 PdfArray            格式[0 0 595 842]
-                Dictionary            PdfDictionary       类似与map
+                Dictionary            PdfDictionary       类似于map
                 Stream                PdfStream           字节序列，增量读取，用于处理大量数据
                 Null object           PdfNull
                 封装的对象：PdfDate继承PdfString

@@ -55,7 +55,7 @@
                 pdfSweep：【🌿🌿🌿--开源】
                     可以安全编辑PDF文档中的数据，比如隐藏数据等
                 pdfDebug【开源】：
-                    pdf调试器插件，可集成到ide。在debug时查看pdf的生成情况
+                    pdf调试器插件，可集成到idea。在debug时查看pdf的生成情况
                 pdfCalligraph：【闭源】
                     允许解锁PDF排版中的高级工作流功能。对pdf进行排版
                 pdfXFA：【🌿🌿🌿--闭源】

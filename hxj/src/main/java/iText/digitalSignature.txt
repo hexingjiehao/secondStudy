@@ -17,7 +17,7 @@
             问：为什么我们需要pdf和数字签名
             答：PDF过去的主要原理是以一种可靠的方式查看和打印文档。
                人们对便携式文档格式的需求，它应该能够提供在屏幕和打印机相同的输出结果。而且相对于其他文档格式有优势：电子签名
-               为了保证有法律价值文件的真实性和完整性从，从而代替白纸黑字的效果。PDF，全名叫做可移植文档格式，于是被使用做电子签名的载体。
+               为了保证有法律价值文件的真实性和完整性，从而代替白纸黑字的效果。PDF，全名叫做可移植文档格式，于是被使用做电子签名的载体。
 
         第1章：理解数字签名的概念🌿🌿🌿🌿🌿
             - 一个简单的PDF示例
@@ -29,42 +29,42 @@
             - 创建消息摘要
                 问：如何检查密码？什么是摘要算法? Java SDK的默认MessageDigest实现？ Bouncy Castle(轻量级密码术包) ？
                 答：在数据库中存储密码摘要，而不是实际密码。举例：
-                                         public class DigestDefault {
-                                            protected byte[] digest;
-                                            protected MessageDigest md;
+                         public class DigestDefault {
+                            protected byte[] digest;
+                            protected MessageDigest md;
 
-                                            protected DigestDefault(String password, String algorithm, String provider) throws GeneralSecurityException {
-                                                if (provider == null)
-                                                    md = MessageDigest.getInstance(algorithm);
-                                                else
-                                                    md = MessageDigest.getInstance(algorithm, provider);
-                                                digest = md.digest(password.getBytes());
-                                            }
+                            protected DigestDefault(String password, String algorithm, String provider) throws GeneralSecurityException {
+                                if (provider == null)
+                                    md = MessageDigest.getInstance(algorithm);
+                                else
+                                    md = MessageDigest.getInstance(algorithm, provider);
+                                digest = md.digest(password.getBytes());
+                            }
 
-                                            public static DigestDefault getInstance(String password, String algorithm) throws GeneralSecurityException {
-                                                return new DigestDefault(password, algorithm, null);
-                                            }
-                                            public int getDigestSize() {
-                                                return digest.length;
-                                            }
-                                            public String getDigestAsHexString() {
-                                                return new BigInteger(1, digest).toString(16);
-                                            }
-                                            public boolean checkPassword(String password) {
-                                                return Arrays.equals(digest, md.digest(password.getBytes()));
-                                            }
-                                            public static void showTest(String algorithm) {
-                                                try {
-                                                    DigestDefault app = getInstance("password", algorithm);
-                                                    System.out.println("Digest using " + algorithm + ": "+ app.getDigestSize());
-                                                    System.out.println("Digest: " + app.getDigestAsHexString());
-                                                    System.out.println("Is the password 'password'? "+ app.checkPassword("password"));
-                                                    System.out.println("Is the password 'secret'? "+ app.checkPassword("secret"));
-                                                } catch (NoSuchAlgorithmException e) {
-                                                    System.out.println(e.getMessage());
-                                                }
-                                            }
-                                         }
+                            public static DigestDefault getInstance(String password, String algorithm) throws GeneralSecurityException {
+                                return new DigestDefault(password, algorithm, null);
+                            }
+                            public int getDigestSize() {
+                                return digest.length;
+                            }
+                            public String getDigestAsHexString() {
+                                return new BigInteger(1, digest).toString(16);
+                            }
+                            public boolean checkPassword(String password) {
+                                return Arrays.equals(digest, md.digest(password.getBytes()));
+                            }
+                            public static void showTest(String algorithm) {
+                                try {
+                                    DigestDefault app = getInstance("password", algorithm);
+                                    System.out.println("Digest using " + algorithm + ": "+ app.getDigestSize());
+                                    System.out.println("Digest: " + app.getDigestAsHexString());
+                                    System.out.println("Is the password 'password'? "+ app.checkPassword("password"));
+                                    System.out.println("Is the password 'secret'? "+ app.checkPassword("secret"));
+                                } catch (NoSuchAlgorithmException e) {
+                                    System.out.println(e.getMessage());
+                                }
+                            }
+                         }
                     创建摘要时，我们使用hash加密算法将任意数据块转化为固定大小的字符串，数据块又叫消息，哈希值又叫做消息摘要。
                         以前数据块是《密码password》，现在对于pdf文档而言，pdf文件的特定范围的byte数据对象是数据块。所以，任意对pdf的修改，都将导致hash值不一致。
                         这是一个单向算法。能从密码计算出消息摘要，但是不能从消息摘要计算出密码。部分老旧hash算法有漏洞，目前都至少是salt hash并且多次迭代
@@ -155,7 +155,7 @@
                     因为我用私钥加密的消息，使用我的公钥能够解密。当别人使用我的证书中的公钥解密时，它知道这是我的私钥进行的加密，而这个私钥只有秘钥的拥有者有，确定了消息的发送者的身份。除非我的私钥泄漏了
                         公钥私钥机制解决了数据完整性，身份验证和不可否认性。
                         当需要加密解密大数据量消息时，这不现实。我们可以只将消息摘要进行加密解密，当消息摘要是真实的，我们就可以认定整个消息是真实的。
-                        也就是数字签名--只加密解密消息摘要（都能够完整表示消息）。类似于二次加密操作(加少数据量，节约时间和CPU)
+                        也就是数字签名--只加密解密消息摘要（都能够完整表示消息）。类似于二次加密操作(减少数据量，节约时间和CPU)
             - 密码学缩略语及标准概述
                 问：首字母缩略词？公钥密码学标准(PKCS)？PDF ISO标准？CAdES, XAdES和PAdES？
                 答：首字母缩略词：
