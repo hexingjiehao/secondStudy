@@ -5,15 +5,11 @@ import org.assertj.core.api.JUnitSoftAssertions;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.Rule;
 import org.junit.Test;
-
-import java.awt.font.NumericShaper;
-import java.awt.font.NumericShaper.Range;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
+
 
 import static org.assertj.core.api.Assertions.*;
 
