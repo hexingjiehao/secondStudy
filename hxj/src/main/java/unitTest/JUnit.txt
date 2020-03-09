@@ -61,7 +61,7 @@
                         内置解析器有：TestInfoParameterResolver
                                     RepetitionInfoParameterResolver
                                     RandomParametersExtension可以随机生成数据进行测试。
-                    测试接口和默认方法:在接口的额default方法傻姑娘增加@Test等注解即可。实现测试接口可以获取信息。
+                    测试接口和默认方法:在接口的default方法上增加@Test等注解即可。实现测试接口可以获取信息。
                     重复测试：@RepeatedTest。代码写法：比如@RepeatedTest(10)
                     参数化测试：声明参数源，多次测试。@ParameterizedTest
                                                  @ValueSource(strings = { ""，""，"".... })

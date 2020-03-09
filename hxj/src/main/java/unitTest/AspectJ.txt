@@ -1,13 +1,13 @@
 学习AspectJ嵌入式语法：
     4.Aspect-J：这是面向切面的框架。参考文档API：https://www.eclipse.org/aspectj/doc/released/runtime-api/
                 概述：IDEA中关于Aspectj的说明文档：http://www.jetbrains.com/help/idea/aspectj.html
-                     最新稳定版：1.9.2。其中版本的的对应关系1.9.x=9,1.8.x=8.所以最新版本也可以说是9
+                     最新稳定版：1.9.2。其中版本的的对应关系1.9.x=9, 1.8.x=8.所以最新版本也可以说是9
                      然后最新的文档竟然是版本5的！！！
-                     真正的额官方文档：https://www.eclipse.org/aspectj/doc/released/progguide/index.html
+                     真正的官方文档：https://www.eclipse.org/aspectj/doc/released/progguide/index.html
                 IDEA中使用条件：绑定插件Spring AOP/@AspectJ 和 AspectJ Support。将Aspectj添加到Java模块，微调它的编译器使用
-                              在.java和.aj中使用@Aspect。只有简单的只能提示。集成Aspectj的编译器ajc。能够微调ajc编译器
+                              在.java和.aj中使用@Aspect。只有简单的能提示。集成Aspectj的编译器ajc。能够微调ajc编译器
                               在使用项目中导入aspectjrt.jar。ajc编译器在aspectjtools.jar包中。
-                              需要事件将插件添加到idea中，名字是AspectJ Support和Spring AOP/@AspectJ
+                              需要事先将插件添加到idea中，名字是AspectJ Support和Spring AOP/@AspectJ
                               Aspectj有自己的文件.aj,也可以通过在Java类上注解进行属性和方法的插入。
 
                 使用Push ITDs重构：有点类似在外部给某个类生命属性或者各种方法等。而不是完全封装，注入属性和方法。
