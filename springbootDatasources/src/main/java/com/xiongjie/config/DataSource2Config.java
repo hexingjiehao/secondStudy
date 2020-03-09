@@ -28,17 +28,18 @@ public class DataSource2Config {
         return DataSourceBuilder.create().build();
     }
 
+    @Bean(name = "test2TransactionManager")
+    public DataSourceTransactionManager testTransactionManager(@Qualifier("test2DataSource") DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+
     @Bean(name = "test2SqlSessionFactory")
     public SqlSessionFactory testSqlSessionFactory(@Qualifier("test2DataSource") DataSource dataSource) throws Exception {
         SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
         bean.setDataSource(dataSource);
         bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath:mybatis/mapper/test2/*.xml"));
         return bean.getObject();
-    }
-
-    @Bean(name = "test2TransactionManager")
-    public DataSourceTransactionManager testTransactionManager(@Qualifier("test2DataSource") DataSource dataSource) {
-        return new DataSourceTransactionManager(dataSource);
     }
 
     @Bean(name = "test2SqlSessionTemplate")

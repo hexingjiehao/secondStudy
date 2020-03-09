@@ -27,7 +27,7 @@
         @EnableAutoConfiguration: 根据maven添加的jar自动配置spring应用
     @RestController：(控制器+http响应体)
         @Controller：控制器,将发来的URl请求转发到服务接口
-        @ResponseBody：返回值封住成http格式
+        @ResponseBody：返回值封装成http格式
         @RequestMapping: 提供路由信息。即请求的路径
     @PathVariable：获取路径参数。
     @Value:注入application.properties配置值
@@ -57,7 +57,7 @@
                                           .andDo(MockMvcResultHandlers.print()) //将响应信息打印到控制台
                                           .andReturn();
 
-6.开发环境调试,打包是自动忽略
+6.开发环境调试,打包时自动忽略
     1.在pom文件添加配置：<dependency标签>spring-boot-devtools
     2.在maven插件中添加配置：<configuration><fork>true</fork></configuration>
 

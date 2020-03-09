@@ -28,6 +28,13 @@ public class DataSource1Config {
         return DataSourceBuilder.create().build();
     }
 
+    @Bean(name = "test1TransactionManager")
+    @Primary
+    public DataSourceTransactionManager testTransactionManager(@Qualifier("test1DataSource") DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+
     @Bean(name = "test1SqlSessionFactory")
     @Primary
     public SqlSessionFactory testSqlSessionFactory(@Qualifier("test1DataSource") DataSource dataSource) throws Exception {
@@ -35,12 +42,6 @@ public class DataSource1Config {
         bean.setDataSource(dataSource);
         bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath:mybatis/mapper/test1/*.xml"));
         return bean.getObject();
-    }
-
-    @Bean(name = "test1TransactionManager")
-    @Primary
-    public DataSourceTransactionManager testTransactionManager(@Qualifier("test1DataSource") DataSource dataSource) {
-        return new DataSourceTransactionManager(dataSource);
     }
 
     @Bean(name = "test1SqlSessionTemplate")
