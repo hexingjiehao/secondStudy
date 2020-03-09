@@ -75,7 +75,7 @@
           System.out.println("Circuit closed");
         }).retryPolicy(retryCount -> retryCount * 100L);
     6.熔断器的状态：
-        开-半开-闭:3中壮体啊都可以设置操作
+        开-半开-闭:3种状态都可以设置操作
         openhandler--halfopenhandler--closehandler
     7.熔断器的消息机制：{ notifications }
         setNotificationAddress 的默认值为 vertx.circuit-breaker

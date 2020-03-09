@@ -1,6 +1,6 @@
 1.学习vert.x-web语法：
     1.核心概念:
-        路由Router：响应请求操作或者转发请求。RoutingCotext被作为参数传递
+        路由Router：响应请求操作或者转发请求。RoutingContext被作为参数传递
                    在路由的handler中可以直接处理，也可以调用next handler。
         路由的使用代码：
             全部路由：

@@ -10,7 +10,7 @@ import io.vertx.core.json.JsonObject;
 public class VertxConfig extends AbstractVerticle {
 
     /**
-     * 公司项目：先加载yaml配置，然后加载vert.x core的context内容。后者可以在初始化是被修改
+     * 公司项目：先加载yaml配置，然后加载vert.x core的context内容。后者可以在初始化时被修改
      * 配置文件直接在resources目录下
      * @param args
      */

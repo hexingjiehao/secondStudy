@@ -51,7 +51,7 @@
     6.重载规则：json的合并方法，后者覆盖前者的同名key
         比如：A={a:value,b:1}
              B={a:value1,c:2}
-        声明顺序(A,B)，结果等于{a:value2, b:1, c:2}.声明顺序(B,A),结果等于{a:value, b:1, c:2}
+        声明顺序(A,B)，结果等于{a:value, b:1, c:2}.声明顺序(B,A),结果等于{a:value, b:1, c:2}
 
     7.监听配置的更改:
         ConfigRetrieverOptions options = new ConfigRetrieverOptions()

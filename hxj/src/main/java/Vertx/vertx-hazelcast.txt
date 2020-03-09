@@ -68,50 +68,99 @@
         ⚠️：cluster.xml文件最终应该挂载到容器中
 
 
+学习vert.x-hazelcast语法：
+    1.概念：基于内存的，可扩展的分布式数据存储，数据缓存。vert.x的集群管理的默认项目就是hazelcast。
+    2.特点：基于java编写。基于TCP连接进行集群交互。默认271个分区(内存被拆分)，用于冗余备份。有内嵌模式和c/s模式。
+           提供开箱即用的分布式数据结构。集群上节点的分区是均匀分布的，都有部主分区和副本分区。
+           有一种轻量化节点，专职计算和监听，不持有分区数据。数据通过哈希算法被分布到特定分区。
+           启动集群节点，该节点自动创建一个分区表，存储分区id和其他节点信息。比如节点A的第3分区上
+    3.jar包依赖：<dependency>
+                  <groupId>io.vertx</groupId>
+                  <artifactId>vertx-hazelcast</artifactId>
+                  <version>3.7.0</version>
+                </dependency>
+    4.功能：
+        vert.x集群中节点的发现和组成员关系
+        维护集群主题订阅列表，哪个节点对哪个事件感兴趣
+        分布式映射支持
+        分布式锁
+        分布式计数器
+    5.使用集群管理器：
+        ClusterManager mgr = new HazelcastClusterManager();
+        VertxOptions options = new VertxOptions().setClusterManager(mgr);
+        Vertx.clusteredVertx(options, res -> {
+          if (res.succeeded()) {
+            Vertx vertx = res.result();
+          } else {
+            // failed!
+          }
+        });
+    6.集群管理器的默认配置：default-cluster.xml。可以通过重写文件cluster.xml来重新配置。
+        集群启动方法：java -jar ... -cp . -cluster 【cluster.xml文件在当前目录】
+                    java -jar ... -cp conf -cluster 【cluster.xml文件在conf目录】
+                    java -Dvertx.hazelcast.config=./config/my-cluster-config.xml -jar ... -cluster 【系统属性】
+                    java -Dvertx.hazelcast.config=classpath:my/package/config/my-cluster-config.xml -jar ... -cluster
+                    可以通过-Dhazelcast.max.no.heartbeat.seconds=5设置节点的超时时间，然后从集群中删除
 
+    7.代码中配置集群管理器：
+        使用默认cluster.xml文件
+            Config hazelcastConfig = new Config();
+            ClusterManager mgr = new HazelcastClusterManager(hazelcastConfig);
+            VertxOptions options = new VertxOptions().setClusterManager(mgr);
+            Vertx.clusteredVertx(options, res -> {
+              if (res.succeeded()) {
+                Vertx vertx = res.result();
+              } else {
+                // failed!
+              }
+            });
+        使用其他xml文件：
+            Config hazelcastConfig = ConfigUtil.loadConfig();
+            hazelcastConfig.getGroupConfig()
+              .setName("my-cluster-name")
+              .setPassword("passwd");
+            ClusterManager mgr = new HazelcastClusterManager(hazelcastConfig);
+            VertxOptions options = new VertxOptions().setClusterManager(mgr);
+            Vertx.clusteredVertx(options, res -> {
+              if (res.succeeded()) {
+                Vertx vertx = res.result();
+              } else {
+                // failed!
+              }
+            });
+    8.使用存在的hazelcast集群对象：
+        ClusterManager mgr = new HazelcastClusterManager(hazelcastInstance);
+        VertxOptions options = new VertxOptions().setClusterManager(mgr);
+        Vertx.clusteredVertx(options, res -> {
+          if (res.succeeded()) {
+            Vertx vertx = res.result();
+          } else {
+            // failed!
+          }
+        });
+    9.自定义hazelcast的xml文件内容：🌿🌿🌿🌿🌿
+            <properties>
+             <property name="hazelcast.shutdownhook.enabled">false</property>
+            </properties>
 
+            <multimap name="__vertx.subs">
+             <backup-count>1</backup-count>
+            </multimap>
 
+            <map name="__vertx.haInfo">
+             <time-to-live-seconds>0</time-to-live-seconds>
+             <max-idle-seconds>0</max-idle-seconds>
+             <eviction-policy>NONE</eviction-policy>
+             <max-size policy="PER_NODE">0</max-size>
+             <eviction-percentage>25</eviction-percentage>
+             <merge-policy>com.hazelcast.map.merge.LatestUpdateMapMergePolicy</merge-policy>
+            </map>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            <semaphore name="__vertx.*">
+             <initial-permits>1</initial-permits>
+            </semaphore>
+    10.常见集群问题：
+        1.mac系统的默认多播禁用
+        2.使用错误的网络接口。当启用VPN可导致该结果。解决方法：<interfaces enabled="true">
+                                                          <interface>192.168.1.20</interface>
+                                                        </interfaces>
