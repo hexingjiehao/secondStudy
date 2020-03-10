@@ -41,7 +41,7 @@
         5.成本低,和docker兼容,在云处理方面有一席之地
 
     4.常用的组件：(springcloud是基于netflix的开源框架)
-        1.Eureka：(服务注册和发现,c/s架构,它应该是能够直到哪些服务是正常的，哪些服务是异常的,微页面查看服务运行情况，暂时无通知)
+        1.Eureka：(服务注册和发现,c/s架构,它应该是能够知道哪些服务是正常的，哪些服务是异常的,微页面查看服务运行情况，暂时无通知)
             在AWS云中使用, 定位服务来进行中间层服务器的负载均衡和故障转移。
             Server: 作为服务注册功能的服务器，它是服务注册中心。类似于大管家
             Client: 接到Eureka Server,并维持心跳连接。使Eureka Server来监控系统中各个微服务是否正常运行
@@ -219,7 +219,7 @@
                             spring.cloud.config.label=master
                     启动类添加注解：@EnableConfigServer
                     检查：直接使用@value就可以获取配置中的数据
-                    ⚠️：springboot项目只有在启动的时候才会获取配置文件的值，修改github信息后，client端并没有在次去获取
+                    ⚠️：springboot项目只有在启动的时候才会获取配置文件的值，修改github信息后，client端并没有再次去获取
         5.配置中心svn和refresh：
             jar包依赖：<dependencies>
                         <dependency>
@@ -645,7 +645,7 @@
             同类产品：eureka,Consul,zookeeper,etcd   🌿🌿🌿🌿🌿
             概念：Consul的方案更“一站式”，内置了服务注册与发现框架、分布一致性协议实现、健康检查、Key/Value 存储、多数据中心方案，不再需要依赖其它工具（比如 ZooKeeper 等）
             工作原理：
-                1、当Producer启动的时候，会向Consul发送一个post请求，告诉Consul自己的IP和Port      //类似与注册操作
+                1、当Producer启动的时候，会向Consul发送一个post请求，告诉Consul自己的IP和Port      //类似于注册操作
                 2、Consul接收到Producer的注册后，每隔10s（默认）会向Producer发送一个健康检查的请求，检验Producer是否健康
                 3、当Consumer发送GET方式请求/api/address到Producer时，会先从Consul中拿到一个存储服务IP和Port的临时表，从表中拿到Producer的IP和Port后再发送GET方式请求/api/address
                 4、该临时表每隔10s会更新，只包含有通过了健康检查的Producer
@@ -958,16 +958,3 @@
                                   args:
                                     retries: 3
                                     statuses: BAD_GATEWAY
-
-
-
-
-
-
-
-
-                                    
-
-
-
-
