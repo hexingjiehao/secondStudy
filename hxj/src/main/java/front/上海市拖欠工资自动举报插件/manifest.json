@@ -12,7 +12,8 @@
 		{
 			"js": ["autoclick.js"],
 			"matches": [
-				"http://rsj.sh.gov.cn/wszx/ldjcjb.shtml"
+				"http://rsj.sh.gov.cn/wszx/ldjcjb.shtml",
+				"http://rsj.sh.gov.cn/ldjcjb/ldjcjb.jsp"
 			],
 			"run_at": "document_end"
 		}
