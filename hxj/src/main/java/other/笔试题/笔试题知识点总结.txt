@@ -1,0 +1,259 @@
+0.java核心常用题。【OK】
+答：
+8个基本数据类型：byte,short,int,long,float,double,char,boolean
+异常类的分类：try-catch-finally。Exception和throwable
+jdk1.8的特性：lambda表达式。
+jvm的分区：
+    方法区
+    java堆:(3个): (-Xmx:最大堆内存 ,-Xms:初始时堆内存。)
+        年轻代(PSYoungGen)：
+            eden: (-XX:SurvivorRatio:新生代中Eden与Survivor的比值。默认值为8。即Eden占新生代空间的8/10，另外两个Survivor各占1/10)
+            from survivor:
+            to survivor:
+        老生代(ParOldGen)：( -XX:NewRatio:老年代与新生代的比例,2=表示老年代占2/3，新生代占1/3)
+        元空间(MetaSpace,java8以后)  /  永久代(PermanentSpace,java8以前)：
+    java栈
+    本地方法栈
+类加载器的顺序：
+    加载器：(一切从BootStrap开始加载,逐个下降到自定义加载器...加载成功为止，寻找就反过来)
+        Bootstrap ClassLoader:
+        Extension ClassLoader:
+        App ClassLoader:
+        Custom ClassLoader:
+hashmap:数组+链表。
+curretHashmap：多线程下能够同步变量。使用synchronised
+
+
+
+1.操作系统常用题。【OK】
+答：
+unix常用命令：
+    ls：列出当前文件
+    chmod xxx yyy.txt:修改文件权限。读写执
+    chown user yyy.txt:修改文件的用户
+    ifconfig：查看ip
+    top：查看机器详情
+    df:查看硬盘空间
+    du：递归查看目录空间大小
+    vim的命令：i-编辑模式。！q-强制退出
+死锁：
+    4个必要条件：请求等待，循环等待，不可剥夺，互斥
+    产生原因：资源不足，推进顺序不当，
+    处理方法：避免死锁（银行家算法），预防死锁（静态分配资源）
+生产者和消费者：
+    使用synchronise+wait+notify同步两个不同方法：多个线程分别执行不同的方法。中间使用转恩资源类来同步queue.
+    使用lock和condition的await、signalAll：lock对象之后，唤醒另一个进程。
+    使用阻塞队列BlockingQueue: {不用使用同步关键字}
+多线程的多个同步方式：
+    使用volatile将变量可视化：每次从内存读数据，而不是缓存。不能保证原子性
+    使用可重入锁：Lock lock = new ReentrantLock();
+                lock.lock();
+                finally{
+                    lock.unlock()
+                }
+CAS同步算法：前内存值V、旧的预期值A、即将更新的值B，当且仅当预期值A和内存值V相同时，将内存值修改为B并返回true，否则什么都不做，并返回false
+信号量：acquire(xx) / relesae()。通过设置请求数量
+线程池的原理：
+    本质：核心线程数+临时线程数<=最大线程数。工作队列
+        corePollSize：核心线程数。经常活跃的
+        maximumPoolSize：最大线程数。活跃的核心线程+暂时未激活的空闲线程
+        keepAliveTime：空闲的线程保留的时间。
+        TimeUnit：空闲线程的保留时间单位。
+        BlockingQueue<Runnable>：阻塞队列，存储等待执行的任务。
+        ThreadFactory：线程工厂，用来创建线程
+        RejectedExecutionHandler：队列已满，而且任务量大于最大线程的异常处理策略
+
+
+
+2.数据结构常用题。【OK】
+答：
+栈和队列：
+    两个栈模拟队列；双端队列模拟栈
+树的5种遍历：
+    先序：根左右
+    中序：左根右
+    后序：左右根
+    层次遍历：队列
+链表的操作：
+    单链表翻转：双指针
+
+
+
+3.数据库常用题。【OK】
+答：
+mysql：
+    第三范式：字段原子性，不可分割--》行唯一区分--》当前表的列在其他表不存在
+    数据库优化：preparedStatement。索引。去掉多余外键。
+    索引的种类(4种)：普通索引-->唯一索引-->主键索引-->组合索引。
+        索引的实现通常使用B树及其变种B+树，和索引组织表。
+    mysql的复制原理以及流程:
+        将Mysql的某一台主机的数据复制到其它主机（slaves）上，并重新执行一遍来实现的。
+            1. 主服务器把更新记录到二进制日志文件中。
+            2. 从服务器把主服务器的二进制日志拷贝到自己的中继日志（replay log）中。
+            3. 从服务器重做中继日志中的时间，把更新应用到自己的数据库上。
+        基于语句复制，行复制和混合复制。
+    mysql种的两个引擎myisam和innodb的区别？
+        第1个没有事务，mvcc，外键，第2个有
+        第1个表级锁，第2个行级锁
+        第1个支持全文索引，第2个不支持
+    四种事务隔离级别名称和区别？
+        未提交读： 所有事务都可以看到其他未提交事务的执行结果----脏读。
+        提交读：其他数据库默认。一个事务只能看见已经提交事务所做的改变。
+        可重复读：MySQL默认，它确保同一事务的多个实例在并发读取数据时，会看到同样的数据行----幻读。多版本+间隙锁解决幻读
+        可序列化：最高的隔离级别，它通过强制事务排序，使之不可能相互冲突，从而解决幻读问题。每行加共享锁。
+    InnoDB行锁是如何完成？
+        索引项加锁。oracle是数据行加锁。Innodb没索引到，则使用表锁。
+    mysql的insertOrUpdate的语句？
+        INSERT INTO table (a,b,c) VALUES (1,2,3) ON DUPLICATE KEY UPDATE c=c+1;
+    MySQL的复制原理以及流程？
+        1. 主：binlog线程——记录下所有改变了数据库数据的语句，放进master上的binlog中；
+        2. 从：io线程——在使用start slave 之后，负责从master上拉取 binlog 内容，放进 自己的relay log中；
+        3. 从：sql执行线程——执行relay log中的语句；
+    mysql的cpu飙升，如何解决？
+        top命令查看是否mysqlid造成的，不是则处理占用高的进程；
+        如果是show processlist，查看session情况，找出消耗高的sql，数据量和index；
+        然后是添加索引，修改sql,改内存参数。或者限制连接数
+        sql优化命令：explain和profile
+    500台db最快重启的方法？
+        可以使用批量ssh工具pssh来对需要重启的机器执行重启命令。
+        也可以使用salt（前提是客户端有安装 salt）或者 ansible（ ansible 只需要 ssh 免登通了就行）等多线程工具同时操作多台服务器
+postgres：
+    响应式连接，直接使用驱动操作数据库。
+事务的4个特性：ACID=原子性+一致性+隔离性+持久性
+
+
+
+
+4.springboot的常用知识点。【OK】
+答：
+spring IOC控制反转：不用手动new对象，而是交给框架new对象。
+springmvc的视图原理：轻量级web框架。组件如下
+    （1）前端控制器 DispatcherServlet（不需要程序员开发）
+    （2）处理器映射器HandlerMapping（不需要程序员开发）
+    （3）处理器适配器HandlerAdapter
+    （4）处理器Handler（需要程序员开发）
+    （5）视图解析器 ViewResolver（不需要程序员开发）
+    （6）视图View接口，各种页面末班实现
+mybatis框架:数据库操作框架，xml和注解语句
+postgresclient的直接使用：过程调用
+消息队列kafka：和zookeeper做分布式消息队列
+    kafka的几个组件？
+        主题：Kafka主题是一堆或一组消息。
+        生产者：在Kafka，生产者发布通信以及向Kafka主题发布消息。
+        消费者：Kafka消费者订阅了一个主题，并且还从主题中读取和处理消息。
+        经纪人：在管理主题中的消息存储时，我们使用Kafka Brokers。
+单点登录keycloak：
+kubernete部署：docker-compose,service，pod
+vert.x的系统知识点：eventbus和rest
+
+
+
+5.redis常用题。【OK】
+答：
+redis的数据结构：
+    字符串：set key value
+    哈希: hmset name key1 value1 key2 value2
+    列表:lpush name value
+    集合:sadd name value
+    有序集合: zadd name score value
+使用过Redis分布式锁么，它是怎么实现的？
+    先拿setnx来争抢锁，抢到之后，再用expire给锁加一个过期时间防止锁忘记了释放。
+使用过Redis做异步队列么，你是怎么用的？有什么缺点？
+    一般使用list结构作为队列，rpush生产消息，lpop消费消息。当lpop没有消息的时候，要适当sleep一会再重试。
+缓存穿透？
+    一般的缓存系统，都是按照key去缓存查询，如果不存在对应的value，就应该去后端系统查找（比如DB）。一些恶意的请求会故意查询不存在的key,请求量很大，就会对后端系统造成很大的压力。这就叫做缓存穿透。
+如何避免缓存穿透？
+1：对查询结果为空的情况也进行缓存，缓存时间设置短一点，或者该key对应的数据insert了之后清理缓存。
+2：对一定不存在的key进行过滤。可以把所有的可能存在的key放到一个大的Bitmap中，查询时通过该bitmap过滤。
+缓存雪崩？
+    当缓存服务器重启或者大量缓存集中在某一个时间段失效，这样在失效的时候，会给后端系统带来很大压力。导致系统崩溃。
+如何避免缓存雪崩？
+1：在缓存失效后，通过加锁或者队列来控制读数据库写缓存的线程数量。比如对某个key只允许一个线程查询数据和写缓存，其他线程等待。
+2：做二级缓存，A1为原始缓存，A2为拷贝缓存，A1失效时，可以访问A2，A1缓存失效时间设置为短期，A2设置为长期
+3：不同的key，设置不同的过期时间，让缓存失效的时间点尽量均匀。
+
+
+
+6.http常用题。【OK】
+答：
+TCP的3次握手和4次挥手：
+    3次握手：
+        客户端     --------------》     服务端
+                syn=x包，客户端进入SYN_SEND状态
+                《--------------------
+                ack=x+1包，发送syn=y包，服务器进入SYN_RECV
+                --------------》
+                ack=y+1包，两者进入ESTABLISHED
+    4次挥手：
+        主动关闭方  --------------》    被动关闭方
+                        FIN包
+                   《--------------
+                        ACK包
+                    《--------------
+                        FIN包
+                    --------------》
+                        ACK包
+https的过程：
+       客户端  ---------------》  服务端
+                https请求443端口
+               《------------
+                服务端公钥
+                ------------》
+               服务端公钥加密的客户端秘钥
+               《--------------
+               使用客户端秘钥加密内容
+RESTful的软件风格：
+    GET，POST，DELETE，PATCH，PUT
+Cookie和Session：
+    cookie客户端，session服务端
+Servlet的链式过滤：
+    dispatchServlet过滤url，进行网关或者过滤等操作
+
+
+
+7.分布式常用题。【OK】
+答：
+分布式事务的3种处理方式：
+    两阶段提交
+        优点：保证数据的强一致性，适合对数据要求高的强一致性领域。
+        缺点：实现复杂，牺牲了可用性，性能不高，不适合高并发，高性能的场景。
+    三阶段提交
+        优点：相对于二阶段，它减低了阻塞的范围，解决了协调者这参与者同时挂掉的问题，即等待超时后，协调者或参与者会中断事务，避免单点问题。
+        缺点：数据不一致性依然存在。
+    补偿事务（TCC）
+        优点：1）性能提升，2）数据最终一致， 3）可靠性更高
+        缺点：花
+springcloud框架的各种软件：
+    服务注册：也是注解eureka
+    服务发现：使用注解feign
+    服务熔断：调用端写的代码Hystrix
+
+
+
+8.算法常用题。【OK】
+答：
+KMP算法：状态转移方程
+    dp[当前状态][遇到的某个出发条件] = 下一个状态
+0-1背包的动态规划：
+    dp[i][j]：在背包最大承重为 j 时，可选的物品件数有 i 件 的情况下，背包装下的物品的最大价值。
+    dp[i-1][j-weight[i-1]]+value[i-1]  表示：当将第 i 件物品装入背包时，背包还能承受的重量变成: j-weight[i-1]  (weight[]数组下标0存储第一件物品的重量)
+股票的买卖利润：
+    只有1次操作：找波峰波谷。遍历一遍即可
+    只有2次操作：累加，firstbuy，secondbuy,的累加操作。两次利润加起来
+排列组合：
+    递归
+
+
+9.java的算法的输入Scan【OK】
+答：
+Scanner sc = new Scanner(System.in);
+while(sc.hasNext()){
+    int n = sc.nextInt();
+    for(int i=0;i<n;i++)
+    {
+        double a=sc.nextDouble();
+        ...
+    }
+
+Syste.out.println(xxx);
+
