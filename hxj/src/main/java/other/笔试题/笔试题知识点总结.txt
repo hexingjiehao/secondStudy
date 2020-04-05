@@ -119,6 +119,20 @@ mysql：
         也可以使用salt（前提是客户端有安装 salt）或者 ansible（ ansible 只需要 ssh 免登通了就行）等多线程工具同时操作多台服务器
 postgres：
     响应式连接，直接使用驱动操作数据库。
+mongodb：
+    文档型非关系数据库，BSON存储文档数据。
+    MongoDB的优势有哪些
+        面向文档的存储：以JSON格式的文档保存数据。
+        任何属性都可以建立索引。
+        复制以及高可扩展性。
+        自动分片。
+        丰富的查询功能。
+        快速的即时更新。
+    在哪些场景使用MongoDB？
+        大数据
+        内容管理系统
+        移动端Apps
+        数据管理
 事务的4个特性：ACID=原子性+一致性+隔离性+持久性
 
 
@@ -135,6 +149,18 @@ springmvc的视图原理：轻量级web框架。组件如下
     （5）视图解析器 ViewResolver（不需要程序员开发）
     （6）视图View接口，各种页面末班实现
 mybatis框架:数据库操作框架，xml和注解语句
+    MyBatis是一个可以自定义SQL、存储过程和高级映射的持久层框架。
+    MyBatis的缓存分为一级缓存和二级缓存,一级缓存放在session里面,默认就有,二级缓存放在它的命名空间里,默认是不打开的,
+        使用二级缓存属性类需要实现Serializable序列化接口(可用来保存对象的状态),可在它的映射文件中配置<cache/>
+    Mybatis是如何进行分页的？分页插件的原理是什么？
+        1）Mybatis使用RowBounds对象进行分页，也可以直接编写sql实现分页，也可以使用Mybatis的分页插件。
+        2）分页插件的原理：实现Mybatis提供的接口，实现自定义插件，在插件的拦截方法内拦截待执行的sql，然后重写sql。
+        举例：select * from student，拦截sql后重写为：select t.* from （select * from student）t limit 0，10
+    简述Mybatis的插件运行原理，以及如何编写一个插件？
+        1）Mybatis仅可以编写针对ParameterHandler、ResultSetHandler、StatementHandler、Executor这4种接口的插件，
+            Mybatis通过动态代理，为需要拦截的接口生成代理对象以实现接口方法拦截功能，每当执行这4种接口对象的方法时，就会进入拦截方法，具体就是InvocationHandler的invoke()方法，当然，只会拦截那些你指定需要拦截的方法。
+        2）实现Mybatis的Interceptor接口并复写intercept()方法，然后在给插件编写注解，指定要拦截哪一个接口的哪些方法即可，记住，别忘了在配置文件中配置你编写的插件。
+    mybatis的#{}是预处理，等价于？.${}是字符串替换
 postgresclient的直接使用：过程调用
 消息队列kafka：和zookeeper做分布式消息队列
     kafka的几个组件？
@@ -145,6 +171,15 @@ postgresclient的直接使用：过程调用
 单点登录keycloak：
 kubernete部署：docker-compose,service，pod
 vert.x的系统知识点：eventbus和rest
+springboot的核心注解：
+    @SpringBootApplication核心类上
+    @SpringBootConfiguration：实现配置文件的功能。
+    @EnableAutoConfiguration：打开自动配置的功能，也可以关闭某个自动配置的选项，如关闭数据源自动配置功能：
+        @SpringBootApplication(exclude = { DataSourceAutoConfiguration.class })。
+    @ComponentScan：Spring组件扫描。
+SpringBoot 实现热部署有哪几种方式？
+    Spring Loaded
+    Spring-boot-devtools　　
 
 
 
@@ -257,3 +292,99 @@ while(sc.hasNext()){
 
 Syste.out.println(xxx);
 
+线程安全的单例模式？{私有静态变量和构造函数}
+    饿汉式(线程安全)：
+    public class Singleton {
+        private static final Singleton instance = new Singleton();
+        private Singleton(){}
+        public static Singleton getInstance(){
+            return instance ;
+        }
+    }
+
+    懒汉式(线程安全)：方法上加锁【推荐】
+    public class Singleton {
+        private static Singleton singleton;
+        private Singleton() {}
+        public static synchronized Singleton getInstance() {
+            if (singleton == null) {
+                singleton = new Singleton();
+            }
+            return singleton;
+        }
+    }
+
+    懒汉式(线程安全)：细粒度双重锁，方法内加锁
+    public class Singleton {
+         private static Singleton instance;
+         private Singleton (){}
+         public static Singleton getInstance(){
+           if (instance == null){
+               synchronized(Singleton.class){
+                   if (instance == null)
+                       instance = new Singleton();
+               }
+           }
+           return instance;
+         }
+     }
+
+     静态内部类(线程安全)
+     public class Singleton {
+
+         private Singleton() {}
+         private static class SingletonInstance {
+             private static final Singleton instance = new Singleton();
+         }
+         // static使单例空间共享,final使得方法不能被重写重载
+         public static final Singleton getInstance() {
+             return SingletonInstance.instance;
+         }
+     }
+
+写一个生产者消费者模式？
+    本质是多个生产者线程相互竞争，多个消费者线程相互竞争。中间一个临界资源类
+    一种方式是直接锁临界对象，另一种是资源对象的操作方法锁
+    public class Demo1 {
+
+        public static void main(String[] args) throws InterruptedException {
+            final List<String> list = new ArrayList<String>();
+
+            // 删除元素线程1
+            Thread sub1 = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        synchronized (list) {
+                            while (true) {
+                                while (list.size() == 0) {
+                                    list.wait();
+                                }
+                                list.remove(0);
+                                list.notifyAll();
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, "sub1");
+            sub1.start();
+
+            Thread addThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (int i = 0; i < 5; i++) {
+                            synchronized (list) {
+                                list.add(i + "");
+                                list.notifyAll();
+                                list.wait();
+                            }
+                        }
+                    } catch (InterruptedException e) {}
+                }
+            }, "B");
+            addThread.start();
+        }
+    }
