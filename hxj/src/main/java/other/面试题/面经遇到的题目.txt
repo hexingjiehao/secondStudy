@@ -1,0 +1,304 @@
+1.spring的源码核心？【OK】
+答：
+IOC控制反转，使用工厂类创建bean,AOP面向切面变成，可做装饰
+
+
+2.Class.forName() 与 ClassLoader.loadClass()的区别？【OK】
+答：
+Class.forName()形式上类似于Class.forName(name,true,currentLoader)。
+    默认当前类加载器进行加载。数据会被初始化。
+ClassLoader.loadClass()，默认数据不会被初始化；
+    由于双亲委派模型的存在，最终都会将类的加载任务交付给Bootstrap ClassLoader进行加载。
+
+
+3.spring的事务传播机制？【OK】
+答：
+PROPAGATION_REQUIRED：如果当前没有事务，就新建一个事务，如果已经存在一个事务中，加入到这个事务中。【默认】
+PROPAGATION_SUPPORTS：支持当前事务，如果当前没有事务，就以非事务方式执行。
+
+PROPAGATION_REQUIRES_NEW：新建事务，如果当前存在事务，把当前事务挂起。
+PROPAGATION_NOT_SUPPORTED：以非事务方式执行操作，如果当前存在事务，就把当前事务挂起。
+
+PROPAGATION_MANDATORY：使用当前的事务，如果当前没有事务，就抛出异常。
+PROPAGATION_NEVER：以非事务方式执行，如果当前存在事务，则抛出异常。
+
+PROPAGATION_NESTED：如果当前存在事务，则在嵌套事务内执行。如果当前没有事务，则执行与PROPAGATION_REQUIRED类似的操作。
+
+
+4.正向代理和反向代理的概念？【OK】
+答：
+正向代码：从客户端访问服务器，类似于翻墙。在客户端配置代理
+反向代理：客户端访问{代理服务器}，代理服务器转发请求给真正服务器，在服务端配置代理。
+
+
+
+5.使用redis实现分布式锁？【OK】
+答：
+（主要使用了redis中的setnx和getset方法，这两个方法在redisTemplate分别是setIfAbsent和getAndSet方法）实现线程安全，
+因为redis是单线程，能保证线程的安全性，而且redis强大的读写能力能提高效率。
+
+
+
+6.请问Servlet过滤器有哪些作用？以及Servlet过滤器的用法又是什么呢?【OK】
+答：
+Servlet 过滤器可以动态地拦截请求和响应。
+用法如下：
+    在客户端的请求访问后端资源之前，拦截这些请求。
+    在服务器的响应发送回客户端之前，处理这些响应。
+
+
+7.统计某个区间范围内的自然后【a,b】,统计其中1出现的个数？【OK】
+答：
+暴力统计：遍历一遍，然后每个数判断是否有1。可以写代码，不需要找到规律。
+
+
+
+8.请说明一下@Controller和@RestController的区别是什么？【OK】
+答：
+@RestController注解相当于@ResponseBody ＋ @Controller合在一起的作用。
+    直接返回json，视图解析器不起作用
+@Controller启用视图解析器，返回指定的页面
+
+
+
+9.minor gc运行的很频繁可能是什么原因引起的？【OK】
+答：
+    产生了太多朝生夕灭的对象导致需要频繁minor gc
+    新生代空间设置的比较小
+minor gc运行的很慢有可能是什么原因引起的？
+  1、 新生代空间设置过大。
+  2、 对象引用链较长，进行可达性分析时间较长。
+  3、 新生代survivor区设置的比较小，清理后剩余的对象不能装进去需要移动到老年代，造成移动开销。
+  4、 内存分配担保失败，由minor gc转化为full gc
+  5、 采用的垃圾收集器效率较低，比如新生代使用serial收集器
+
+
+10.hibernate的 save() 和persist() 方法分别是做什么的？有什么区别？【OK】
+答：
+save和persist方法可以使得对象状态发生改变，调用save方法之后，瞬时态对象可以变成持久态；
+persist()方法保证当它在一个事务外部被调用的时候并不触发一个INSERT语句，当需要封装一个长会话流程的时候，persist()方法是很有必要的；
+persist()方法把一个瞬时态的实例持久化，但是并不保证标识符被立刻填入到持久化实例中
+
+
+
+11.请回答一下servlet的生命周期是什么。servlet是否为单例以及原因是什么？【OK】
+答：
+Servlet的生命周期为：{5个步骤}
+    类装载过程；
+    init() 初始化过程；
+    service() 服务过程，
+    选择doGet \ doPost；
+    destroy() 销毁过程。
+Servlet一般可以认为是单例的，是一种单实例多线程的模型，通过线程池来响应多个请求，提高了请求的响应时间；
+Servlet单实例，减少产生Servlet的开销；
+
+
+
+12.使用过ThreadLocal吗？介绍一下【OK】
+答：
+ ThreadLocal采用的是以空间换时间的方式，为每个线程提供一份变量副本。
+ 每一个线程都可以独立的改变自己的副本。
+
+
+
+13.解释Java8之后的ConcurrentHashMap, 舍弃分段锁的原因？【OK】
+答：
+加入多个分段锁浪费内存空间。
+生产环境中， map 在放入时竞争同一个锁的概率非常小，分段锁反而会造成更新等操作的长时间等待。
+为了提高 GC 的效率。
+
+
+
+14.介绍下cms收集器？【OK】
+答：
+CMS收集器是老年代收集器，可以配合新生代的Serial和ParNew收集器一起使用。
+使用的是标记清除算法，容易产生内存碎片。
+4个步骤： 1.初始标记--》并发标记--》重新标记--》并发清除  （初始标记、重新标记）仍需STW。
+但初始标记仅仅只标记了一下GC Roots能直接关联到的对象，速度很快。
+而重新标记则是修正并发标记期间因用户程序继续运行而导致标记产生变动的那一部分对象的标记记录，虽然一般比初始标记阶段稍长，但要远小于并发标记时间。
+
+
+
+15.redis缓存与数据库一致性问题？【OK】
+答：
+一致性问题主要出现在数据更新的时候，通常在更新时采取删除缓存而不是更新缓存。
+先淘汰缓存，再写数据库。因为如果先写数据库可能出现如果有读请求发生，可能导致旧数据入缓存，引发数据不一致。
+
+
+
+16.dubbo有哪几种负载均衡策略？【OK】
+答：
+本质是多个服务端中，客户端如何选服务器的策略。
+1.RandomLoadBalance:按权重随机调用，这种方式是dubbo默认的负载均衡策略
+2.RoundRobinLoadBalance：轮询，按公约后的权重设置轮询比率
+3.LeastActiveLoadBalance：最少活跃次数
+4.ConsistentHashLoadBalance：一致性hash
+5.自定义负载均衡策略
+
+
+
+17.介绍一下服务器选择的策略{一致性hash}?【OK】
+答:
+集群服务器上每个节点的某个属性做hash操作，得到一个值。
+然后对数据key也做同样的hash操作，得到一个值。如何相同，则该数据放入该服务器，否则使用线性探测冲突解决法
+
+
+
+
+18.介绍下mysql的回表和覆盖索引？【OK】
+答：
+回表：数据库根据索引（非主键）找到了指定记录所在行后，还需要根据主键再次到数据库里获取数据。
+覆盖索引：如果一个索引包含(或覆盖)所有需要查询的字段的值。即只需扫描索引而无须回表。
+
+
+
+
+19.请问EJB是基于哪些技术实现的？并说明一下SessionBean和EntityBean的区别以及StatefulBean和StatelessBean的区别。【OK】
+答：
+EJB基于JNDI、RMI、JAT等技术实现。
+包括Session Bean、Entity Bean、Message Driven Bean，
+
+Session Bean用于实现业务逻辑，它可以是有状态的，也可以是无状态的。每当客户端请求时，容器就会选择一个Session Bean来为客户端服务。SessionBean可以直接访问数据库，但更多时候，它会通过Entity Bean实现数据访问。
+Entity Bean是域模型对象，用于实现O/R映射，负责将数据库中的表记录映射为内存中的Entity对象，事实上，创建一个Entity Bean对象相当于新建一条记录，删除一个Entity Bean会同时从数据库中删除对应记录，修改一个EntityBean时，容器会自动将Entity Bean的状态和数据库同步
+
+
+
+
+20.请问Spring支持的事务管理类型有哪些？以及你在项目中会使用哪种方式？【OK】
+答：
+声明式事务@Transactional
+@Transactional注解是一个用来定义一个接口、类或者方法必须具备事务化语义的元数据;
+编程式事务
+推荐使用TransactionTemplate来进行编程式事务管理.
+
+
+
+21.请问java中有几种类型的流？JDK为每种类型的流提供了一些抽象类以供继承，请说出他们分别是哪些类？【OK】
+答：
+java中的流按单位分为两种，一种字节流，另一种是字符流。，按照方向来分也是两种：一是输入流，另一位是输出流。
+分别由四个抽象类来表示InputStream、OutputStream、Reader、Writer
+
+
+
+22.请你说明concurrenthashmap有什么优势以及1.7和1.8区别？【OK】
+答：
+concurrenthashmap是hashmap的多线程版本
+jdk1.7中采用Segment + HashEntry的方式进行实现
+1.8中放弃了Segment臃肿的设计，取而代之的是采用Node + CAS + Synchronized来保证并发安全进行实现，
+
+
+
+23.写一个函数，求两个整数之和，要求在函数体内不得使用+、-、*、/四则运算符号。
+答：
+思路：递归操作：比如3+5=6+2=4+4=0+8=8+0
+具体步骤：先异或，然后与操作后左移1位，递归。然后直到第2个数==0，返回第一个数
+    a^b
+    (a&b)<<1
+
+
+24.请说出你所知道的线程同步的方法？【OK】
+答：
+同步方法
+同步块
+wait 和 notify
+volatile
+Lock:ReentrantLock
+局部变量比如ThreadLocal
+blockqueue
+
+
+
+25.请谈一下autowired 和resource区别是什么？【OK】
+答：
+ @Autowired注解是按照类型（byType）装配依赖对象，默认情况下它要求依赖对象必须存在，如果允许null值，可以设置它的required属性为false。如果我们想使用按照名称（byName）来装配，可以结合@Qualifier注解一起使用。
+ @Resource默认按照ByName自动注入，由J2EE提供，需要导入包javax.annotation.Resource。@Resource有两个重要的属性：name和type，而Spring将@Resource注解的name属性解析为bean的名字，而type属性则解析为bean的类型。所以，如果使用name属性，则使用byName的自动注入策略，而使用type属性时则使用byType自动注入策略。如果既不制定name也不制定type属性，这时将通过反射机制使用byName自动注入策略。
+
+
+
+ 26.请简单介绍ReentranceLock 和 synchronized 有什么区别？【OK】
+ 答：
+ 可重入性：synchronized其实也是可重锁，同一线程每进入一次，锁的计数器都会加一，在释放锁是计数器都会减一，只有当计数器为0时才能释放锁。
+ 锁的实现: ReentrantLock是JDK实现的，Synchronized是JVM实现。
+ 性能:在Synchronized优化以前，synchronized的性能是比ReenTrantLock差很多的，但是自从Synchronized引入了偏向锁，轻量级锁（自旋锁）后，两者的性能就差不多了，在两种方法都可用的情况下，官方甚至建议使用synchronized，其实synchronized的优化我感觉就借鉴了ReenTrantLock中的CAS技术。都是试图在用户态就把加锁问题解决，避免进入内核态的线程阻塞。
+ 功能:很明显Synchronized的使用比较方便简洁，并且由编译器去保证锁的加锁和释放，而ReenTrantLock需要手工声明来加锁和释放锁，为了避免忘记手工释放锁造成死锁，所以最好在finally中声明释放锁。锁的细粒度和灵活度：很明显ReenTrantLock优于Synchronized 当你需要时候一下三种功能是需要使用ReentrantLock ReentranLock可以指定公平锁还是非公平锁.（公共锁就是先等待的线程先获得锁,通过循环调用CAS操作来实现加锁，性能比较好，避免进入内核态的线程阻塞
+
+
+
+ 27.请说明hibernete的Query接口的list方法和iterate方法有什么区别？【OK】
+ 答：
+都能获取查询的对象.但是list()方法返回的每个对象都是完整的，
+而iterator()方法所返回的对象中仅包含了主键值（标识符），只有当你对iterator中的对象进行操作时，Hibernate才会向数据库再次发送SQL语句来获取该对象的属性值。
+
+
+
+28.为什么计算小数运算时，无法精确结果？【OK】
+答：
+2进制的小数无法精确的表达10进制小数，计算机在计算10进制小数的过程中要先转换为2进制进行计算，这个过程中出现了误差。
+
+
+
+29.请你使用过哪些JSTL标签？也就是jsp的标签【OK】
+答：
+<c:if>、<c:choose>、<c: when>、<c: otherwise>、<c:forEach>等
+
+
+
+30.请简述一下Hibernate的一级缓存、二级缓存以及查询缓存分别是什么？【OK】
+答：
+一级缓存:Hibernate默认的缓存机制，它属于Session级别的缓存机制。
+    也就是说Session关闭，缓存数据消失。
+    当程序调用Session的save()方法持久化对象时，程序并不会立刻将这个数据搞到数据库，而是将它放在了Session的一级缓存中，
+    Session的get()、load()方法也是，当我们调用Session的flush()时，数据才会一并存到数据库。
+二级缓存：属于SessionFactory级别的缓存，二级缓存是全局性的，应用中的所有Session都共享这个二级缓存。
+    二级缓存默认是关闭的，一旦开启，当我们需要查询数据时，会先在一级缓存查询，没有，去二级缓存，还没有，好，咱们再去数据库，因此缓存机制大大提高了数据库的访问性能。
+    二级缓存的使用策略一般有这几种：read-only、nonstrict-read-write、read-write、transactional。注意：我们通常使用二级缓存都是将其配置成 read-only ，
+    即我们应当在那些不需要进行修改的实体类上使用二级缓存，否则如果对缓存进行读写的话，性能会变差，这样设置缓存就失去了意义。
+开启了查询缓存，第一次进行查询的时候，已经把结果放到query***中，当第二次再次做出相同的查询的时候，就不再向数据库发重复的sql语句了。
+
+
+
+
+
+31.java堆内存垃圾收集器的重新整理？【OK】
+答：
+堆有年轻代+老年代。所以分别有专门的收集器处理。堆得垃圾收集器一般是配套出现的。
+一个负责回收年轻代，一个负责回收年老代。两者组合形成一套垃圾收集器
+
+年轻代：                    年老代：
+Serial收集器                Serial Old收集器。    //两者都是单线程。标记-整理算法。这是组合的一套收集器
+ParNew收集器                                     //多线程版本
+Parallel Scavenge收集器     Parallel Old收集器    //多线程，吞吐量。复制算法
+            两个区域都可以的垃圾收集器：
+                CMS收集器：标记-清除算法。初始标记-并发标记-重新标记-并发清除
+                G1收集器：同样有单线程和多线程
+
+
+32.分布式环境下，怎么保证线程安全？
+答：
+避免并发；
+时间戳；
+串行化；
+数据库；
+行锁；
+统一触发途径；
+
+
+
+33.如何保证高并发时线程安全？【OK】
+答：
+代码层面：使用原子类和锁，线程内部变量。AtomicInteger、synchronized、Lock、ThreadLocal等；
+功能层面：用线程池ThreadPool。
+缓存层面：用Redis的分布式锁(setnx)，将对于服务器的承载力达到一定数量后，之后的请求全部加入队列处理。
+负载均衡：在代码层级上对不同的业务进行读写分离；而数据库上进行集群和主从复制。用lvs+keepalive模式进行服务器集群。
+
+
+
+32.请你介绍一下Vert.x?
+答：
+
+
+33.请你介绍一下Zeebe？
+答：
+
+
+

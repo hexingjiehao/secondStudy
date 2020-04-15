@@ -1,0 +1,157 @@
+1.学习lua的知识点：
+    1.官网地址：http://www.lua.org
+    2.版本: 稳定版本lua5.3.5, 最新版本lua5.4.0(beta)
+    2.概念：Lua是一种强大、高效、轻量级、可嵌入的脚本语言。它支持过程式编程、面向对象编程、函数式编程、数据驱动编程和数据描述。
+           Lua是纯c语言编译的项目
+    3.使用的IDEA有：
+        在线编辑平台：https://www.lua.org/cgi-bin/demo
+        IntelliJ IDEA Lua插件
+        IntelliJ IDEA Emmylua插件
+        ZeroBrane Studio
+        LuaDist
+    4.安装方式：
+        mac安装：brew install lua  【推荐】
+            或者下载源码包自己编译：make macosx test
+        linux安装:
+            curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
+            tar zxf lua-5.3.5.tar.gz
+            cd lua-5.3.5
+            make linux test
+            make install
+    5.lua的下载：
+        http://www.lua.org/download.html
+        插件仓库：https://luarocks.org
+    5.5 执行编译和执行命令：🌿🌿🌿🌿🌿
+        lua Hello.lua
+    6.使用的场景：
+        idea+luaJ: 需要LuaJ这样一个SDK。
+        LuaJ的官网：http://www.luaj.org/luaj/3.0/README.html
+            定义：Luaj是一个基于5.2.x的lua解释器
+    7.学习lua语法文档：【类似论文，不建议初学者观看😢😢😢😢😢】
+        2.基础概念
+            值和类型：
+                Lua是一种动态类型语言。这意味着变量没有类型,只有值。
+                Lua有8种值：nil、boolean、number、string、function、userdata、thread和table
+                userdata是为了允许将任意C数据存储在Lua变量中，它表示一块原始内存
+            垃圾收集：Lua执行自动内存管理。实现增量的标记-清除收集器
+            协作多线程Coroutines：
+                function foo (a)
+                   print("foo", a)
+                   return coroutine.yield(2*a)
+                end
+
+                co = coroutine.create(
+                    function (a,b)
+                       print("co-body", a, b)
+                       local r = foo(a+1)
+                       print("co-body", r)
+                       local r, s = coroutine.yield(a+b, a-b)
+                       print("co-body", r, s)
+                       return b, "end"
+                    end
+                )
+
+                print("main", coroutine.resume(co, 1, 10))
+                print("main", coroutine.resume(co, "r"))
+                print("main", coroutine.resume(co, "x", "y"))
+                print("main", coroutine.resume(co, "x", "y"))
+        3.语法
+            变量：全局变量，局部变量，表字段【❓❓❓】
+......
+    8.菜鸟教程：🌿🌿🌿🌿🌿
+        1.命令行操作：
+           lua -i  //显示版本
+        2.脚本式编程：创建.lua文件,使用lua Hello.lua执行脚本文件
+        3.注释：
+            单行注释：--
+            多行注释：--[[
+                        ......
+                     ]]
+        4.全局变量：默认是全局的
+            b=10
+            删除全局变量：b=nil
+        5.数据类型：
+            nil: 表示无效值
+                nil 作比较时应该加上双引号 "：
+                    type(nil) =="nil"
+            boolean:
+            number:
+            string:
+                使用[[]]来表示一块字符串。
+                对数字字符串进行算术操作时，会尝试将其转化为数字。
+                字符串连接符号：..
+                使用#计算字符串的长度
+            function:
+            userdata: 表示任意存储在变量中的C数据结构
+                userdata 是一种用户自定义数据，用于表示一种由应用程序或 C/C++ 语言库所创建的类型，
+            thread: 表示执行的独立线路，用于执行协同程序
+                线程跟协程的区别：线程可以同时多个运行，而协程任意时刻只能运行一个，并且处于运行状态的协程只有被挂起（suspend）时才会暂停。
+            table: 表示关联数组，类似于map。构造表达式为{}
+                table类型的下标从1开始，而且容量无限大
+        6.变量
+            local b=5
+            a=5
+            c,d=1,2
+                变量个数 > 值的个数             按变量个数补足nil
+                变量个数 < 值的个数             多余的值会被忽略
+            函数有多个返回值：
+                a,b=f()
+        7.循环语句：break,goto
+            while(true) do
+                ....
+            end
+
+            for var=1 do
+                ...
+            end
+
+            repeat
+                ....
+            until(true)
+        8.流程控制：
+            if(0) then
+                ...
+            elseif(1) then
+                ...
+            else
+                ...
+            end
+        9.函数的多返回值：
+            function f()
+                return 1,2;
+            end
+        10.字符串的替换方法:还可以决定替换的次数
+            string.gsub("aaaabcd","a","z",2);
+        11.模块与包🌿🌿🌿🌿🌿
+            创建模块就是创建1个table
+                module={}
+                module.constant = "这是一个常量"
+                return module
+            导入模块：
+                require("<模块名>")
+        12.文件操作
+            file = io.open("test.lua", "r")
+            -- 输出文件第一行
+            print(io.read())
+            -- 关闭打开的文件
+            io.close(file)
+未完待续......
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

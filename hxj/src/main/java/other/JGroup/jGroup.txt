@@ -1,0 +1,174 @@
+1.学习JGroup知识点：
+    官网地址：http://www.jgroups.org
+    功能：做集群消息交互。可以通过代码编写，也可以通过xml文件配置。
+    概念：JGroups是一个用于可靠消息传递的工具包。它可以用来创建集群，集群中的节点可以互相发送消息。
+         它更像是一个存储协议的容器。
+    docker仓库上的镜像：docker run -it --rm belaban/jgroups
+        或者：docker run -it --rm belaban/jgroups-docker
+    java参考文档：非常简单,只有一页。地址：http://www.jgroups.org/javadoc4/index.html
+    最简单的使用代码：核心是xml文件中的内容
+        JChannel channel=new JChannel("/home/bela/udp.xml");
+        channel.setReceiver(new ReceiverAdapter() {
+          public void receive(Message msg) {
+              System.out.println("received msg from " + msg.getSrc() + ": " + msg.getObject());
+          }
+        });
+        channel.connect("MyCluster");  //连接到集群，没有则创建
+        channel.send(new Message(null, "hello world"));   //第一个参数为null，表示发送给所有集群节点
+        channel.close();
+
+    下载插入JGroup等教程：http://www.jgroups.org/tutorial4/index.html
+        最新版本：4.0.19.Final
+        下载后命令行查看版本信息：java org.jgroups.Version   或者  java -jar jgroups-4.x.y.jar
+        测试代码运行两次，显示集群效果：java org.jgroups.demos.Draw
+        默认使用IP组播。
+        断网Jgroup集群：java -Djgroups.bind_addr=127.0.0.1 org.jgroups.demos.Draw
+            增加路由：route add -net 224.0.0.0 netmask 240.0.0.0 dev lo
+        集群未形成的原因：防火墙丢弃数据包
+                        使用IPv6地址。解决：-Djava.net.preferIPv4Stack=true  或者 -Djava.net.preferIPv6Addresses=true
+                        没有使用正确的网络接口NIC：java -Djgroups.bind_addr=192.168.5.2 java.org.jgroups.demos.Draw
+                        选择的网络接口NIC没有多播路由
+        获取集群拓扑逻辑的节点成员：View.getMembers()
+        集群中的节点只能发送和接收消息
+        节点离开集群：JChannel.disconnect()  或者
+                    JChannel.close()，后者实际调用前者
+        默认使用内置的udp.xml创建集群管道。
+        关键方法有viewAccepted(),receive(),connect(),send(),close()
+
+    重要的JGroup使用教程：http://www.jgroups.org/manual4/index.html
+        综述：重点是JGroup的使用，而不是实现。
+            管道、积木、协议栈。
+        插入和配置：
+            JGroup包默认使用log4j2日志
+            检查IP组播是否有效：-mcast_addr表示多播地址
+        API：
+            工具类、接口、地址、消息、头、事件、视图、管道、IP地址UUID
+        积木：
+            消息调度器、rpc协议调度器、调度器的异步实现、副本hashMap、副本缓存、集群全局锁、集群全局原子计数器
+        高级概念：
+            多播管道、传输协议、传输细节、处理网络分区、缓冲区、大集群、远程集群的桥接、多播中继器、决定协调者
+        协议列表：
+            协议中的公共属性、系统属性、传输协议、成员发现、网络分区合并、失败检测、可靠消息传输、消息稳定性、组成员、流控制
+            非阻塞流控制、顺序、状态传输、多播缓冲、安全
+
+        ⚠️⚠️⚠️配置文件中协议从底部往顶部创建，第一个是最底层，最后一个是最顶层，有顺序。
+                这些协议必须要有对应的java类对应。集群成员必须有一致的协议栈
+        确认消息发送成功：Message msg=new Message(null, "hello world").setFlag(Message.RSVP);
+                        ch.send(msg);
+        RSVP是一个确认消息到达的协议。
+
+        jgroup.xml配置举例:
+            <config xmlns="urn:org:jgroups"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/jgroups.xsd">
+                <UDP
+                     mcast_port="${jgroups.udp.mcast_port:45588}"
+                     ip_ttl="4"
+                     ucast_recv_buf_size="5M"
+                     ucast_send_buf_size="5M"
+                     mcast_recv_buf_size="5M"
+                     mcast_send_buf_size="5M"
+                     max_bundle_size="64K"
+                     enable_diagnostics="true"
+
+                     thread_pool.min_threads="2"
+                     thread_pool.max_threads="8"
+                     thread_pool.keep_alive_time="5000" />
+
+                <PING />
+                <MERGE3 max_interval="30000"
+                        min_interval="10000"/>
+                <FD_SOCK/>
+                <FD_ALL/>
+                <VERIFY_SUSPECT timeout="1500"  />
+                <pbcast.NAKACK2 xmit_interval="500"
+                                xmit_table_num_rows="100"
+                                xmit_table_msgs_per_row="2000"
+                                xmit_table_max_compaction_time="30000"
+                                max_msg_batch_size="500"
+                                use_mcast_xmit="false"
+                                discard_delivered_msgs="true"/>
+                <UNICAST3 xmit_interval="500"
+                          xmit_table_num_rows="100"
+                          xmit_table_msgs_per_row="2000"
+                          xmit_table_max_compaction_time="60000"
+                          conn_expiry_timeout="0"
+                          max_msg_batch_size="500"/>
+                <pbcast.STABLE desired_avg_gossip="50000"
+                               max_bytes="4M"/>
+                <pbcast.GMS print_local_addr="true" join_timeout="2000"/>
+                <UFC max_credits="2M"
+                     min_threshold="0.4"/>
+                <MFC max_credits="2M"
+                     min_threshold="0.4"/>
+                <FRAG2 frag_size="60K"  />
+            </config>
+
+        ⚠️⚠️⚠️协议栈的代码实现：
+            Protocol[] prot_stack={
+                      new UDP().setValue("bind_addr", InetAddress.getByName("127.0.0.1")), 2
+                      new PING(),
+                      new MERGE3(),
+                      new FD_SOCK(),
+                      new FD_ALL(),
+                      new VERIFY_SUSPECT(),
+                      new BARRIER(),
+                      new NAKACK2(),
+                      new UNICAST3(),
+                      new STABLE(),
+                      new GMS(),
+                      new UFC(),
+                      new MFC(),
+                      new FRAG2()};
+            JChannel ch=new JChannel(prot_stack).name(args[0]); 1
+
+        ⚠️⚠️⚠️集群全局锁案例：
+        JChannel ch=new JChannel("/home/bela/locking.xml");
+        LockService lock_service=new LockService(ch);
+        ch.connect("lock-cluster");
+        Lock lock=lock_service.getLock("mylock"); // gets a cluster-wide lock
+        lock.lock();
+        try {
+            // do something with the locked resource
+        }
+        finally {
+            lock.unlock();
+        }
+
+        各个协议的功能：
+            UDP: 传输协议
+            PING：发现协议
+            MERGE3：合并子集群成一个集群
+            FD_SOCK:基于套接字的失败检测
+            FD/FD_ALL:基于心跳的失败检测
+            VERIFY_SUSPECT:双重检查怀疑成员是否死亡
+            BARRIER：传输状态
+            pbcast.NAKACK2:确保消息可靠和先进先出
+            UNICAST3：单播消息的可靠性和先进先出
+            pbcast.STABLE:分布式垃圾回收
+            pbcast.GMS:成员协议
+            UFC：单播流控制
+            MFC：多播流控制
+            FRAG2：碎片消息的重组
+            STATE_TRANSFER:确保状态正确传输
+
+        TCP配置的案例：
+            <TCP bind_port="7800" />
+            <TCPPING initial_hosts="${jgroups.tcpping.initial_hosts:HostA[7800],HostB[7801]}"
+                     port_range="1"/>
+            <VERIFY_SUSPECT timeout="1500"  />
+            <pbcast.NAKACK2 use_mcast_xmit="false"
+                            discard_delivered_msgs="true"/>
+            <UNICAST3/>
+            <pbcast.STABLE stability_delay="1000" desired_avg_gossip="50000"
+                           max_bytes="400000"/>
+            <pbcast.GMS print_local_addr="true" join_timeout="2000"/>
+
+文档的第5节和第6节没时间看了。
+
+
+
+
+
+
+

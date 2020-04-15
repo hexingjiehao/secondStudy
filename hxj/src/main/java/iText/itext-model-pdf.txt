@@ -1,0 +1,74 @@
+0.即将搭建的项目框架：
+    主要流程：模版->HTML+CSS->PDF->签名PDF
+        1.模版->HTML+CSS
+            使用 Pebble Template引擎：https://pebbletemplates.io/
+            VertX与Pebble的结合：https://vertx.io/docs/vertx-web/java/#_pebble_template_engine
+        得到渲染结果在内存里的Buffer中（VertX内存对象）
+
+        2.HTML+CSS->PDF
+        使用 pdfHTML 将VertX Buffer中的结果，转换成PDF（也存于内存中）
+
+        3.PDF->签名PDF
+            这个暂时先不做，而是将上一步得到的在内存中的PDF利用WebClient和objectstore-qcloud中的签名服务将PDF写入到腾讯云的COS存储里。
+    以上整个作为一个EventBus上运行的微服务，输入为模版名称+参数对象（JsonObject），输出为转换得到的COS存储上的PDF路径。
+
+1.学习Pebble Template引擎：
+    官网：https://pebbletemplates.io/。最新版本是3.0.10
+    定义：Pebble是一个受Twig启发的Java模板引擎。它具有模板继承和易于阅读的语法，内置安全自动转义，包括对国际化的集成支持。
+    特点：丰富的内置标签和过滤器
+         模板继承:在单个“布局”中提取内容的公共区域，并使模板继承此布局
+         可扩展语言:可以很容易地将新的标记、过滤器和函数添加到Pebble中
+    基本用法：
+        -添加jar包依赖：<dependency>
+                        <groupId>io.pebbletemplates</groupId>
+                        <artifactId>pebble</artifactId>
+                        <version>3.0.10</version>
+                      </dependency>
+        -在WEB-INF目录下创建基础模版：base.html
+            <html>
+            <head>
+            	<title>{% block title %}My Website{% endblock %}</title>
+            </head>
+            <body>
+            	<div id="content">
+            		{% block content %}{% endblock %}
+            	</div>
+            	<div id="footer">
+            		{% block footer %}
+            			Copyright 2018
+            		{% endblock %}
+            	</div>
+            </body>
+            </html>
+        -创建新的模版继承基础模版:home.html
+            {% extends "base.html" %}
+
+            {% block title %} Home {% endblock %}
+
+            {% block content %}
+            	<h1> Home </h1>
+            	<p> Welcome to my home page. My name is {{ name }}.</p>
+            {% endblock %}
+        -通过java代码编译模版并渲染模版：
+            PebbleEngine engine = new PebbleEngine.Builder().build();
+            PebbleTemplate compiledTemplate = engine.getTemplate("home.html");
+            Map<String, Object> context = new HashMap<>();
+            context.put("name", "Mitchell");
+            Writer writer = new StringWriter();
+            compiledTemplate.evaluate(writer, context);
+            String output = writer.toString();  //output值应该是一个静态html
+        -渲染的结果展示：
+            <html>
+            <head>
+            	<title> Home </title>
+            </head>
+            <body>
+            	<div id="content">
+            		<h1> Home </h1>
+            	    <p> Welcome to my home page. My name is Mitchell.</p>
+            	</div>
+            	<div id="footer">
+            		Copyright 2018
+            	</div>
+            </body>
+            </html>

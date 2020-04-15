@@ -1,0 +1,762 @@
+1.drools规则语法的学习：参考文档http://ksoong.org/drools-examples/content/
+
+    1.目的：为了业务决策的自动化。每次决策都会有分析大量数据，然后才能产生有用信息。
+         它是一个推理引擎，20年历史，基于规则匹配算法。有点类似于词法分析器或者语法分析器。
+    2.历史发展：
+        2001年到现在：Drools社区项目1.0-7.x
+        2006年到现在：球队规划师社区项目1.o-7.x
+        2006年：jBoss Rules3发布
+        2007年：jBoss Rules4发布
+        2010年：jBoss Enterprise BRM 5发布。也可以叫做jBoss企业业务规则管理引擎
+        2014年：Red Hat jBoss BRM 6发布。也可以叫做红帽jBoss业务规则管理引擎
+        2018年：Red Hat Decision Manager 7发布。也可以叫做红帽决策管理引擎
+    3.主要特点：
+        业务敏捷：UI和持久化分开
+        实时响应：高效算法，可持续处理数据事件
+        最优计划：制定依赖算法和数据
+        高效合作：参与着合作构建业务系统
+    4.语法【关键！！！】：
+        4.1 规则文件结构：一共7个要素+额外的类型声明
+                4.1.1 package package-name: 文件的包路径
+                4.1.2 imports：导入其他文件
+                4.1.3 globals：全局变量
+                    语法分析：开始-》'global'-》class-》name-》分支1："；"-》结束
+                                                      -》分支2：直接结束
+                    drl举例：
+                        package org.drools.examples.globals;
+                        global java.util.List myGlobalList;
+                        rule "Using a global"
+                          when
+                            eval(true)
+                          then
+                            myGlobalList.add( "Hello World" );
+                        end
+                    Java举例：
+                        KieServices ks = KieServices.Factory.get();
+                        KieContainer kContainer = ks.getKieClasspathContainer();
+                        KieSession kSession = kContainer.newKieSession("ksession-rules-globals");
+                        List<String> list = new ArrayList<>();
+                        kSession.setGlobal( "myGlobalList", list );
+                        kSession.fireAllRules();
+                        kSession.dispose();
+
+
+                4.1.4 Type Declaration：类型声明。类型声明主要有两个目的：声明一个新类型，声明元数据
+                    1.自定义类型：(就像声明一个类一样)
+                        语法分析：
+                            开始-》'@ID' -》分支1：结束
+                                        -》分支2：回到'@ID'
+                                        -》分支3：'(' -》value -》')' -》分支1：结束
+                                                                    -》分支2：回到'@ID'
+                        drl举例：
+                            package org.drools.examples.newTypes;
+                            import java.util.Date
+                            global java.util.List myGlobalList;
+                            declare Address
+                              number : int
+                              streetName : String
+                              city : String
+                            end
+                            declare Person
+                              name : String
+                              dateOfBirth : Date
+                              address : Address
+                            end
+                            declare enum DaysOfWeek
+                              SUN,MON,TUE,WED,THU,FRI,SAT;
+                            end
+                            declare Employee
+                              name : String
+                              dayOff : DaysOfWeek
+                            end
+
+                            rule "Declaing new Types"
+                              when
+                                eval(true)
+                              then
+                                Address address = new Address();
+                                address.setNumber(100);
+                                address.setStreetName("Bing He Road");
+                                address.setCity("LanZhou");
+                                Person person = new Person();
+                                person.setName("Bob");
+                                person.setAddress(address);
+                                myGlobalList.add(address);
+                                insert(person);
+                            end
+                            rule "Using a declared Type"
+                              when
+                                $p : Person( name == "Bob" )
+                              then
+                                myGlobalList.add($p);
+                                Employee employee = new Employee();
+                                employee.setName("Mr Yung");
+                                employee.setDayOff(DaysOfWeek.WED);
+                                insert(employee);
+                            end
+                            rule "Using a declared Enum"
+                              when
+                                $e : Employee( dayOff == DaysOfWeek.WED )
+                              then
+                                myGlobalList.add($e);
+                            end
+
+                        Java举例：
+                            KieServices ks = KieServices.Factory.get();
+                            KieContainer kContainer = ks.getKieClasspathContainer();
+                            KieSession kSession = kContainer.newKieSession("ksession-rules-newTypes");
+                            List<Object> list = new ArrayList<>();
+                            kSession.setGlobal( "myGlobalList", list );
+                            kSession.fireAllRules();
+                            kSession.dispose();
+                            list.forEach(obj -> System.out.println("class: " + obj.getClass() + ", value: " + obj));
+
+                    2.元数据类型：有点像注解，又有点像sql语句中建表操作
+                        语法分析：
+                            开始-》'declare'-》name-》分支1：'end'-》结束
+                                                  -》分支3：第一个meta_data -》分支1：达到ID
+                                                                          -》分支2：回到第一个meta_data
+                                                                          -》分支3：到达'end'
+                                                  -》分支2：ID -》 '；' -》 'type' -》分支1：回到ID
+                                                                                 -》分支2：到达'end'
+                                                                                 -》分支3：第二个meta_data -》分支1：回到第二个meta_data
+                                                                                                         -》分支2：回到ID
+                                                                                                         -》分支3：达到'end'
+                        类型-级别：
+                            @role( <fact / event> )       --Class      ：声明 Fact 对象为一个事件
+                            @typesafe( <boolean> )        --Class
+                            @timestamp( <attribute name> )--Class      ：声明事件发生的时间
+                            @duration( <attribute name> ) --Class      ：声明事件在规则引擎中持续的时间
+                            @expires( <time interval> )   --Class      ：声明事件在规则引擎中被删除的时间，与事件流一起使用
+                            @propertyChangeSupport        --Class
+                            @propertyReactive             --Class
+                            @key                          --Attribute
+                            @position                     --Attribute
+
+                        drl举例：
+                            package org.drools.examples.metadata;
+                            import java.util.Date
+                            import org.drools.examples.model.Customer;
+
+                            declare Address
+                              @author( Kylin )
+                              @dateOfCreation( 23-Oct-2017 )
+                              number : int @key @position(0)
+                              streetName : String @key @position(1)
+                              city : String @key @position(2)
+                            end
+                            declare Person
+                              @author( Kylin )
+                              @dateOfCreation( 23-Oct-2017 )
+                              name : String @key @maxLength( 30 ) @position(0)
+                              dateOfBirth : Date @key @position(1)
+                              address : Address
+                            end
+                            declare Customer
+                              @author( Kylin )
+                              @dateOfCreation( 23-Oct-2017 )
+                            end
+                            declare GoldenCustomer extends Customer
+                              @author( Kylin )
+                              @dateOfCreation( 23-Oct-2017 )
+
+                              priority : int
+                            end
+
+                            rule "Declaring Metadata"
+                              when
+                                eval(true)
+                              then
+                                Person person = new Person("Bob", new Date());
+                                Customer customer = new Customer();
+                                System.out.println(person);
+                                System.out.println(customer);
+                            end
+                            rule "Accessing Declared Types from the Application Code"
+                              when
+                                $c : GoldenCustomer(id == 101)
+                              then
+                                System.out.println($c);
+                            end
+
+                        Java举例：
+                            KieServices ks = KieServices.Factory.get();
+                            KieContainer kContainer = ks.getKieClasspathContainer();
+                            KieBase kbase = kContainer.getKieBase("rules-metadata");
+                            KieSession kSession = kbase.newKieSession();
+                            FactType factType = kbase.getFactType("org.drools.examples.metadata", "GoldenCustomer");
+                            Object obj = factType.newInstance();
+                            factType.set(obj, "id", 101);
+                            factType.set(obj, "name", "Bob");
+                            factType.set(obj, "discription", "this is a discription");
+                            factType.set(obj, "priority", 1);
+                            kSession.insert(obj);
+                            kSession.fireAllRules();
+                            kSession.dispose();
+
+
+                4.1.5 attributes：属性，规定了这个规则可以怎么样，不可以怎么样
+                    语法分析：
+                        开始 -》分支1 -》'duration'-》duration-value(ms)-》结束
+                            -》分支2 -》'enabled'         -》到达value
+                            -》分支3 -》'date-expires'    -》到达value
+                            -》分支4 -》'date-effective'  -》到达value
+                            -》分支5 -》'dialect'         -》到达value
+                            -》分支6 -》'activation-group'-》到达value
+                            -》分支7 -》'ruleflow-group'  -》到达value
+                            -》分支8 -》'auto-fous'       -》到达value
+                            -》分支9 -》'agenda-group'    -》到达value
+                            -》分支10 -》'salience'       -》到达value
+                            -》分支11 -》'lock-on-active' -》到达value
+                            -》分支12 -》'no-loop'        -》value -》分支1：直接结束
+                                                                  -》分支2：'；'-》结束
+                    注意事项：
+                        属性  	       默认值  类型	   描述
+                        no-loop        false  Boolean  用来设定是否循环执行规则
+                        ruleflow-group null   String   用来关联规则流与规则而实现规则的顺序执行。在某种层面上是对规则的分区执行。
+                        salience       0      Integer  定义规则执行的优先级
+                        agenda-group   MAIN   String   分区执行规则, 不能与ruleflow-group同时存在。
+                        auto-focus     false  Boolean  控制在执行MAIN agenda-group之前执行其它agenda-group中的规则
+                        lock-on-active false  Boolean  控制agenda-group与ruleflow-group中规则是否同时存在
+                        date-effective null   String   规则在一段事件之后才可以被执行
+                        date-expires   null   String   规则在一段事件之内可以被执行
+                    drl和Java举例：
+                        1.no-loop:无环
+                            drl举例：
+                                package org.drools.examples.loop;
+                                import org.drools.examples.model.Cursor;
+                                rule "no-loop testing"
+                                  no-loop true // will skip loop
+                                  when
+                                    c : Cursor(cur < 10, tmpCur : cur)
+                                  then
+                                    System.out.println(tmpCur);
+                                    c.setCur(c.getCur() + 1);
+                                    update(c);
+                                end
+                            Java举例：
+                                KieServices ks = KieServices.Factory.get();
+                                KieContainer kContainer = ks.getKieClasspathContainer();
+                                KieSession kSession = kContainer.newKieSession("ksession-rules-no-loop");
+                                Cursor cur = new Cursor(5);
+                                kSession.insert(cur);
+                                kSession.fireAllRules();
+                                kSession.dispose();
+
+                        2.salience；突出，给每个规则一个优先级，形成顺序执行
+                            drl举例：
+                                package org.drools.examples.saliences;
+                                rule "Rule 01"
+                                  salience -100
+                                  when
+                                    eval (true)
+                                  then
+                                    System.out.println("Rule 01");
+                                end
+                                rule "Rule 02"
+                                  when
+                                    eval (true)
+                                  then
+                                    System.out.println("Rule 02");
+                                end
+                                rule "Rule 03"
+                                  salience 100
+                                  when
+                                    eval (true)
+                                  then
+                                    System.out.println("Rule 03");
+                                end
+                            Java举例：
+                                KieServices ks = KieServices.Factory.get();
+                                KieContainer kContainer = ks.getKieClasspathContainer();
+                                KieSession kSession = kContainer.newKieSession("ksession-rules-saliences");
+                                kSession.fireAllRules();
+                                kSession.dispose();
+
+                        3.agenda-group：议程组，对规则进行分组分区。可单独执行某一个分区的所有规则
+                            drl举例：
+                                package org.drools.examples.partition;
+                                rule "Rule 01"
+                                  agenda-group "partitionA"
+                                  when
+                                    eval (true)
+                                  then
+                                    System.out.println("Rule 01");
+                                end
+                                rule "Rule 02"
+                                  agenda-group "partitionB"
+                                  when
+                                    eval (true)
+                                  then
+                                    System.out.println("Rule 02");
+                                end
+                            Java举例：
+                                KieServices ks = KieServices.Factory.get();
+                                KieContainer kContainer = ks.getKieClasspathContainer();
+                                KieSession kSession = kContainer.newKieSession("ksession-rules-partition");
+                                kSession.getAgenda().getAgendaGroup("partitionB").setFocus();
+                                kSession.fireAllRules();
+                                kSession.getAgenda().getAgendaGroup("partitionA").setFocus();
+                                kSession.fireAllRules();
+                                kSession.dispose();
+
+                        4.auto-focus：自动对焦。控制在主分区规则执行之前，执行其他分区的规则。语法还是有点不明白？？？
+                            drl举例：rule后面的字符串只是规则的名字
+                                package attributes
+                                rule "auto-focus set to 'true'"
+                                agenda-group "TEST"
+                                auto-focus true
+                                    when
+                                        eval(true)
+                                    then
+                                        System.out.println(drools.getRule().getName());
+                                end
+                            Java举例：
+                                KieServices ks = KieServices.Factory.get();
+                                KieContainer kContainer = ks.getKieClasspathContainer();
+                                KieSession kSession = kContainer.newKieSession("ksession-attributes");
+                                kSession.fireAllRules();
+                                kSession.dispose();
+
+
+                4.1.6 funtions：功能函数
+                    语法分析：开始-》分支1：documentation-》'function'-》return-type -》name-》'(' -》params -》')' -》'{' -》 code -》'}' -》结束
+                             —》分支2：'function'
+                    drl举例：
+                       package org.drools.examples.functions;
+                       function String sayHello(String msg) {
+                         return "Hello " + msg + "!";
+                       }
+                       rule "using a function"
+                         when
+                           eval(true)
+                         then
+                           System.out.println(sayHello("TEST"));
+                       end
+                    Java举例：
+                        KieServices ks = KieServices.Factory.get();
+                        KieContainer kContainer = ks.getKieClasspathContainer();
+                        KieSession kSession = kContainer.newKieSession("ksession-rules-functions");
+                        kSession.fireAllRules();
+                        kSession.dispose();
+
+
+                4.1.7 queries：查询
+                4.1.8 rules：规则
+                    语法分析：
+                        开始-》'rule'-》name-》分支1：attributes -》分支1：回到attributes
+                                                               -》分支2：到达'when'
+                                           -》分支2：'when' -》LHS(非必须) -》'then' -》RHS(非必须)-》'end'-》结束
+                    注意事项：规则名要唯一。LHS和RHS不是必需，在关键字后面跟随。LHS与RHS：javascript引擎的两种查找类型，含义是赋值操作的左侧与右侧。
+                    drl举例：
+                        package org.drools.examples.banking;
+                        import org.drools.examples.model.Cashflow;
+                        import org.drools.examples.model.TypedCashflow;
+                        import org.drools.examples.model.AllocatedCashflow;
+
+                        rule "Rule 01"
+                            when
+                                eval (1==1)
+                            then
+                                System.out.println("Rule 01 Works");
+                        end
+                        rule "Rule 02"
+                            when
+                                $number : Number()
+                                not Number( intValue < $number.intValue )
+                            then
+                                System.out.println("Number found with value: " + $number.intValue() );
+                                delete( $number );
+                        end
+                        rule "Rule 03"
+                            when
+                                Number( $intValue : intValue )
+                            then
+                                System.out.println("Number found with value: " + $intValue);
+                        end
+                        rule "Rule 04"
+                            when
+                                $cashflow : Cashflow( $date : date, $amount : amount )
+                                not Cashflow( date < $date)
+                            then
+                                System.out.println("Cashflow: "+$date+" :: "+$amount);
+                                delete($cashflow);
+                        end
+                        rule "Rule 05"
+                            when
+                                $cashflow : TypedCashflow( $date : date,$amount : amount,type == TypedCashflow.CREDIT )
+                                not TypedCashflow( date < $date,type == TypedCashflow.CREDIT )
+                            then
+                                System.out.println("Credit: "+$date+" :: "+$amount);
+                                delete($cashflow);
+                        end
+                        rule "Rule 06 - Credit"
+                            when
+                                $cashflow : AllocatedCashflow( $account : account,$date : date, $amount : amount,type==TypedCashflow.CREDIT )
+                                not AllocatedCashflow( account == $account, date < $date)
+                            then
+                                System.out.println("Credit: " + $date + " :: " + $amount);
+                                $account.setBalance($account.getBalance()+$amount);
+                                System.out.println("Account: " + $account.getAccountNo() + " - new balance: " + $account.getBalance());
+                                delete($cashflow);
+                        end
+                        rule "Rule 06 - Debit"
+                            when
+                                $cashflow : AllocatedCashflow( $account : account,$date : date, $amount : amount,type==TypedCashflow.DEBIT )
+                                not AllocatedCashflow( account == $account, date < $date)
+                            then
+                                System.out.println("Debit: " + $date + " :: " + $amount);
+                                $account.setBalance($account.getBalance() - $amount);
+                                System.out.println("Account: " + $account.getAccountNo() + " - new balance: " + $account.getBalance());
+                                delete($cashflow);
+                        end
+
+
+                    Java举例：结果是不同的对象插入session中，然后分别调用不同的规则，这些规则可以写到不同的文件中。判断条件有些是因为象的类型
+                        KieServices ks = KieServices.Factory.get();
+                        KieContainer kContainer = ks.getKieClasspathContainer();
+                        KieSession kSession = kContainer.newKieSession("ksession-rules-banking");
+                        Number[] numbers = new Number[] {new Integer(3), new Integer(1), new Integer(4), new Integer(1), new Integer(5)};
+                        for(int i = 0 ; i < numbers.length ; i ++) {
+                               kSession.insert(numbers[i]);
+                        }
+                        Cashflow[] cashflows = new Cashflow[]{
+                                new Cashflow(new SimpleDate("01/12/2017"), 300.00),
+                                new Cashflow(new SimpleDate("05/01/2017"), 100.00),
+                                new Cashflow(new SimpleDate("11/07/2017"), 500.00),
+                                new Cashflow(new SimpleDate("07/01/2017"), 800.00),
+                                new Cashflow(new SimpleDate("02/10/2017"), 400.00)
+                        };
+                        for(int i = 0 ; i < cashflows.length ; i ++) {
+                               kSession.insert(cashflows[i]);
+                        }
+                        TypedCashflow[] typedCashflows = new TypedCashflow[]{
+                              	new TypedCashflow(new SimpleDate("01/12/2017"), 300.00, TypedCashflow.CREDIT),
+                                new TypedCashflow(new SimpleDate("05/01/2017"), 100.00, TypedCashflow.CREDIT),
+                                new TypedCashflow(new SimpleDate("11/07/2017"), 500.00, TypedCashflow.CREDIT),
+                                new TypedCashflow(new SimpleDate("07/01/2017"), 800.00, TypedCashflow.DEBIT),
+                                new TypedCashflow(new SimpleDate("02/10/2017"), 400.00, TypedCashflow.DEBIT)
+                        };
+                        for(int i = 0 ; i < typedCashflows.length ; i ++) {
+                                kSession.insert(typedCashflows[i]);
+                        }
+                        Account acc1 = new Account(1);
+                        Account acc2 = new Account(2);
+                        AllocatedCashflow[] allocatedCashflows = new AllocatedCashflow[] {
+                                new AllocatedCashflow(acc1,new SimpleDate("01/01/2017"), 300.00, TypedCashflow.CREDIT),
+                                new AllocatedCashflow(acc1,new SimpleDate("05/02/2017"), 100.00, TypedCashflow.CREDIT),
+                                new AllocatedCashflow(acc2,new SimpleDate("11/03/2017"), 500.00, TypedCashflow.CREDIT),
+                                new AllocatedCashflow(acc1,new SimpleDate("07/02/2017"), 800.00, TypedCashflow.DEBIT),
+                                new AllocatedCashflow(acc2,new SimpleDate("02/03/2017"), 400.00, TypedCashflow.DEBIT),
+                                new AllocatedCashflow(acc1,new SimpleDate("01/04/2017"), 200.00, TypedCashflow.CREDIT),
+                                new AllocatedCashflow(acc1,new SimpleDate("05/04/2017"), 300.00, TypedCashflow.CREDIT),
+                                new AllocatedCashflow(acc2,new SimpleDate("11/05/2017"), 700.00, TypedCashflow.CREDIT),
+                                new AllocatedCashflow(acc1,new SimpleDate("07/05/2017"), 900.00, TypedCashflow.DEBIT),
+                                new AllocatedCashflow(acc2,new SimpleDate("02/05/2017"), 100.00, TypedCashflow.DEBIT)
+                        };
+                        for(int i = 0 ; i < allocatedCashflows.length ; i ++) {
+                                kSession.insert(allocatedCashflows[i]);
+                        }
+                        kSession.fireAllRules();
+                        kSession.dispose();
+
+        4.2 关键字：
+            硬关键字：true，false，null
+            软关键字：40个
+                in             | or             | and          | exists  | forall     | accumulate
+                duration       | package        | import       | dialect | salience   | enabled
+                entry-point    | query          | declare      | function| global     | not
+                attributes     | rule           | extend       | when    | then       | template
+                collect        | from           | action       | reverse | result     | end
+                lock-on-active | date-effective | date-expires | no-loop | auto-focus | activation-group
+                over           | agenda-group   | eval          | ruleflow-group
+        4.3 注释：
+                单行注释：//
+                多行注释：/* ... */
+        4.4 规则高级语法：
+            4.4.1 条件元素：Fact是条件表达式，能够得到true或者false
+                    and:有多个fact并且条件都满足，只有and时，可以省略
+                        rule "Using the and conditional"
+                            when
+                                Cheese(cheeseType : type) and
+                                Person(favoriteCheese == cheeseType)
+                            then
+                                System.out.println("hello,world");
+                        end
+                    or: 有多个fact且只需满足一个条件
+                        rule "Using the or conditional"
+                            when
+                                Person(favoriteCheese == "Swiss") or
+                                (Person(favoriteCheese == "Cheddar") and Mouse(favoriteCheese == "Swiss"))
+                            then
+                                System.out.println("hello,world");
+                        end
+                    eval: 语义元素，用来包装布尔型变量，例如 eval(true).表示的就是true结果或者false结果
+                        rule "Using the eval element"
+                            when
+                                ob1 : Observation()
+                                ob2 : Observation(this != ob1)
+                                eval(weightedAverage(ob1.getVal(),ob2.getVal(),ob1.getPer(),ob2.getPer()) < .1)
+                            then
+                                System.out.println("hello,world");
+                        end
+                    exists: 判断特定fact是否存在
+                        rule "Using the exists conditional"
+                            when
+                                customer : Customer()
+                                order: Order(customerId == customer.customerId)
+                                exists OrderItem(orderId == order.orderId, itemStatus == "out_of_stock")
+                            then
+                                System.out.println("hello,world");
+                        end
+                    not: 判断特定Fact是否不存在
+                        rule "Using the exists conditional"
+                            when
+                                customer : Customer()
+                                order: Order(customerId == customer.customerId)
+                                not OrderItem(orderId == order.orderId, itemStatus == "out_of_stock")
+                            then
+                                System.out.println("hello,world");
+                        end
+                    from:用于Fact之间的关联。用于描述某个值可能来自于那个对象之类的
+                        rule "Using the from element for integration"
+                            when
+                                order : Order()
+                                item : OrderItem( value > 100 ) from order.items
+                            then
+                                item.setValue(item.getValue() * 0.8);
+                        end
+                    forall:是否所有Fact满足判断条件
+                        rule "Using the forall element"
+                            when
+                            not (
+                                forall( emp : Employee() HealthCare( employee == emp ) DentalCare( employee == emp ) )
+                            )
+                            then
+                                System.out.println("hello,world");
+                        end
+                    collect:处理集合，支持的集成类型包括: ArrayList, LinkedList, HashSet
+                        rule "Using the collect conditional element"
+                            when
+                                company : Company( name == 'Red Hat' )
+                                mothers : LinkedList() from collect( Person( gender == 'F', children > 0 )
+                                                                        from company.getPeople()
+                                                                    )
+                            then
+                                System.out.println("hello,world");
+                        end
+                    accumulate:对collect的加强，增加遍历，反转等功能
+                        rule "Using the accumulate element"
+                            when
+                                $order : Order()
+                                total : Number( doubleValue > 100 )
+                                     from accumulate( OrderItem( order == $order,$value : value ),sum( $value ) )
+                            then
+                                System.out.println("hello,world");
+                        end
+            4.4.2 比较运算符：
+                <, ⇐, >, >=, ==, =, != ：数学比较运算符。Person( age > 30 && < 40 )
+                matches：规则中引用正则表达式。Cheese( type matches "(Buffalo)?\\S*Mozarella" )
+                soundslike：类似于==，听起来像，不知道是不是模糊查询。Cheese( name soundslike 'swish')
+                contains：集合或数组中是否存在某元素。
+                         CheeseCounter( cheeses contains "stilton" )
+                         CheeseCounter( cheeses contains $var )
+                in：某元素是否在某元素集中
+                   Person( $cheese : favoriteCheese )
+                   Cheese( type in ( "stilton", "cheddar", $cheese ) )
+                memberOf：是否是集合或数组中的元素。CheeseCounter( cheese memberOf $matureCheeses )
+            4.4.3 两种dialect的比较：dialect指的是行话。一种是Java，一种是MVEL
+                MVEL是一个功能强大的基于Java应用程序的表达式语言。是表达式解析器。用作脚本进行效率优化。
+                属性访问：Java是函数调用--user.getManager().getName()。MVEL是点连接--user.manager.name
+                集合和映射访问：Java是函数调用--user.get(key)。MVEL是点连接和数组--user["foobar"]/user.foobar
+                属性赋值：Java是函数调用--user.add("foo", "bar")。MVEL是等号和数组--user.manager.name = "name" 和 user["foo"] = "bar"
+
+    5.复杂事件处理(CEP=complete event processing)。  Drools==流口水，Fusion==融合，Drools Fusion==事件处理规则
+        概念：就是多事件的事件处理。处理各种事件之间的关系。应用场景有欺诈检测，实时物流--运送线路，业务活动监控--证券交易，交通流程控制--堵车
+             上述例子都表示在一个时间范围内的一组事事件中的异常状态变化。
+             CEP系统要正常工作的条件：事件检测： 来自事件云或来自事件流。
+                                   事件关联： 对于时间和非时间相关的事件，以及聚合事件。
+                                   事件抽象： 从原子事件中组合复杂事件。
+
+             什么是事件【关键！】：一个事件（event）是在特定时间范围内在受监视环境中的特定时间点的事实状态的显著变化。关键词有时间范围，受监视，事实状态变化
+                                事件范围内，工作内存对象大改变，将该event事件对象存储回去变成Fact事实对象。事件可以变成事实，但事实不能变成事件
+                                事件不怎么被关注，但是巨大的事件(即事实)会被广泛关注，并实时监控由它的状态变化产生的事件
+                                要成为事实（即网红）的条件：
+                                    事件是不可变的：它是过去式，无法变化
+                                    事件具有强烈的时间限制：同一个规则事件，不同的事件点发生，产生的结果是一样的，但吸引人的程度不一样。
+                                    事件管理生命周期：引擎自动管理，事件仅在指定时间段有兴趣
+                                    事件使用滑动窗口：按时间管理各种事件的聚合值
+                                基于时间间隔的事件/基于时间点的事件：有可能持久化到工作内存中。
+                                声明事件举例：
+                                declare MyEventFact
+                                  @role( event)
+                                  @timestamp( ts )
+                                  @duration( life )
+                                  @expires( death )
+                                end
+        Drools Fusion：事件处理规则。感知行为和模式，更加灵活建模。它能够作为插件扩展到建模平台
+            CEP场景的共同特征：大量事件，少数有用，事件不可变，他们是fact状态变化的记录者，个人活动不重要，系统执行事件的组合和聚合，事件之间有时间关系
+            目标：支持事件流。支持时间约束来模拟事件之间的时间关系。支持会话范围的统一时钟
+        事件处理的两种模式：
+            CLOUD：默认处理模式。规则引擎查看所有Fact和event.多对多匹配算法查找匹配元组，激活和触发规则
+            STREAM：处理事件流时需要。有一定要求：每个流中的事件必须按时间顺序排列。而且引擎使用会话时钟强制流之间的同步
+
+    6.规则整合：fire rules。
+        maven配置：
+            1.架构说明：远端maven仓库部署项目，本地maven仓库插入项目，同时在本地的maven仓库会部署client应用。在本地maven仓库进行决策。
+                    本地的决策可以通过maven发布到远端，而本地的客户端应用加载规则，可以通过maven的setting.xml中增加一个依赖。
+            2.setting.xml配置：
+                添加 profile：设置决策仓库和更新策略。举例如下：<profile>
+                                                            <id>guvnor-m2-repo</id>
+                                                            <repositories>
+                                                                <repository>
+                                                                  <id>guvnor-m2-repo</id>
+                                                                  <name>BRMS Repository</name>
+                                                                  <url>http://localhost:8080/decision-central/maven2/</url>
+                                                                  <layout>default</layout>
+                                                                  <releases>
+                                                                    <enabled>true</enabled>
+                                                                    <updatePolicy>always</updatePolicy>
+                                                                  </releases>
+                                                                  <snapshots>
+                                                                    <enabled>true</enabled>
+                                                                    <updatePolicy>always</updatePolicy>
+                                                                  </snapshots>
+                                                                </repository>
+                                                            </repositories>
+                                                         </profile>
+            3.配置 server：设置身份验证。举例如下：<server>
+                                              <id>guvnor-m2-repo</id>
+                                              <username>kylin</username>
+                                              <password>password1!</password>
+                                              <configuration>
+                                                <wagonProvider>httpclient</wagonProvider>
+                                                <httpConfiguration>
+                                                  <all>
+                                                    <usePreemptive>true</usePreemptive>
+                                                  </all>
+                                                </httpConfiguration>
+                                              </configuration>
+                                            </server>
+            4.本地加载规则：举例如下：<dependency>
+                                    <groupId>com.sample</groupId>
+                                    <artifactId>helloworld</artifactId>
+                                    <version>1.0.0</version>
+                                </dependency>
+        客户端API调运KIE服务器：使用kie服务器java客户端API触发规则。
+            1.配置 KIE 服务器：可以分布式集群。配置用户名和初始化参数。
+                举例如下：./add-user.sh -a --user kieserver --password password1! --role kie-server,rest-all
+
+                        /system-property=org.kie.server.user:add(value=kieserver)
+                        /system-property=org.kie.server.pwd:add(value=password1!)
+                        /system-property=org.kie.server.location:add(value=http://localhost:8080/kie-server/services/rest/server)
+                        /system-property=org.kie.server.controller:add(value=http://localhost:8080/business-central/rest/controller)
+                        /system-property=org.kie.server.controller.user:add(value=kieserver)
+                        /system-property=org.kie.server.controller.pwd:add(value=password1!)
+                        /system-property=org.kie.server.id:add(value=local-server-1)
+            2.远程调运 KIE 服务器：具体的代码操作。
+                Person p1 = new Person();
+                p1.setFirstName("Anton");
+                p1.setLastName("RedHat");
+                p1.setHourlyRate(11);
+                p1.setWage(20);
+
+                String url = "http://localhost:8080/kie-server/services/rest/server";
+                String username = "kieserver";
+                String password = "password1!";
+                String container = "testContainer";
+                String session = "testSession";
+
+                KieServicesConfiguration config = KieServicesFactory.newRestConfiguration(url, username, password);
+                Set<Class<?>> allClasses = new HashSet<Class<?>>();
+                allClasses.add(Person.class);
+                config.addExtraClasses(allClasses);
+
+                KieServicesClient client  = KieServicesFactory.newKieServicesClient(config);
+                RuleServicesClient ruleClient = client.getServicesClient(RuleServicesClient.class);
+                List<GenericCommand<?>> commands = new ArrayList<GenericCommand<?>>();
+
+                commands.add((GenericCommand<?>) KieServices.Factory.get().getCommands().newInsert(p1,"Person Insert ID"));
+                commands.add((GenericCommand<?>) KieServices.Factory.get().getCommands().newFireAllRules("fire-identifier"));
+
+                BatchExecutionCommand batchCommand = KieServices.Factory.get().getCommands().newBatchExecution(commands,session);
+                ServiceResponse<ExecutionResults> response = ruleClient.executeCommandsWithResults(container, batchCommand);
+                System.out.println(response.getResult().getValue("fire-identifier"));
+        本地执行规则【关键】：代码操作。
+            Person person = new Person();
+            person.setFirstName("Anton");
+            person.setLastName("RedHat");
+            person.setHourlyRate(11);
+            person.setWage(20);
+
+            KieServices kieServices = KieServices.Factory.get();
+            KieContainer kContainer = kieServices.getKieClasspathContainer();
+            KieBase kbase = kContainer.getKieBase("testBase");
+            KieSession ksession = kbase.newKieSession();
+            ksession.insert(person);
+            ksession.fireAllRules();
+            ksession.dispose();
+    7.LABS实验室：Drools的相关理论
+        RHDM：使用Java -jar进行安装。
+        PHREAK：是一个算法，树节点。
+        CEP规则编写：事件和事实。包裹检测
+
+    8.案例：背景/规则/运行步骤
+        欺骗侦测：
+            举例：1.单一用户在5秒钟内交易3次
+                 2.单一用户的交易，金额是过去4次信用卡交易均值的2倍以上
+                 3.信用卡交易后10秒内提取现金
+                 4.10秒内的交易金额大大于1000000
+                 5.特定用户10秒内金额大于200000
+            运行步骤：
+                springboot: mvn clean package
+                            java -jar ???.jar
+                openshift: mvn clean fabric8:deploy
+                           oc expose svc/cep-fraud-detection
+                           oc get routes
+        智能交通：
+        贷款审批：
+            规则运行：KieSession ksession = newSession();
+                     FinancialInfo f = new FinancialInfo();
+                     f.setIsXBSalaryAccount("false");
+                     f.setRGScore(4);
+                     f.setNoOfXpressCreditTopups(0);
+                     Customer c = new Customer();
+                     c.setAge(24);
+
+                     ksession.insert(f);
+                     ksession.insert(c);
+                     ksession.fireAllRules();
+                     ksession.dispose();
+        运单管理：
+    9.常见问题：为什么要业务规则？（时间就是金钱）
+        答：业务敏捷 / 实时响应 / 最优计划 / 高效合作
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

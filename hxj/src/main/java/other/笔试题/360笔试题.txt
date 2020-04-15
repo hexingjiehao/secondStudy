@@ -1,0 +1,30 @@
+1.Spring开发模式的工作流程？【OK】
+答：
+a.Spring MVC将所有的请求都提交给DispatcherServlet
+b.DispatcherServlet查询一个或多个HandlerMapping,找到处理请求的Controller.
+c.DispatcherServlet将请求提交到目标Controller
+d.Controller进行业务逻辑处理后，会返回一个ModelAndView
+e.找到ModelAndView对象指定的视图对象
+f.视图对象负责渲染返回给客户端
+
+
+2.Spring特性中IoC是什么？【OK】
+答：
+所谓“控制反转”是指控制权由应用代码转到外部容器，即控制权的转移。【也就是将代码new对象转移到框架来new对象】
+IoC将控制创建的职责搬进了框架中，从应用代码脱离开来
+使用Spring的IoC容器时只需指出组件需要的对象，在运行时Spring的IoC容器会根据XML配置数据提供给它
+
+
+3.在服务器的网络编程中，解决会话跟踪的方法有?【OK】
+答：
+使用Cookie+Session
+使用URL重写+Session
+使用隐藏的表单域+Session
+
+
+4.java的类加载器有哪些？【OK】
+答：
+引导类加载器（bootstrap class loader）：它用来加载 Java 的核心库，是用原生代码来实现的
+扩展类加载器（extensions class loader）：它用来加载 Java 的扩展库。
+系统类加载器（system class loader）：它根据 Java 应用的类路径（CLASSPATH）来加载 Java 类
+tomcat为每个App创建一个Loader，里面保存着此WebApp的ClassLoader。需要加载WebApp下的类时，就取出ClassLoader来使用

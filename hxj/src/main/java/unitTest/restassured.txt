@@ -1,0 +1,729 @@
+1.rest-assured的学习：使用Stream风格的链式方法
+    1.资源依赖：官网名字是REST Assured。翻译成中文是《请放心》。GitHub是https://github.com/rest-assured/rest-assured
+             官网是http://rest-assured.io。官网是http://rest-assured.io。
+             教程：https://github.com/rest-assured/rest-assured/wiki/Usage#example-1---json
+             最新版本：3.3.0。发布时间2019-01-11。包名是：rest-assured-3.3.0-dist.zip
+             源码的版本仓库：https://bintray.com/johanhaleby/generic/rest-assured
+             功能：REST Assured会模拟一切的http请求操作，包括参数，身份验证等
+
+    2.定义：测试和验证REST服务在Java中很困难。所以REST Assured能够简化难题，方便测试。应该需要导入jar包，使用内部方法。
+         举例：@Test
+              public void lotto_resource_returns_200_with_expected_id_and_winners() {
+                    when().get("/lotto/{id}", 5).then().statusCode(200).
+                            body("lotto.lottoId", equalTo(5),
+                                 "lotto.winners.winnerId", hasItems(23, 54));
+              }
+    3.历史版本：修改特点
+       3.3.0：发布时间2019年1月11日
+            io.restassured.mapper.TypeRef可以反序列化响应值
+                List<Map<String, Object>> products = get("/products").as(new TypeRef<List<Map<String, Object>>>() {});
+            增加jar依赖：<dependency>
+                           <groupId>io.rest-assured</groupId>
+                           <artifactId>rest-assured-all</artifactId>
+                           <version>3.3.0</version>
+                           <scope>test</scope>
+                       </dependency>
+            测试验证失败的传统监听器：
+                given().config(RestAssured.config().failureConfig(
+                        failureConfig()
+                        .with()
+                        .failureListeners( (requestSpec, responseSpec, response) -> log.info("Rest Assured validation failed!") )
+                        .when(). ..
+
+    4.常见问题：
+        1.问题：REST Assured 1.8+版本报错java.lang.IncompatibleClassChangeError: Found interface org.objectweb.asm.MethodVisitor, but class was expected
+               解决：asm的版本冲突。<dependency>
+                                   <groupId>io.rest-assured</groupId>
+                                   <artifactId>rest-assured</artifactId>
+                                   <version>${rest-assured.version}</version>
+                                   <exclusions>
+                                       <!-- Exclude Groovy because of classpath issue -->
+                                       <exclusion>
+                                           <groupId>org.codehaus.groovy</groupId>
+                                           <artifactId>groovy</artifactId>
+                                       </exclusion>
+                                   </exclusions>
+                                   <scope>test</scope>
+                               </dependency>
+                               <dependency>
+                                   <groupId>org.codehaus.groovy</groupId>
+                                   <artifactId>groovy-all</artifactId>
+                                   <!-- Needs to be the same version that REST Assured depends on -->
+                                   <version>2.4.6</version>
+                                   <scope>test</scope>
+                               </dependency>
+        2.问题：如何确定JSON响应路径是否存在? 判断一个响应值中的json包含某个字段属性。假设有/json请求路径
+               解决：get("/json").then().assertThat().body("records.any { it.containsKey('Phone') }", is(true));
+                    或者get("/json").then().assertThat().body("any { it.key == 'size' }", is(true));
+        3.问题：REST Assured 和 Grape的冲突问题 ?
+               解决：@Grab("io.rest-assured:rest-assured:<version>")
+                    @GrabExclude("org.codehaus.groovy:groovy-xml")
+                    @GrabExclude("org.codehaus.groovy:groovy-json")
+               注意：Grape是Ruby中的一个类REST API框架
+        4.问题：怎样将日志写到硬盘上，而不是打印到工作台上？
+               解决：使用java.io.PrintStream。举例：FileWriter fileWriter = new FileWriter("/tmp/logging.txt");
+                                                 PrintStream printStream = new PrintStream(new WriterOutputStream(fileWriter), true)) {
+                                                    RestAssured.config = RestAssured.config().logConfig(LogConfig.logConfig().defaultStream(printStream));
+                                                    given().
+                                                        log().all().
+                                                        queryParam("firstName", "John").
+                                                        queryParam("lastName", "Doe").
+                                                    when().
+                                                        get("/greet").
+                                                    then().
+                                                        log().all().
+                                                        statusCode(200).
+                                                        body("greeting", equalTo("Greetings John Doe"));
+                                                 }
+        5.问题：在Java9中分割包中的异常问题？
+               解决：使用rest-assured-all替换rest-assured。举例：<dependency>
+                                                                 <groupId>io.rest-assured</groupId>
+                                                                 <artifactId>rest-assured-all</artifactId>
+                                                                 <version>${rest-assured.version}</version>
+                                                                 <scope>test</scope>
+                                                              </dependency>
+    5.重要的核心类：
+        RestAssured：是Java领域语言，目的是为了简化<构建在HTTP Builder上的基于服务的>REST的测试
+        RestAssuredMockMvc：这个模块相当于RestAssured。是dsl起点。主要是Spring MVC的测试
+            注意：DSL的全称是domain-specific language。特定领域的计算机语言。
+        XmlPath:  可以替换XPath。容易从XML文档来获取值
+        JsonPath：可以替换XPath。容易从Object文档来获取值，也就是JSON文档。
+    6.REST Assured的简单开始：
+        1.使用maven配置环境：
+            REST Assured：在pom.xml中添加依赖 <dependency>
+                                             <groupId>io.rest-assured</groupId>
+                                             <artifactId>rest-assured</artifactId>
+                                             <version>3.3.0</version>
+                                             <scope>test</scope>
+                                           </dependency>
+            JsonPath：导入<dependency>
+                           <groupId>io.rest-assured</groupId>
+                           <artifactId>json-path</artifactId>
+                           <version>3.3.0</version>
+                         </dependency>
+            XmlPath:导入： <dependency>
+                           <groupId>io.rest-assured</groupId>
+                           <artifactId>xml-path</artifactId>
+                           <version>3.3.0</version>
+                         </dependency>
+            验证响应值是否满足Json Schema模式：<dependency>
+                                               <groupId>io.rest-assured</groupId>
+                                               <artifactId>json-schema-validator</artifactId>
+                                               <version>3.3.0</version>
+                                               <scope>test</scope>
+                                           </dependency>
+                注意：json schema是json模式。是数据交换中的一种虚拟的“合同”，负责提供一致性检验
+                     说明json数据的格式
+            Spring Mvc架构下来单元测试controller，使用RestAssuredMockMvc。导入：<dependency>
+                                                                                 <groupId>io.rest-assured</groupId>
+                                                                                 <artifactId>spring-mock-mvc</artifactId>
+                                                                                 <version>3.3.0</version>
+                                                                                 <scope>test</scope>
+                                                                             </dependency>
+            Spring Web Test Client：测试Spring Webflux的reactive controllers。使用RestAssuredWebTestClient。导入：<dependency>
+                                                                                                                 <groupId>io.rest-assured</groupId>
+                                                                                                                 <artifactId>spring-web-test-client</artifactId>
+                                                                                                                 <version>3.3.0</version>
+                                                                                                                 <scope>test</scope>
+                                                                                                               </dependency>
+            Scala Support：设计目的是为了伸缩式编程语言，类Java。导入：<dependency>
+                                                                  <groupId>io.rest-assured</groupId>
+                                                                  <artifactId>scala-support</artifactId>
+                                                                  <version>3.3.0</version>
+                                                                  <scope>test</scope>
+                                                                 </dependency>
+            Java9+的支持：<dependency>
+                             <groupId>io.rest-assured</groupId>
+                             <artifactId>rest-assured-all</artifactId>
+                             <version>3.3.0</version>
+                             <scope>test</scope>
+                        </dependency>
+        2.静态导入class：
+            1.REST assured: io.restassured.RestAssured.*
+                            io.restassured.matcher.RestAssuredMatchers.*
+                            org.hamcrest.Matchers.*
+            2.Json Schema: io.restassured.module.jsv.JsonSchemaValidator.*
+            3.Spring Mock Mvc: io.restassured.module.mockmvc.RestAssuredMockMvc.*
+                               io.restassured.matcher.RestAssuredMatchers.*
+        3.REST Assured 2.0旧版本之前的支持：
+            导入包使用com.jayway.restassured替换io.rest-assured
+    7.验证结果类型：
+        equalTo(): 验证数据是否相等
+        hasItems(): 验证属性包含一个或者多个确定的值
+        is(): 验证数据类型，比如float。注意：直接使用方法比较。is()和equalTo()方法只能验证小数中的float类型，而必须添加f后缀
+              验证bigdecimal需要配置配置器，决定返回值类型，但是报错精度不对。
+        containsString():判断字符串是否包含，位于CoreMatchers类。
+        json schema文件：作为一种规则，验证返回值是否符合其中的说明，是大范围的验证，不像is()等单个元素验证。
+                        可以在文件中规定返回的类型，比如数组或者对象，值的范围等。
+            注意:json schema验证可以自定义设置和配置，并且可以不用rest assured模块
+
+真正的代码教程：
+    1.静态导入pom.xml文件和import static *
+    2.案例：
+        json/json schema validation: json属性检查需要设置响应 文本类型。有通用几个方法比较，schema是文件的说明规范来匹配返回值。
+                                     new BigDecimal(),java规范操作是传入字符串，如果传入double，会产生精度问题
+        xml: 同样设置响应文本类型，比较多个值可以直接在后面加或者多个body,也可发送post请求。
+             xml命名空间要使用 io.restassured.config.XmlConfig类。如何比较其中的细节
+             可以使用Xpath表达式来验证xml文件内容，进阶篇的xsd,dtd,xpath中使用namespace暂时不熟
+        Advanced xml/json:精彩开始！！！实现Groovy，利用Groovy的集合API
+            groovy主要的查询方法find/collect/sum/max/min.使用*可以让数组中每个元素调用同样的方法
+            可以利用groovy简化xml/json值的查询
+            利用XPath可以获取其中的节点值
+        反序列化和范型：io.restassured.mapper.TypeRef类
+        额外案例：有两位专家的代码案例
+            http://www.hascode.com/2011/10/testing-restful-web-services-made-easy-using-the-rest-assured-framework/
+            https://www.ontestautomation.com/open-sourcing-my-workshop-an-experiment/
+    3.注意事项：
+        float/double:
+            get("/price").then().assertThat().body("price", equalTo(12.12f));
+        语法说明：很多遗留语法.版本2.0以前没有“given/when/then。可能同时报错多个期望值。
+                 新语法只报错一个错误
+            given().param("x", "y").expect().body("lotto.lottoId", equalTo(5)).when().get("/lotto");
+            连接方法and，连接并列关系，方便阅读。:下面代码含义相同
+                given().param("x", "y").and().header("z", "w").when().get("/something").
+                then().
+                        assertThat().
+                        statusCode(200).and().
+                        body("x.y", equalTo("z"));
+/********************华丽的分割线**********************************/
+                given().param("x", "y").header("z", "w").when().get("/something").
+                then().
+                        statusCode(200).
+                        body("x.y", equalTo("z"));
+    4.获取响应数据：
+        从验证后的响应中提取值：asInputStream() / asInputStream() / asString()
+            extract()抽取数据，比如抽取URL进行下一次的验证
+        json(使用jsonPath):getInt(),get(),getList()等
+            int lottoId = from(json).getInt("lotto.lottoId");
+            List<Integer> winnerIds = from(json).get("lotto.winners.winnerId");
+
+            JsonPath jsonPath = new JsonPath(json).setRoot("lotto");
+            int lottoId = jsonPath.getInt("lottoId");
+        xml:
+            xml和json的from()只能二选一，不能同时存在
+            可以使用CompatibilityMode.HTML来解析html文件。
+        单个路径(获取单个标签)：返回一个单一的路径，也就是一个单独的标签
+                            可以手动设置数据解析器。
+            int lottoId = get("/lotto").path("lotto.lottoid");
+            String firstName = post("/greetXML?firstName=John&lastName=Doe").andReturn()
+                                    .xmlPath()
+                                    .getString("firstName");
+        http信息:首先获取response对象，然后调用对应方法即可
+            头信息：response.getHeaders();
+            cookies: response.getCookies();
+            注意：一个名字的header和cookie可以包含几个值： Headers.getValues( )/ Cookies.getValues()
+                 获取cookie中的细节：Response.getDetailedCookie(java.lang.String)
+    5.指定请求数据：可以传参数，header，cookie内容等
+        调用http资源：when().get("/x")。when().
+                                         request("CONNECT", "/somewhere").
+                                      then().
+                                         statusCode(200);
+        参数：可以自动确认参数是get还是post。有3种方式。还有集合类型的参数处理，一名多值或者list传入
+             given().param("param1", "value1").param("param2", "value2").when().get("/something");
+             given().formParam("formParamName", "value1").queryParam("queryParamName", "value2").when().post("/something");
+             when().get("/name?firstName=John&lastName=Doe");
+             集合类型参数：
+                given().param("myList", "value1", "value2")
+
+                List<String> values = new ArrayList<String>();
+                values.add("value1");
+                values.add("value2");
+
+                given().param("myList", values)
+             无值参数：given().param("paramName")
+             路径变量参数：传入的参数作为变量组合URL.也可以在post()或者get()方法的后面传入变量的具体值。数量必须一致
+                post("/reserve/{hotelId}/{roomNumber}", "My Hotel", 23);
+
+                given().pathParam("hotelId", "My Hotel").pathParam("roomNumber", 23).when().post("/reserve/{hotelId}/{roomNumber}").then()...
+                混合使用两种参数：
+                    given().pathParam("hotelId", "My Hotel").when().post("/reserve/{hotelId}/{roomNumber}", 23).then()...
+        cookie：指定cookie，集合类型cookie.指定cookie详细信息。cookie里面装cookie对象
+            given().cookie("username", "John").when().get("/cookie").then().body(equalTo("username"));
+            given().cookie("cookieName", "value1", "value2")...
+
+            Cookie someCookie = new Cookie.Builder("some_cookie", "some_value").setSecured(true).setComment("some comment").build();
+            given().cookie(someCookie).when().get("/cookie").then().assertThat().body(equalTo("x"));
+
+            Cookie cookie1 = Cookie.Builder("username", "John").setComment("comment 1").build();
+            Cookie cookie2 = Cookie.Builder("token", 1234).setComment("comment 2").build();
+            Cookies cookies = new Cookies(cookie1, cookie2);
+            given().cookies(cookies).when().get("/cookie").then().body(equalTo("username, token"));
+            注意：cookie的使用顺序很让人困惑，要用代码试试？？？
+
+        头信息：可以设定单值/多值/集合请求头。默认一名多值请求头，可以设置合并和覆盖策略
+            given().header("headerName", "value1", "value2"). ..
+
+            //下述就只会有一个header
+            given().
+                    config(RestAssuredConfig.config().headerConfig(headerConfig().overwriteHeadersWithName("x"))).
+                    header("x", "1").
+                    header("x", "2").
+            when().
+                    get("/something").
+
+        文件类型：设置请求的文本类型
+            given().contentType(ContentType.TEXT). ..
+            given().contentType("application/json"). ..
+        请求体：
+            given().body("some body").
+            given().request().body("some body").
+    6.验证响应数据: 可以验证状态码，状态行，缓存，信息头，内容类型和身体。
+        响应体：可以映射响应体为Java对象
+        Cookies： get("/x").then().assertThat().cookie("cookieName", "cookieValue").
+        状态：
+            get("/x").then().assertThat().statusCode(200). ..
+            get("/x").then().assertThat().statusLine("something"). ..
+        头信息：
+            get("/x").then().assertThat().header("headerName", "headerValue")
+            get("/something").then().assertThat().header("Content-Length", Integer::parseInt, lessThan(1000));
+        文件类型： get("/x").then().assertThat().contentType(ContentType.JSON).
+        全文匹配： get("/x").then().assertThat().body(equalTo("something"))
+        使用响应的一部分数据来验证其他部分：
+            json举例：{ "userId" : "some-id", "href" : "http://localhost:8080/some-id" }
+            代码：get("/x").then().body("href", new ResponseAwareMatcher<Response>() {
+                                                 public Matcher<?> matcher(Response response) {
+                                                         return equalTo("http://localhost:8080/" + response.path("userId"));
+                                                 }
+                                      });
+            lambda表达式：get("/x").then().body("href", response -> equalTo("http://localhost:8080/" + response.path("userId"));
+            内置比较器：
+                get("/x").then().body("href", endsWithPath("userId"));
+                get("/x").then().body("href", and(startsWith("http:/localhost:8080/"), endsWithPath("userId")));
+        测量响应时间：能够获取请求的响应时间，可以设置时间单元。默认时间单元是毫秒。执行条件是jvm热状态时，即有server服务
+            long timeInMs = get("/lotto").time()
+            long timeInSeconds = get("/lotto").timeIn(SECONDS);
+            when().get("/lotto").then().time(lessThan(2000L));
+            when().get("/lotto").then().time(lessThan(2L), SECONDS);
+    7.身份验证：方案有OAuth，digest，certificate，form，preemptive basic authentication
+               抢占式(rest事先提供凭证)/被挑战(不事先提供凭证，额外发送一次请求)的身份验证，发送凭证减少额外连接的开销
+        基础：单个请求验证/全部请求验证。请求时可以设置授权策略
+            given().auth().basic("username", "password"). ..
+            RestAssured.authentication = basic("username", "password");
+
+            given().auth().preemptive().basic("username", "password").when().get("/secured/hello").then().statusCode(200);
+
+            given().auth().basic("username", "password").when().get("/secured/hello").then().statusCode(200);
+        摘要：目前只支持挑战式的摘要身份验证。given().auth().digest("username", "password").when().get("/secured").
+        表单验证：填写用户名密码凭证。 模拟了输入用户名密码的操作，并模拟提交操作。given().
+                                                                               auth().form("John", "Doe").
+                                                                         when().
+                                                                               get("/formAuth");
+                                                                         then().
+                                                                               statusCode(200);
+                可以事先说明表单的URL和表单中的用户名密码变量：
+                    given().auth().form("John", "Doe", new FormAuthConfig("/j_spring_security_check", "j_username", "j_password")).
+                    when().get("/formAuth");then().statusCode(200);
+                默认的Spring的安全验证：
+                    given().auth().form("John", "Doe", FormAuthConfig.springSecurity()).when().get("/formAuth");then().statusCode(200);
+                CSRF：跨站点请求伪造。额外请求和解析网页。下述代码自动检测网页是否包含CSRF令牌。CSRF字段名
+                      given().auth().form("John", "Doe", formAuthConfig().withAutoDetectionOfCsrf()).
+                      when().get("/formAuth").then().statusCode(200);
+
+                      使用CSRF字段名：
+                          given().
+                                  auth().form("John", "Doe", springSecurity().withCsrfFieldName("_csrf").sendCsrfTokenAsHeader()).
+                          when().get("/formAuth").then().statusCode(200);
+                表单额外字段的验证：
+                    given().auth().form("username", "password", formAuthConfig().withAdditionalFields("firstInputField", "secondInputField"). ..
+
+        OAuth授权：
+            1.  2.5.0版本之前，需要在pom.xml中增加jar包：<dependency>
+                                                     <groupId>com.github.scribejava</groupId>
+                                                     <artifactId>scribejava-apis</artifactId>
+                                                     <version>2.5.3</version>
+                                                     <scope>test</scope>
+                                                  </dependency>
+            2.OAuth1的使用：given().auth().oauth(..). ..
+            3.OAuth2的使用，可有可无Scribe的jar包，向后兼容性：
+                    given().auth().oauth2(accessToken). ..
+                    given().auth().oauth2(accessToken, OAuthSignature.QUERY_STRING).
+            4.自定义授权：实现接口io.restassured.spi.AuthFilter作为过滤器。可以通过方法自动移除given().auth().none()
+                given().
+                        filter((requestSpec, responseSpec, ctx) -> {
+                            String header1 = requestSpec.getHeaders().getValue("header1");
+                            String header2 = requestSpec.getHeaders().getValue("header2");
+                            requestSpec.header("AUTH", header1 + header2);
+                            return ctx.next(requestSpec, responseSpec);
+                        }).
+                when().get("/customAuth").then().statusCode(200);
+    8.富文本数据：发送大量数据时使用，比如文件上传。有一个控件名.同一个请求下有多个富文本数据。核心类 MultiPartSpecBuilder
+                given().multiPart(new File("/path/to/file")).when().post("/upload");
+                given().multiPart("controlName", new File("/path/to/file")).when().post("/upload");
+                多个富文本数据：
+                    given().
+                            multiPart("controlName1", new File("/path/to/file")).
+                            multiPart("controlName2", "my_file_name.txt", someData).
+                            multiPart("controlName3", someJavaObject, "application/json").
+                    when().
+                            post("/upload");
+               高级应用：
+                    Greeting greeting = new Greeting();
+                    greeting.setFirstName("John");
+                    greeting.setLastName("Doe");
+
+                    given().
+                            multiPart(new MultiPartSpecBuilder(greeting, ObjectMapperType.JACKSON_2)
+                                    .fileName("greeting.json")
+                                    .controlName("text")
+                                    .mimeType("application/vnd.custom+json").build()).
+                    when().
+                            post("/multipart/json").
+                    then().
+                            statusCode(200);
+               配置控件名：
+                    given().config(config().multiPartConfig(multiPartConfig().defaultControlName("something-else"))).
+    9.对象映射：需要实现导入Jackson或者Gson的包
+        序列化：顺序是Jackson 2->jackson->Gson->JAXB。将请求体序列化
+            基于内容类型的序列化:将普通Java或者map序列化成body或者form。Message message = new Message();
+                                                           message.setMessage("My messagee");
+                                                           given().
+                                                                 contentType("application/json; charset=UTF-16").
+                                                                 body(message).
+                                                           when().
+                                                                post("/message");
+                Message message = new Message();
+                message.setMessage("My messagee");
+                given().
+                       contentType("application/json; charset=UTF-16").
+                       formParam("param1", message).
+                when().post("/message");
+            使用显示序列化器：  Message message = new Message();
+                             message.setMessage("My messagee");
+                             given().body(message, ObjectMapperType.JAXB).when().post("/message");
+        反序列化：将响应体反序列化。返回值的类型必须是application/json
+            基于内容的反序列化：Message message = get("/message").as(Message.class);
+            自定义反序列化：注册解析器或者显示反序列化器
+                Message message = expect().parser("application/something", Parser.XML).when().get("/message").as(Message.class);
+                Message message = expect().defaultParser(Parser.XML).when().get("/message").as(Message.class);
+            使用显示反序列化器对象：
+                Message message = get("/message").as(Message.class, ObjectMapperType.GSON);
+        配置：设置json/xml与对象的映射策略。
+            RestAssured.config = RestAssuredConfig.config().objectMapperConfig(objectMapperConfig().gsonObjectMapperFactory(
+                            new GsonObjectMapperFactory() {
+                                public Gson create(Class cls, String charset) {
+                                    return new GsonBuilder().setFieldNamingPolicy(LOWER_CASE_WITH_UNDERSCORES).create();
+                                }
+                            }
+                    ));
+            自定义对象映射器：实现接口io.restassured.mapper.ObjectMapper
+                given().body(myJavaObject, myObjectMapper).when().post("..")
+                RestAssured.config = RestAssuredConfig.config().objectMapperConfig(new ObjectMapperConfig(myObjectMapper));
+    10.解析器：
+        预定义解析器：处理html/json/xml。
+            RestAssured.defaultParser = Parser.JSON;
+            get("/x").then().using().defaultParser(Parser.JSON). ..
+        自定义解析器：可以用默认解析器解析不支持的文件内容，前提是需要注册
+            RestAssured.registerParser("application/vnd.uoml+xml", Parser.XML);
+            RestAssured.unregisterParser("application/vnd.uoml+xml");
+            get(..).then().using().parser("application/vnd.uoml+xml", Parser.XML). ..;
+    11.默认值：修改主机或者端口，还有其他的相关配置
+        given().port(80).
+        ..when().get("http://myhost.org:80/doSomething");
+        RestAssured.baseURI = "http://myhost.org";
+        RestAssured.port = 80;
+        RestAssured.basePath = "/resource";
+        RestAssured.authentication = basic("username", "password");
+        RestAssured.rootPath = "x.y.z";......
+        重置配置：RestAssured.reset();
+    12.规范重用：将值固定比较的值封装成一个组件，每次使用该组件就可以了，不需重写代码。核心类RequestSpecBuilder or ResponseSpecBuilder.
+        响应体：
+            ResponseSpecBuilder builder = new ResponseSpecBuilder();
+            builder.expectStatusCode(200);
+            builder.expectBody("x.y.size()", is(2));
+            ResponseSpecification responseSpec = builder.build();
+            when().get("/something").then().spec(responseSpec).body("x.y.z", equalTo("something"));
+        请求体：
+            RequestSpecBuilder builder = new RequestSpecBuilder();
+            builder.addParam("parameter1", "parameterValue");
+            builder.addHeader("header1", "headerValue");
+            RequestSpecification requestSpec = builder.build();
+            given().spec(requestSpec).param("parameter2", "paramValue").when().get("/something").then().body("x.y.z", equalTo("something"));
+        查询请求规范：核心类io.restassured.specification.SpecificationQuerier
+            RequestSpecification spec = ...
+            QueryableRequestSpecification queryable = SpecificationQuerier.query(spec);
+            String headerValue = queryable.getHeaders().getValue("header");
+            String param = queryable.getFormParams().get("someparam");
+
+    13.过滤器：相似切面编程。实现接口io.restassured.filter。可以实现自定义身份验证方案、会话管理、日志记录等
+              given().filter(new MyFilter()).
+        默认过滤器：
+            io.restassured.filter.log.RequestLoggingFilter：打印请求规范细节
+            io.restassured.filter.log.ResponseLoggingFilter：返回码匹配，打印响应体细节
+            io.restassured.filter.log.ErrorLoggingFilter：响应体报错，打印错误信息
+        过滤器的过滤顺序：实现接口io.restassured.filter.OrderedFilter。数字越小，优先级越高。默认优先级是1000。
+        重构响应体：核心类ResponseBuilder。
+                  Response newResponse = new ResponseBuilder().clone(originalResponse).setBody("Something").build();
+    14.日志：使用过滤器来记录日志。
+        请求体日志：版本1.5之后支持。
+            given().log().all(). ..
+            given().log().params(). ..
+            given().log().body(). ..
+            given().log().headers(). ..
+            given().log().cookies(). ..
+            given().log().method(). ..
+            given().log().path()
+        响应体日志：
+            get("/x").then().log().body() ..
+            get("/x").then().log().ifError(). ..
+            get("/x").then().log().all().
+            get("/x").then().log().statusLine(). ..
+            get("/x").then().log().headers(). ..
+            get("/x").then().log().cookies(). ..
+            get("/x").then().log().ifStatusCodeIsEqualTo(302). ..
+            get("/x").then().log().ifStatusCodeMatches(matcher). ..
+        验证失败日志：版本2.3.1后支持。
+            given().log().ifValidationFails(). ..
+            .. .then().log().ifValidationFails(). ..
+            given().config(RestAssured.config().logConfig(logConfig().enableLoggingOfRequestAndResponseIfValidationFails(HEADERS))). ..
+            RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+    15.根路径：返回数据中的根路径查找。可以指定根路径。根路径的动态扩展连接，动态的路径变量，也可以动态分离根路径
+        when().get("/something").then().
+                 body("x.y.firstName", is(..)).
+                 body("x.y.lastName", is(..)).
+                 body("x.y.age", is(..)).
+                 body("x.y.gender", is(..));
+
+        when().get("/something").then().root("x.y").
+                 body("firstName", is(..)).
+                 body("lastName", is(..)).
+                 body("age", is(..)).
+                 body("gender", is(..));
+
+        RestAssured.rootPath = "x.y";
+        动态扩展根路径：
+            when().
+                     get("/jsonStore").
+            then().
+                     root("store.%s", withArgs("book")).
+                     body("category.size()", equalTo(4)).
+                     appendRoot("%s.%s", withArgs("author", "size()")).
+                     detachRoot("size()").
+                     body(withNoArgs(), equalTo(4));
+        路径参数：
+            String someSubPath = "else";
+            int index = 1;
+            get("/x").then().body("something.%s[%d]", withArgs(someSubPath, index), equalTo("some value")). ..
+
+            when().get("/x").then().
+                   root("filters.filterConfig[%d].filterConfigGroups.find { it.name == 'GroupName' }.includes").
+                   body(withArgs(0), hasItem("first")).
+                   body(withArgs(1), hasItem("second")).
+
+            when().get("/jsonStore").then().
+                     root("store.%s", withArgs("book")).
+                     body("category.size()", equalTo(4)).
+                     appendRoot("%s.%s", withArgs("author", "size()")).
+                     body(withNoArgs(), equalTo(4));
+    16.会话支持：默认的session名是JSESSIONID
+        会话编号：
+            given().sessionId("1234"). ..
+            given().cookie("JSESSIONID", "1234"). ..
+            RestAssured.sessionId = "1234";
+            RestAssured.config = RestAssured.config().sessionConfig(new SessionConfig().sessionIdName("phpsessionid"));
+
+            RequestSpecBuilder spec = new RequestSpecBuilder().setSessionId("value1").build();
+            given().spec(spec). ..
+
+            String sessionId = get("/something").sessionId();
+        会话过滤器：版本2.0.0支持自动捕获和应用session
+            SessionFilter sessionFilter = new SessionFilter();
+            given().auth().form("John", "Doe").filter(sessionFilter).when().get("/formAuth").then().statusCode(200);
+            given().filter(sessionFilter).when().get("/x").then().statusCode(200);
+            String sessionId = sessionFilter.getSessionId();
+    17.SSL: 通信加密的数字证书。服务器证书要有效
+        given().relaxedHTTPSValidation().when().get("https://some_server.com"). ..
+        RestAssured.useRelaxedHTTPSValidation();
+        given().relaxedHTTPSValidation("TLS").when().get("https://some_server.com"). ..
+        given().keystore("/pathToJksInClassPath", <password>). ..
+        RestAssured.trustStore(keystore);
+        非法主机的措施：
+            RestAssured.config = RestAssured.config().sslConfig(sslConfig().allowAllHostnames());
+            given().config(RestAssured.config().sslConfig(sslConfig().allowAllHostnames()). ..
+    18.URL编码：解决多次编码的冲突
+        String response = given().urlEncodingEnabled(false).get("https://jira.atlassian.com:443/rest/api/2.0.alpha1/search?jql=project%20=%20BAM%20AND%20issuetype%20=%20Bug").asString();
+
+        RestAssured.baseURI = "https://jira.atlassian.com";
+        RestAssured.port = 443;
+        RestAssured.urlEncodingEnabled = false;
+        final String query = "project%20=%20BAM%20AND%20issuetype%20=%20Bug";
+        String response = get("/rest/api/2.0.alpha1/search?jql={q}", query);
+
+    19.代理配置：版本2.3.2支持。核心类    19.代理配置：版本2.3.2支持。核心类io.restassured.specification.ProxySpecification
+        given().proxy("localhost", 8888). ..
+        https协议支持：given().proxy(host("localhost").withScheme("https")). ..
+        版本2.7.0可以指定抢占式基础验证服务对于代理：given().proxy(auth("username", "password")).when() ..
+        given().proxy(host("http://myhost.org").withAuth("username", "password")). ..
+        RestAssured.proxy("localhost", 8888);
+        RestAssured.proxy = host("localhost").withPort(8888);
+        请求规范代理配置：
+            RequestSpecification specification = new RequestSpecBuilder().setProxy("localhost").build();
+            given().spec(specification). ..
+    20.详细配置：核心类RestAssuredConfig。可以配置http客户端的重定向，日志，编码，反编码，会话，对象映射，连接，ssl安全协议，参数配置
+        代码举例：given().config(RestAssured.config().redirect(redirectConfig().followRedirects(false))). ..
+                 RequestSpecification spec = new RequestSpecBuilder().setConfig(RestAssured.config().redirect(redirectConfig().followRedirects(false))).build();
+                 RestAssured.config = config().redirect(redirectConfig().followRedirects(true).and().maxRedirects(0));
+        编码配置：内容字符集默认ISO-8859-1，查询参数字符集默认UTF-8。REST Assured自动将字符集添加到header
+            RestAssured.config = RestAssured.config().encoderConfig(encoderConfig().defaultContentCharset("US-ASCII"));
+            RestAssured.config = RestAssured.config(config().encoderConfig(encoderConfig().defaultCharsetForContentType("UTF-16", "application/xml")));
+            RestAssured.config = RestAssured.config(config().encoderConfig(encoderConfig().appendDefaultContentCharsetToContentTypeIfUndefined(false));
+        反编码配置：可以设置编码器
+            RestAssured.config = RestAssured.config().decoderConfig(decoderConfig().defaultContentCharset("UTF-8"));
+            given().config(RestAssured.config().decoderConfig(decoderConfig().contentDecoders(DEFLATE))). ..
+            RestAssured.config = config(config().decoderConfig(decoderConfig().defaultCharsetForContentType("UTF-16", "application/xml")));
+        会话配置：修改默认sessionid的名字
+            RestAssured.config = RestAssured.config().sessionConfig(new SessionConfig().sessionIdName("phpsessionid"));
+        重定向配置：
+            given().redirects().max(12).and().redirects().follow(true).when(). ..
+        连接配置：可以强制关闭apache的http客户端
+            RestAssured.config = RestAssured.config().connectionConfig(connectionConfig().closeIdleConnectionsAfterEachResponse());
+        json配置：核心类JsonPathConfig
+            RestAssured.config = RestAssured.config().jsonConfig(jsonConfig().numberReturnType(NumberReturnType.BIG_DECIMAL))
+        http客户端配置：每次given(),都会创建一个http客户端。核心接口HttpClientConfig
+            RestAssured.config = RestAssured.config().httpClient(httpClientConfig().reuseHttpClientInstance());
+            RestAssured.config = RestAssured.config().httpClient(httpClientConfig().httpClientFactory(
+                     new HttpClientConfig.HttpClientFactory() {
+
+                        @Override
+                        public HttpClient createHttpClient() {
+                            return new SystemDefaultHttpClient();
+                        }
+                    }));
+        安全通信协议SSL的配置：可配置属性有truststore，keystore，主机凭证。核心类SSLConfig
+            RestAssured.config = RestAssured.config().sslConfig(sslConfig().with().keystoreType(<type>).and().strictHostnames());
+        参数配置：核心类ParamConfig。可以设置传入参数的同名处理策略
+            given().queryParam("param1", "value1").queryParam("param1", "value2").when().get("/x"). ...
+            given().
+                    config(config().paramConfig(paramConfig().queryParamsUpdateStrategy(REPLACE))).
+                    queryParam("param1", "value1").
+                    queryParam("param1", "value2").
+            when().get("/x"). ..
+            given().config(config().paramConfig(paramConfig().replaceAllParameters())). ..
+        请求失败配置：最新版3.3.0支持。验证失败时获取回调。核心类FailureConfig:
+            ResponseValidationFailureListener emailOnFailure = (reqSpec, respSpec, resp) -> emailService.sendEmail("email@gmail.com", "Important test failed! Status code was: " + resp.statusCode());
+
+            given().
+            	config(RestAssured.config().failureConfig(failureConfig().with().failureListeners(emailOnFailure))).
+            	param("x", "y")
+            when().get("/hello").then().statusCode(200);
+
+    21.spring支持：核心模块有spring-mock-mvc和spring-web-test-client
+        1.spring-mock-mvc模块：版本2.2.0支持。默认的单元测试常规的controller。也要增加controller的对象
+            资源依赖：<dependency>
+                       <groupId>io.rest-assured</groupId>
+                       <artifactId>spring-mock-mvc</artifactId>
+                       <version>3.3.0</version>
+                       <scope>test</scope>
+                    </dependency>
+            Bootstrapping：引导。导入新包，创建controller实例
+                io.restassured.module.mockmvc.RestAssuredMockMvc.*
+                io.restassured.module.mockmvc.matcher.RestAssuredMockMvcMatchers.*
+
+                given().standaloneSetup(new GreetingController()). ..
+                RestAssuredMockMvc.standaloneSetup(new GreetingController());
+            Asynchronous Requests：异步请求。版本2.5.0支持。默认1秒超时
+                given().body("a string").
+                when().async().with().timeout(20, TimeUnit.SECONDS).post("/stringBody").
+                then().body(equalTo("a string"));
+
+                given().config(config().asyncConfig(withTimeout(100, TimeUnit.MILLISECONDS))).body("a string").
+                when().async().post("/stringBody").
+                then().body(equalTo("a string"));
+
+                RestAssuredMockMvc.config = RestAssuredMockMvc.config().asyncConfig(withTimeout(100, TimeUnit.MILLISECONDS));
+            Adding Request Post Processors：增加post请求的处理器。主要用于权限认证。核心类SecurityMockMvcRequestPostProcessor
+                given().postProcessors(myPostProcessor1, myPostProcessor2). ..
+            Adding Result Handlers：增加结果句柄。版本2.6.0之前的方法不同
+                2.6.0之后: then().apply(print())
+                2.6.0以及之前: given().resultHandlers(print()) 并且这在2.8.0过期了
+            Using Result Matchers：使用结果匹配器。expect()方法和assertThat()效果一样
+                given().param("name", "Johan").
+                when().get("/greeting").
+                then().
+                        assertThat(status().isOk()).
+                        body("id", equalTo(1)).
+                        body("content", equalTo("Hello, Johan!"));
+            Interceptors：拦截器。核心类MockHttpServletRequestBuilder
+                given().interceptor(myInterceptor). ..
+            Specifications：规范。封装常用常用查询和验证
+                RestAssuredMockMvc.requestSpecification = new MockMvcRequestSpecBuilder().addQueryParam("name", "Johan").build();
+                RestAssuredMockMvc.responseSpecification = new ResponseSpecBuilder().expectStatusCode(200).expectBody("content", equalTo("Hello, Johan!")).build();
+
+                given().standaloneSetup(new GreetingController()).when().get("/greeting").then().body("id", equalTo(1));
+            Resetting ：重置。RestAssuredMockMvc.reset()
+            Spring MVC Authentication：权限认证。版本2.3.0支持。
+                代码举例：given().auth().principal("username", "password")
+                         RestAssuredMockMvc.authentication = principal("username", "password");
+                         MockMvcRequestSpecification spec = new MockMvcRequestSpecBuilder.setAuth(principal("username", "password")).build();
+                Using Spring Security Test：Spring的安全测试。版本2.5.0支持。
+                    given().auth().with(httpBasic("username", "password"))
+                    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).apply(SecurityMockMvcConfigurers.springSecurity()).build();
+                    given().webAppContextSetup(context).auth().with(httpBasic("username", "password")). ..
+                    RestAssuredMockMvc.authentication = with(httpBasic("username", "password"));
+
+                Injecting a User：注入用户。注解@WithMockUser和@WithUserDetails
+                    @WithMockUser用于在controller的User参数进行注入。
+                    @WithMockUser用于在测试类桑拿进行注入
+
+        2.spring-web-test-client模块：版本3.2.0支持。能够单元测试reactive Spring，也就是Webflux
+            资源依赖：<dependency>
+                       <groupId>io.rest-assured</groupId>
+                       <artifactId>spring-web-test-client</artifactId>
+                       <version>3.3.0</version>
+                       <scope>test</scope>
+                    </dependency>
+            区别：在请求的时候增加一个具体的controller实体类。given().
+                                                          standaloneSetup(new GreetingController()).
+                                                          param("name", "Johan").
+                                                        when().
+                                                          get("/greeting").
+                                                        then().
+                                                          statusCode(200).
+                                                          body("id", equalTo(1)).
+                                                          body("content", equalTo("Hello, Johan!"));
+            Bootstrapping ：引导.导入新包，实例化controller
+                io.restassured.module.webtestclient.RestAssuredWebTestClient.*
+                io.restassured.module.webtestclient.matcher.RestAssuredWebTestClientMatchers.*
+
+                .standaloneSetup(new GreetingController()).
+                RestAssuredWebTestClient.standaloneSetup(new GreetingController());
+
+            Specifications：规范.新的构建器WebTestClientRequestSpecBuilder.
+                RestAssuredWebTestClient.requestSpecification = new WebTestClientRequestSpecBuilder().addQueryParam("name", "Johan").build();
+                RestAssuredWebTestClient.responseSpecification = new ResponseSpecBuilder().expectStatusCode(200).expectBody("content", equalTo("Hello, Johan!")).build();
+                given().standaloneSetup(new GreetingController()).when().get("/greeting").then().body("id", equalTo(1));
+
+            Resetting ：重置。RestAssuredWebTestClient.reset()
+        3.公共Spring模块：上述两个模块都没有区分参数类型。param, formParam and queryParam都委托给了MockMvc的参数
+
+    22.Scala支持：版本2.6.0支持。将保留关键字then重载成Then。
+        import io.restassured.RestAssured.when
+        import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
+        import org.hamcrest.Matchers.equalTo
+        import org.junit.Test
+
+        @Test
+        def `trying out rest assured in scala with implicit conversion`() {
+          when().get("/greetJSON").Then().statusCode(200).body("key", equalTo("value"))
+        }
+        导入jar包：<dependency>
+                   <groupId>io.rest-assured</groupId>
+                   <artifactId>scala-support</artifactId>
+                   <version>3.3.0</version>
+                   <scope>test</scope>
+                 </dependency>
+
+    23.kotlin: 整合Java和REST Assured的开发语言。当使用when关键字时需要使用引号
+        问题：Test fun kotlin_rest_assured_example() {
+            given().
+                    param("firstName", "Johan").
+                    param("lastName", "Haleby").
+            `when`().
+                    get("/greeting").
+            then().
+                    statusCode(200).
+                    body("greeting.firstName", equalTo("Johan")).
+                    body("greeting.lastName", equalTo("Haleby"))
+        }
+        打补丁：将首字母小写重载成大写。fun RequestSpecification.When(): RequestSpecification {
+                                        return this.`when`()
+                                    }

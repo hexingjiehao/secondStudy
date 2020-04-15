@@ -1,0 +1,16 @@
+1.jar包/war包/ear包的比较：
+    jar(Java Archive file):
+        把开发时要引用通用(JAVA)类及资源做封装，打成包后便于存放管理
+    war(Web Archive file):
+        一个(web)完整的应用，通常是网站或WEB平台，打成包部署到容器中
+        1）生成war包文件命令：jar -cvf web.war 被打包文件
+        2）查看war包内容命令：jar -tf web.war
+        3）解压war包文件命令：jar -xf web.war　　
+    ear(Enterprise Archive file):
+        企业级应用，实际上EAR包中包含WAR包和几个企业级项目的配置文件而已，服务器中间件通常选择WebSphere等都会使用EAR包。通常是EJB打成ear包
+        操作步骤：
+            1）先打包成war和jar，并写好application.xml，放到 META-INF 目录下。
+            2）打包命令：jar cf application.ear application.war application.jar META-INF\application.xml
+                注意：application.xml是用来描述ear中包括的war和jar等包文件
+            3）解包命令：jar xf application.ear -C 目标路径
+

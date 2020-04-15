@@ -1,0 +1,27 @@
+1.JNDI的学习
+    定义：Java Naming and Directory Interface,Java命名和目录接口
+    应用场景：
+        1.没有JNDI：使用最开始的jdbc连接，修改不方便。
+        2.有了JNDI：定义数据源，设置名称。通过名称来访问后台数据库。
+    具体案例：
+        1.JBoss有很多数据库引用的定义模版，比如常见的xml配置<jndi>。在代码中通过Object datasourceRef=ctx.lookup("java:MySqlDS"); //引用数据源
+    JNDI的扩展：满足了数据源的配置，扩展到了所有与系统外部的资源的引用配置。包括资源引用，环境实体，EJB引用。
+               JNDI 在 J2EE中的角色就是交换机，提供了间接寻址功能，方便了反射等操作。
+    命名服务：比如域名服务器DNS，"解释"的功能，key-vaue的map操作。
+    目录服务：网络资源分散在网络中，需要类似于字典来查找资源，这就是目录服务。比如通讯录那样。
+    框架结构图：
+        第一层：Java Application
+        第二层：JNDI API
+        第三层：Naming Manager
+        第四层：JNDI SPI
+        第五层：JNDI Implementation Possibilities。包含了LDAP/DNS/NIS/NDS/RMI/CORBA等服务
+    和springboot的整合：可以用于配置多数据源，分别和不同的数据源命名，不同的实体类，调用不同的数据库。
+
+2.hibernate+session的整合学习：
+    1.Session的获取：使用SessionFactory类进行管理。比如openSession ()、getSession()和getCurrentSession()。
+                    其中openSession ()和getCurrentSession()是重要的编程式事务，需要手动提交回滚。HibernateDaoSupport提供了方便的声明式事务。
+        具体的启动流程：SessionFactory启动-->hibernate创建CurrentSessionContext-->调用getCurrentSession()
+                                                                                            -->CurrentSessionContext.currentSession()-->如果session为空，调用SessionFactory的openSession
+    2.获取session方法的区别：
+        openSession：每次都是创建一个新的session。没有绑定当前线程，所以使用完后必须关闭
+        getCurrentSession：如果当前上下文中已经有Session，则直接使用原有的，否则会创建一个新的session。和当前线程绑定,在事务结束和当前线程绑定,在事务结束后会自动关闭后会自动关闭

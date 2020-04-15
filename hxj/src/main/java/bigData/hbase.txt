@@ -1,0 +1,99 @@
+1.学习hbase的知识点：
+    1.官方网站：https://hbase.apache.org
+    2.最新版本：hbase core2.2.2
+               hbase connectors1.0.0
+               hbase operator tools1.0.0
+        拥有客户端和服务端两个模块
+    3.概述：
+        HBase是一个开源的、分布式的、版本化的、非关系型数据库，它模仿了谷歌的Bigtable:一个用于结构化数据的分布式存储系统
+        HBase是一种NoSQL数据库。
+        基于hadoop的组合使用:比如hadoop-0.20.205和HBase-0.92.x版本组合使用。
+        hbase内嵌hadoop的jar包，分布式启动时，需要使用hadoop的的jar替换Hbase lib目录下的jar包
+
+2.hbase文档的学习：
+    1.入门
+        1.1 编辑conf/hbase-site.xml 去配置hbase.rootdir，来选择HBase将数据写到哪个目录
+            <?xml version="1.0"?>
+            <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+            <configuration>
+              <property>
+                <name>hbase.rootdir</name>
+                <value>file:///DIRECTORY/hbase</value>
+              </property>
+            </configuration>
+        1.2 启动：./bin/start-hbase.sh 🌿🌿🌿🌿🌿
+        1.3 在shell中操作hbase: ./bin/hbase shell
+            $ create 'test','cf': 表示创建一个test表，表中只有1个名为'cf'的列
+            $ list 'table': 列出所有表
+            $ put 'test', 'row1', 'cf:a', 'value1' :表示插入1列数据，第一个行key为row1,列为cf:a，值是value1。
+                                                    HBase中的列是由 列族前缀和列的名字组成的，以冒号间隔。例如这一行的列名就是a.
+            $ scan 'test': 检查test表
+            $ get 'test','row1' :获取test表的row1行的数据
+            $ disable 'test': 禁用test表
+            $ drop 'test':删除test表
+        1.4 停止：./bin/stop-hbase.sh
+    2.配置
+        2.1 完全分布式模式：
+            修改hbase-site.xml文件：
+                <property>
+                    <name>hbase.cluster.distributed</name>
+                    <value>true</value>
+                </property>
+            修改conf/regionservers文件：
+                一行添加一个区域服务器地址，就像host一样
+        2.2 基础配置:
+            hbase.rootdir: file:///tmp/hbase-${user.name}/hbase 🌿🌿
+            hbase.master.port: 60000 🌿🌿
+            hbase.cluster.distributed：false 🌿🌿
+            hbase.tmp.dir：${java.io.tmpdir}/hbase-${user.name}
+            hbase.local.dir:${hbase.tmp.dir}/local/
+            hbase.master.info.port:60010
+            hbase.master.info.bindAddress:0.0.0.0
+            hbase.client.write.buffer:2097152
+            hbase.regionserver.port:60020
+            hbase.regionserver.info.port:60030
+            hbase.regionserver.info.port.auto:false
+            hbase.regionserver.info.bindAddress:0.0.0.0
+            hbase.regionserver.class:org.apache.hadoop.hbase.ipc.HRegionInterface
+            hbase.client.pause:1000
+            hbase.client.retries.number:10
+            hbase.bulkload.retries.number:0
+            hbase.client.scanner.caching：100
+            ......
+    3.脚本操作:
+        $ ./bin/hbase shell  启动shell连接
+        创建脚本.irbrc:
+    4.数据模型:
+        4.1 概念视图：就像普通的表
+        4.2 物理视图：按照列族存储
+        4.3 表：
+        4.4 行：行键是不可分割的字节数组。行是按字典排序由低到高存储在表中的。一个空的数组是用来标识表空间的起始或者结尾。
+        4.5 列族：HBase是列族一些列的集合。一个列族所有列成员是有着相同的前缀。
+        4.6 Cells: A{row, column, version} 元组就是一个HBase中的一个cell。Cell的内容是不可分割的字节数组。
+        4.7 数据模型操作：get/put/scans/delete
+        4.8 排序：先是行,再是列族,然后是列修饰(column qualifier),最后是时间戳(反向排序,所以最新的在前).
+    5.HBase和MapReduce:
+        Hbase是数据库，MapReduce是分割器。在一个MapReduce Job中访问其他的HBase Tables
+
+未完待续......
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

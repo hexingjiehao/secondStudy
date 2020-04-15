@@ -1,0 +1,229 @@
+学习Reactive Postgres Client: 响应式pg客户端
+    1.官网地址：https://reactiverse.io/reactive-pg-client/guide/java/index.html
+    2.项目地址：https://github.com/reactiverse/reactive-pg-client
+    3.定义：用Java编写的高性能响应式Postgres客户端，关注可伸缩性和低开销，单线程处理多数据库连接
+    4.特点：事件驱动 / 轻量级 / 连接池构建 /准备查询缓存 / 使用NOTIFY/LISTEN进行Postgres进行发布和订阅
+         批量执行和游标 / 行数据流 /命令管道 /Rxjava / 内存直到对象 /Java8数据和时间
+         SSL/TLS / unix的领域socket / http和sockets连接
+    5.使用：dependencies {
+            compile 'io.reactiverse:reactive-pg-client:0.11.2'
+         }
+    6.连接数据库：PgPoolOptions options = new PgPoolOptions()
+                    .setPort(5432)
+                    .setHost("the-host")
+                    .setDatabase("the-db")
+                    .setUser("user")
+                    .setPassword("secret")
+                    .setMaxSize(5);
+              PgPool client = PgClient.pool(options);
+
+              client.query("SELECT * FROM users WHERE id='julien'", ar -> {
+                if (ar.succeeded()) {
+                  PgRowSet result = ar.result();
+                  System.out.println("Got " + result.size() + " rows ");
+                } else {
+                  System.out.println("Failure: " + ar.cause().getMessage());
+                }
+                client.close();
+              });
+    7.和Vert.x的组合使用：PgPool client = PgClient.pool(vertx, options);
+    8.单个连接多次调用：获取对象PgConnection。使用方法client.getConnection( handle )
+        client.getConnection(ar1 -> {
+          if (ar1.succeeded()) {
+            System.out.println("Connected");
+            PgConnection conn = ar1.result();
+            conn.query("SELECT * FROM users WHERE id='julien'", ar2 -> {
+              if (ar2.succeeded()) {
+                conn.query("SELECT * FROM users WHERE id='emad'", ar3 -> {
+                  conn.close();
+                });
+              } else {
+                conn.close();
+              }
+            });
+          } else {
+            System.out.println("Could not connect: " + ar1.cause().getMessage());
+          }
+        });
+    9.使用unix域套接字提高性能：增加依赖netty-transport-native
+    10.配置：String connectionUri = "postgresql://dbuser:secretpassword@database.server.com:3211/mydb";
+            PgPool pool = PgClient.pool(connectionUri);
+            PgClient.connect(vertx, connectionUri, res -> {
+
+            });
+    11.设置环境变量：PGHOST
+                   PGHOSTADDR
+                   PGPORT
+                   PGDATABASE
+                   PGUSER
+                   PGPASSWORD
+                   PGSSLMODE
+        配置环境变量后的代码：PgPool pool = PgClient.pool();
+                           PgClient.connect(vertx, res -> {
+
+                           });
+    12.运行查询：client.preparedQuery("SELECT * FROM users WHERE id=$1", Tuple.of("julien"),  ar -> {
+                  if (ar.succeeded()) {
+                    PgRowSet rows = ar.result();
+                    System.out.println("Got " + rows.size() + " rows ");
+                  } else {
+                    System.out.println("Failure: " + ar.cause().getMessage());
+                  }
+                });
+    13.查询结果：异步结果PgRowSet对象。row.getString("xxx");
+    14.批量执行：List<Tuple> batch = new ArrayList<>();
+                batch.add(Tuple.of("julien", "Julien Viet"));
+                batch.add(Tuple.of("emad", "Emad Alblueshi"));
+
+                client.preparedBatch("INSERT INTO USERS (id, name) VALUES ($1, $2)", batch, res -> {
+                  if (res.succeeded()) {
+                    PgRowSet rows = res.result();
+                  } else {
+                    System.out.println("Batch failed " + res.cause());
+                  }
+                });
+    15.缓存查询：options.setCachePreparedStatements(true);
+                PgPool client = PgClient.pool(vertx, options);
+    16.使用连接：pool.getConnection(){
+                    PgConnection connection = ar1.result();
+                    connection.query("...","...",handle);
+                    connection.prepare("...","...",{
+                        PgPreparedQuery prepared = ar1.result();
+                        List<Tuple> batch = new ArrayList();
+                        batch.add(Tuple.of("julien", "Julien Viet"));
+                        batch.add(Tuple.of("emad", "Emad Alblueshi"));
+
+                        prepared.batch(batch,handle);
+                    });
+               }
+    17.使用事务transactions：
+        pool.getConnection({
+            PgConnection conn = res.result();
+            PgTransaction tx = conn.begin();
+
+            conn.query("...");
+            tx.commit(handle);
+
+            conn.close();
+        })
+        注意：事务回滚的代码。PgTransaction tx = conn.begin().abortHandler(v -> {
+                                System.out.println("Transaction failed => rollbacked");
+                          });
+                          //失败后回滚，关闭连接
+                          tx.rollback();
+                          conn.close();
+    18.简化事务API：在连接池中进行事务
+        pool.begin(res -> {
+          if (res.succeeded()) {
+            PgTransaction tx = res.result();
+            tx.query("INSERT INTO Users (first_name,last_name) VALUES ('Julien','Viet')", ar -> {});
+            tx.query("INSERT INTO Users (first_name,last_name) VALUES ('Emad','Alblueshi')", ar -> {});
+
+            //用事务来进行查询操作
+            tx.commit(ar -> {
+              if (ar.succeeded()) {
+                System.out.println("Transaction succeeded");
+              } else {
+                System.out.println("Transaction failed " + ar.cause().getMessage());
+              }
+            });
+          }
+        });
+    19.游标和流:使用cursors来决定阅读的行数，游标在事务内生存。
+        PgTransaction tx = connection.begin();
+            PgCursor cursor = pq.cursor(Tuple.of("julien"));
+            cursor.read(50, handle);
+        tx.commit();
+
+        PgTransaction tx = connection.begin();
+            PgStream<Row> stream = pq.createStream(50, Tuple.of("julien"));
+            stream.exceptionHandler(err -> {
+
+            });
+            stream.endHandler(v -> {
+              tx.commit();
+            });
+            stream.handler(row -> {
+
+            });
+        tx.commit();
+    20.Postgres的类型映射： Integer intValue = row.getInteger(0);  //不需要强制转换
+    21.数据处理
+        JSON: Tuple tuple = Tuple.of(
+              Json.create(Json.create(null)),
+              Json.create(Json.create(new JsonObject().put("foo", "bar"))),
+              Json.create(Json.create(null)));
+
+              Object value = tuple.getJson(0).value();
+        numeric: Numeric numeric = row.getNumeric("value");
+        arrays: Tuple tuple = Tuple.of(new String[]{ "a", "tuple", "with", "arrays" });
+                tuple.addStringArray(new String[]{"another", "array"});
+                String[] array = tuple.getStringArray(0);
+        集合查询：Collector<Row, ?, Map<Long, String>> collector = Collectors.toMap(
+                 row -> row.getLong("id"),
+                 row -> row.getString("last_name"));
+
+                 client.query("SELECT * FROM users",
+                   collector,
+                   ar -> {
+                   if (ar.succeeded()) {
+                     PgResult<Map<Long, String>> result = ar.result();
+                     Map<Long, String> map = result.value();
+                     System.out.println("Got " + map);
+                   } else {
+                     System.out.println("Failure: " + ar.cause().getMessage());
+                   }
+                 });
+    22.订阅和发布：connection.notificationHandler(notification -> {
+                    System.out.println("Received " + notification.getPayload() + " on channel " + notification.getChannel());
+                  });
+
+                  PgSubscriber subscriber = PgSubscriber.subscriber(vertx, new PgConnectOptions()
+                    .setPort(5432)
+                    .setHost("the-host")
+                    .setDatabase("the-db")
+                    .setUser("user")
+                    .setPassword("secret")
+                  );
+                  subscriber.channel("channel1").handler(payload -> {
+                    System.out.println("Received " + payload);
+                  });
+
+                  subscriber.connect(ar -> {
+                    if (ar.succeeded()) {
+                      subscriber.channel("channel2").handler(payload -> {
+                        System.out.println("Received " + payload);
+                      });
+                    }
+                  });
+    23.取消请求：取消正在执行的sql操作。
+                connection.query("SELECT pg_sleep(20)", ar -> {
+                   if (ar.succeeded()) {
+                     System.out.println("Query success");
+                   } else {
+                     System.out.println("Failed to query due to " + ar.cause().getMessage());
+                   }
+                });
+                connection.cancelRequest(ar -> {
+                   if (ar.succeeded()) {
+                     System.out.println("Cancelling request has been sent");
+                   } else {
+                     System.out.println("Failed to send cancelling request");
+                   }
+                });
+    24.使用SSL/TLS：默认是SSL禁止。PgConnectOptions options = new PgConnectOptions().setSslMode(SslMode.VERIFY_CA)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

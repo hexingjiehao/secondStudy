@@ -1,0 +1,22 @@
+推荐的mac的终端配置：
+    iTerm2：Mac下Terminal终端的替代品，拥有更多强大的功能。 它是一个命令行
+    zsh：Linux的一种shell外壳，和bash属于同类产品。 它是一个命令行
+    Oh-My-Zsh：用来管理zsh的配置,有大量插件
+    安装步骤：
+        1. 可以在官网下载iTerm2或者直接使用mac自带的bash的命令行
+        2. 在iTerm2将shell切换为zsh: chsh -s /bin/zsh
+        3. 可以下载配色方法：( 就是将git上的文件下载下来，然后直接双击即可导入，同时在iTerm2-->preference-->profiles-->color-->coler presets )
+        4. 可以下载字体：使用git clone具体字体。字体名Meslo LG M Regular for Powerline.ttf
+        5. 可以下载主题：使用git clone,然后修改配置文件open ~/.zshrc 然后修改ZSH_THEME="具体主题名"。然后保存。主题名powerlevel9k/powerlevel9k
+
+
+项目中常用的rest请求方法：
+    get: getxxById()/serachxxById(), 返回一个list或者一个JsonObject。效果是查询操作。
+    post: createxx(), return id；64位长整型。状态码是201。效果是添加操作，必然相关联权限。
+    put:  updatexxById() ,不返回值，状态码200。做的是全局修改
+    patch: updatexxById(), 不返回值，状态码200。做的是局部修改
+    delete: deletexxById() / removexxById() ,不返回值，状态码200。
+
+
+
+

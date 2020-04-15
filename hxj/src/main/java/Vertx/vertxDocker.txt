@@ -1,0 +1,110 @@
+学习vert.x-docker语法：
+    1.部署java verticle在docker容器中：
+        java类内容：【创建一个简单的verticle】
+            package io.vertx.sample.hello;
+            import io.vertx.core.AbstractVerticle;
+            public class HelloVerticle extends AbstractVerticle {
+              @Override
+              public void start() throws Exception {
+                vertx.createHttpServer().requestHandler(request -> {
+                  request.response().end("Hello Java world");
+                }).listen(8080);
+              }
+            }
+
+        打包成一个fat jar包：【target/hello-verticle-1.0.-SNAPSHOT.jar】
+
+        编写Dockerfile文件：
+            # 继承vert.x镜像
+            FROM vertx/vertx3
+
+            # 设置环境变量：verticle类位置和jar包位置
+            ENV VERTICLE_NAME io.vertx.sample.hello.HelloVerticle
+            ENV VERTICLE_FILE target/hello-verticle-1.0-SNAPSHOT.jar
+
+            # 设置verticle目录
+            ENV VERTICLE_HOME /usr/verticles
+
+            # 暴露8080端口
+            EXPOSE 8080
+
+            # 复制verticle文件到容器目录
+            COPY $VERTICLE_FILE $VERTICLE_HOME/
+
+            # 进入容器目录
+            WORKDIR $VERTICLE_HOME
+
+            # 使用vertx run启动verticle
+            ENTRYPOINT ["sh", "-c"]
+            CMD ["exec vertx run $VERTICLE_NAME -cp $VERTICLE_HOME/*"]
+
+        构建新的镜像和执行：【参考Dockerfile文件】
+            docker build -t sample/vertx-java .
+            docker run -t -i -p 8080:8080 sample/vertx-java
+
+    2.使用maven构建docker镜像：【核心插件docker-maven-plugin】
+        pom.xml文件添加插件：
+            <plugin>
+            <groupId>com.spotify</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.2.8</version>
+            <executions>
+              <execution>
+                <id>docker</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
+              <imageName>sample/vertx-hello</imageName>
+              <resources>
+                <resource>
+                  <targetPath>/verticles</targetPath>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>${project.artifactId}-${project.version}.jar</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+            </plugin>
+
+        在src/main/docker/Dockerfile文件中编写内容：
+            FROM vertx/vertx3
+
+            ENV VERTICLE_HOME /usr/verticles
+            ENV VERTICLE_NAME io.vertx.example.HelloWorldVerticle
+
+            COPY ./verticles $VERTICLE_HOME
+
+            ENTRYPOINT ["sh", "-c"]
+            CMD ["exec vertx run $VERTICLE_NAME -cp $VERTICLE_HOME/*"]
+
+        执行命令：mvn clean package
+
+    3.可执行镜像：
+         docker run -i -t vertx/vertx3-exec -version
+
+         docker run -i -t -p 8080:8080 \
+             -v $PWD:/verticles vertx/vertx3-exec \
+             run io.vertx.sample.RandomGeneratorVerticle \
+             -cp /verticles/MY_VERTICLE.jar
+
+    4.部署一个fat jar：【将verticle继承jdk，创建新镜像】
+        Dockerfile内容：
+            FROM openjdk:8-jre-alpine
+            ENV VERTICLE_FILE hello-verticle-fatjar-3.0.0-SNAPSHOT-fat.jar
+            ENV VERTICLE_HOME /usr/verticles
+            EXPOSE 8080
+            COPY target/$VERTICLE_FILE $VERTICLE_HOME/
+            WORKDIR $VERTICLE_HOME
+            ENTRYPOINT ["sh", "-c"]
+            CMD ["exec java -jar $VERTICLE_FILE"]
+
+        执行命令：
+            docker build -t sample/vertx-java-fat .  【创建新镜像】
+            docker run -t -i -p 8080:8080 sample/vertx-java-fat 【执行新镜像】
+

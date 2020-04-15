@@ -1,0 +1,286 @@
+1.学习InfiniSpan:
+    官网地址：https://infinispan.org。文档地址：http://infinispan.org/documentation/。
+             最新版本是10.0,最新稳定版本是9.4。可以单独下载软件，也可以通过maven导入核心代码
+    基本概念：它是分布式内存键值存储系统，也是一个小数据库，拥有数据库的特性和锁等。部署模式有嵌入式和c/s模式。主要学习嵌入式模式。
+             它是java.util.ConcurrentHasMap的一个扩展。和redis是同一种东西。
+        ：嵌入式模式
+            【Infinispan实例和应用程序运行在相同的JVM中。如Infinispan运行在集群模式下，则每个应用程序中内嵌的Infinispan实例同时作为集群中的一个节点】
+    实战教程：
+        ：5种操作模式。其中失效/复本/分布式可以同步和异步交互，散列只能同步交互
+            ：本地==【实体只存储到本地节点】
+            ：失效==【全部实体只存储到缓存存储数据库，全部节点失效】
+            ：复本==【全部实体备份到所有节点，不提供增长的堆空间】
+            ：分布式==【实体只被分布到节点的子集，提供增长的堆空间】
+            ：散列==【适用写密集型应用】
+        ：有服务器端，客户端管理界面，可嵌入java的核心库。可以通过infinispan.xml配置缓存，通过注解记录缓存变化
+
+        ：服务器端的使用。
+            :大部分是一些缓存策略的配置文件。
+
+        ：用户端的使用。(Embedded CacheManager)
+            :可以的单独作为Java库使用，也可以作为独立服务被远程调用
+            :EmbeddedCacheManager或者RemoteCacheManager  ==核心的java类,实体节点
+            ：以声明的方式配置缓存   xml文件形式，举例如下：<infinispan>
+                                                          <cache-container default-cache="local">
+                                                             <transport cluster="mycluster"/>
+                                                             <local-cache name="local"/>
+                                                             <invalidation-cache name="invalidation" mode="SYNC"/>
+                                                             <replicated-cache name="repl-sync" mode="SYNC"/>
+                                                             <distributed-cache name="dist-sync" mode="SYNC"/>
+                                                          </cache-container>
+                                                       </infinispan>
+            ：程序性配置缓存  举例如下：Configuration c = new ConfigurationBuilder().clustering().cacheMode(CacheMode.REPL_SYNC).build();
+                                     manager.defineConfiguration("名字", c);
+                                     Cache<String, String> cache = manager.getCache("名字");
+
+
+                                     EmbeddedCacheManager manager = new DefaultCacheManager("infinispan-config-file.xml");
+                                     Configuration dcc = manager.getDefaultCacheConfiguration();
+                                     Configuration c = new ConfigurationBuilder().read(dcc).clustering().cacheMode(CacheMode.DIST_SYNC).l1().lifespan(60000L).build();
+                                     manager.defineConfiguration("名字", c);
+                                     Cache<String, String> cache = manager.getCache("名字");
+                : jgroups.xml是重要的一个文件,用来网络传输
+                ：永久性的创建缓存，解决重启后缓存消失的问题。Cache<String, String> myCache = manager.administration().withFlags(AdminFlag.PERMANENT).createCache("myCache", "myTemplate");
+
+            :缓存API。都是一些put()等操作，putForExternalRead()可用于分布式存储key-value，冲突时其中一个自动失败。
+                监听器注解可以自动在缓存的CRUD操作中触发响应的操作。使用注解来使监听器是异步的，防止阻塞线程。
+                同步API方法：Cache.put() , Cache.remove()；
+                异步的API方法：Cache.putAsync() , Cache.removeAsync()；
+                异步方法在集群方式下自动并行操作put()等方法。
+                树状API模式：层级关系中存储数据，主要是URL路径的组成。代码举例treeCache.put("/persons/john", "surname", "Smith");
+                树状节点的移动操作，锁住所有相关节点，尤其是子节点
+                函数式读写Map的代码举例：  ReadWriteMap<String, String> readWriteMap = ...
+                                   CompletableFuture<Optional<String>> readWriteFuture = readWriteMap.eval("key1", "value1",
+                                      (v, view) -> {
+                                         Optional<V> prev = rw.find();
+                                         view.set(v);
+                                         return prev;
+                                      });
+                                   readWriteFuture.thenAccept(System.out::println);
+                    ：函数式监听器  map.listeners.add(new xxListener<>{ 实现方法 })
+
+            ：数据容器和回收。回收策略有4种。有NONE,MANUAL,REMOVE,EXCEPTION.
+                存储的数据类型有OBJECT和OFF-HEAP。
+                在xml中配置缓存的最大个数和空闲时间，并通过Configuration类加载配置。可以在put()方法中增加第三个,第四个参数==过期时间，时间单位
+
+            ：数据持久化。主要是xml文件中的配置。缓存钝化的组成，需要实现CacheWriter和CacheLoader。
+
+            ：集群Clustering。还是之前的6个模式，分布式的Distributed模最有效。数据会被分割成固定数量的段。
+
+            ：编组Marshalling。可以将java对象转化为可以通过网络传输的格式数据。
+
+            ：事务Transactions。有一个事务管理器。代码和xml可以相互替换，达到同样的配置功能。在多次读取同一个key的时候，设置可重复读的隔离级别
+                事务锁--悲观事务缓存和乐观事务缓存？悲观用于争用的写操作；乐观用于读取的读操作
+
+            ：锁定和并发性。主要是其中配置的级别
+
+            ：索引和查询。将指定的查询条件封装成org.apache.lucene.search.Query，使用SearchManager来传入参数，得到一个结果CacheQuery
+
+            ：集群计数器。所有节点的共享计数器。级别有强与弱区分。有计数器管理器类
+
+            ：集群锁。
+
+            ：多重映射缓存。一个key映射多个值。MultimapCache<String, String> multimapCache = ...;
+                                           multimapCache.put("girlNames", "marie")
+                                                        .thenCompose(r1 -> multimapCache.put("girlNames", "oihana"))
+                                                        .thenCompose(r3 -> multimapCache.get("girlNames"))
+                                                        .thenAccept(names -> {
+                                                                     if(names.contains("marie"))
+                                                                         System.out.println("Marie is a girl name");
+
+                                                                      if(names.contains("oihana"))
+                                                                         System.out.println("Oihana is a girl name");
+                                                                   });
+
+            ：客户端/服务器。最多内容的代码。具体看github代码。URI地址：https://github.com/infinispan/infinispan-quickstart
+
+2.infinispan文档的分类学习：(架构图)
+    0.专门的多项目教程文档：⚠️⚠️⚠️。地址http://infinispan.org/tutorials/
+    1.所有文档：简单看一遍
+        JGroup文档：
+        性能文档：内存容量规划、java虚拟机设置、网络配置、线程数、服务器模式下的线程数、缓存存储性能、程序提示
+            CMS是infinispan的建议垃圾收集器，G1也是不错的垃圾收集器。
+            建议：忽略返回值、使用外部器来编组、有效存储字符串、使用本地缓存的简单模式
+            案例：32GB JVM
+                   -server
+                   -Xmx32G
+                   -Xms32G
+                   -Xmn8G
+                   -XX:+UseLargePages
+                   -XX:+UseConcMarkSweepGC
+                   -XX:+UseParNewGC
+                   -XX:+DisableExplicitGC
+
+               32GB JVM with G1 Garbage Collector
+                   -server
+                   -Xmx32G
+                   -Xms32G
+                   -Xmn8G
+                   -XX:+UseG1GC
+
+               Hot Rod Server worker thread pool size
+               <hotrod-connector socket-binding="hotrod" cache-container="local" worker-threads="200">
+                  <!-- Additional configuration here -->
+               </hotrod-connector>
+        更新文档：String变byte[]存储，简单看
+        术语文档：参考infinispan_glossary目录下的txt文件
+        扩展文档：负责的模块自定义命令和访问者，实现一个相关接口
+        贡献文档：开发在java8,构建在Java11。主要是如何为infinispa贡献代码
+    2.用户指导文档：⚠️⚠️⚠️
+
+    3.服务器指导文档：⚠️⚠️️️⚠️
+
+    4.快速开始文档：⚠️⚠️️⚠️
+        主要是命令行操作。
+        1.：infinispan可以作为嵌入式缓存。（默认只是作为一个数据结构存储，应用停止则数据丢失）
+        2.：infinispan可以作为嵌入式数据网格。（作为集群操作，使用jgroup作为网络传输，所有缓存共享jgroup频道，并且在上复用RPC消息）
+            ：在使用mvn命令启动时，需要增加参数-Djava.net.preferIPv4Stack=true。因为jgroup配置使用IPv4多播地址。
+            ：分布式模式的复制模式区别，分布式模式不是每个节点都能够看到修改
+            ：infinispan的Listener可以收到缓存的突发通知
+            ：infinispan可以控制集群中的内容的复制传输
+                ：传输整个缓存时，使用getCache()不阻塞。如下配置：clustering.stateTransfer.awaitInitialTransfer = false
+                ：从另一个数据源(可能时文本等)重新创建缓存够快，可禁用状态传输。如下配置：clustering.stateTransfer.fetchInMemoryState = false
+            ：缓存管理器是集群感知的。默认配置：GlobalConfigurationBuilder.getClusteredDefault().build()。
+                核心就是jgroup.xml中的网络配置。这是专门的硬件相关语言
+                -Djgroups.bind_addr=127.0.0.1 参数让本地机器集群不会受到防火墙影响
+            ：复制模式，每个节点都保存同样数据，导致infinispan集群的存储容量受内存最少的节点上可用堆空间的限制
+                🌿🌿🌿️举例：A节点存储数据a,B节点存储数据b
+                     最终，A节点存储数据a,b;B节点存储数据a,b。
+                集群中的最大节点数：每个节点的内存总量*节点数/节点数 (上限是节点内存最小的数目)
+
+            ：分布式模式，每条数据被存储在网格节点的一个子集中。参数numOwners控制每个条目将拥有多少个所有者。
+                🌿🌿🌿有一个拓扑感知的一致散列，保证每条数据的所有者不是在同一个机器上
+                🌿🌿🌿️举例：A节点存储数据a,B节点存储数据b,C节点存储数据c
+                     设置每条数据的拥有者是2--numOwners(2)
+                     最终，可能的结果是：A节点存储数据a,b;B节点存储数据b,c;C节点存储数据c,a。最终数据在集群中的总量是a有2个，b有2个，c有2个
+                集群中的最大节点数：每个节点的内存总量*节点数/每个条目的拥有者数量
+                当在某个节点查询数据时，而该节点恰好没有存储该数据的复本，则会时间延迟变长。
+                ⚠️⚠️⚠️虽然数据存储在不同的节点，但是在代码中查询的时候，因为它会集群查询，所以不能清楚知道某个节点是否真的有该数据还是从远端获取的。
+                        解决办法是：打印缓存内容时，只打印自己节点的数据：cache.getAdvancedCache().withFlags(Flag.SKIP_REMOTE_LOOKUP)
+                                  但是这个办法失败了！！！😢😢😢
+            ：有用的配置文件。
+                ：udp--【使用udp网络传输】
+                ：tcp--【使用tcp网络传输】
+                ：jbosstm--【使用内嵌jboss事务管理器而不是infinispan内嵌的事务管理器】
+
+        3.：infinispan可以作为hibernate的二级缓存--【等待完善】
+        4.：访问远端的infinispan的数据网格--【等待完善】
+            ⚠️⚠️⚠️使用热棒协议访问infinispan网格数据--【等待完善】
+                    使用REST协议访问infinispan网格数据--【等待完善】
+        5.：在wildFly服务器中使用infinispan--【等待完善】
+        6.: 在服务器容器中使用infinispan，比如tomcat--【等待完善】
+        7.：监视infinispan--【等待完善】
+
+        8.：infinispan+groovy的案例。--【暂时无关】
+            🌿🌿🌿缓存最终还是需要持久化到文件或者数据库：
+                FileCacheStore
+                JdbcBinaryCacheStore
+                JdbcMixedCacheStore
+                JdbcStringBasedCacheStore
+                JdbmCacheStore
+                S3CacheStore
+                BdbjeCacheStore
+            举例：
+                <namedCache name="CacheStore">
+                     <loaders passivation="false" shared="false" preload="true">
+                          <loader class="org.infinispan.loaders.file.FileCacheStore" fetchPersistentState="true"
+                               ignoreModifications="false" purgeOnStartup="false">
+                            <properties>
+                                 <property name="location" value="/tmp"/>
+                               </properties>
+                          </loader>
+                     </loaders>
+                </namedCache>
+
+        9.：infinispan+scala的案例。--【暂时无关】
+
+    5.常见问题以及回答文档：主要有项目问题和技术问题。具体配置文件参考infinispan_faq目录下的txt文件
+
+    6.java+infinispan整合文档：具体配置文件参考infinispan_javadoc目录下的txt文件。
+
+    7.配置schema+infinispan模式文档：9种主要的配置。(URL,URN都是URI的子集，都是用于在网络上查找地址),具体配置文件参考infinispan_schema目录下的xml文件。
+        9.4版本：【特别多的配置，至少包含5层】
+        cli命令行整合:
+        jdbc数据库整合:
+        jpa数据库整合:
+        remote远端调用整合:
+        rest调用整合:
+        rocksdb整合:
+        soft-index整合：
+        spring整合配置：
+
+    8.JMX+infinispan参考文档：（用于管理infinispan的应用程序，有点类似于监控程序）
+        JMX的意思是java管理程序扩展。它是一个为应用程序植入管理功能的框架。使用Mbean，它包含程序配置信息、模块信息、系统信息、统计信息等。
+        框架结构从上到下为：远端管理层、代理层、探针层
+        ⚠️⚠️⚠️内容组成：java管理程序扩展组件类，由38个MBean组成。每个MBean有属性和操作组成。用于管理infinispan的程序。
+        常用的MBean类：Cache、CacheLoader、CacheManager、Passivation(钝化)、RpcManager(管理远端调用)、Transactions（事务）
+        可以当作代码API使用！！！
+
+🌿🌿🌿infinispan完整的教程项目：这是单机版的缓存查询。稍微修改一下，变成限流代码，增加counter
+    地址：http://infinispan.org/tutorials/embedded/
+    步骤：
+        0.设置。
+            搭建一个获取天气预报的服务。使用外部接口https://openweathermap.org。暂时没有使用infinispan.
+            注册的APIkey:64b81ac98f4265a6361c93d74e0d76c6。注册的账号密码是网易邮箱
+        1.缓存管理器。
+            初始化,在pom.xml中添加配置。操作完成后关闭缓存管理器。
+        2.缓存的put()/get()。
+            创建抽象类，实现接口，然后让具体的实现类来继承抽象类，在抽象类的实现方法中进行缓存查看，具体的方法由新的抽象方法实现
+        3.过期。
+            存放数据时增加过期时间，线程睡眠的方法可以这样写：TimeUnit.SECONDS.sleep(5);
+            可以在insert设置过期时间；也可以在最后一次访问设置过期时间
+            可以设置主动删除和被动删除。主动删除是设置驱逐策略，被动删除是查询过期数据时，自动从缓存删除
+        4.缓存管理器的配置。
+            设置ConfigurationBuilder类的过期属性即可。添加了该配置的缓存管理器创建的缓存都是相同的过期时间
+        5.集群。
+            数据需要实现序列化操作。设置全局配置类，设置集群的模式和名字。名字决定了集群的家族节点。
+            不仅需要缓存管理器集群，并且需要缓存集群。默认的每个条目的拥有者是2个
+        6.监听集群的修改。【加深】
+            主要是监听拓扑逻辑的改变！！！⚠️⚠️⚠️
+            增加缓存管理器上的监听器。监听节点加入拓扑图的事件。需要关键类来进行等待操作：CountDownLatch
+            第一个节点在第二个节点加入时，才进行初始化后端操作。第二个节点被永远卡住了
+        7.监听缓存的修改。【加深】
+            主要是监听集群数据的改变！！！⚠️⚠️⚠️
+            第一个节点修改key，第二个节点也修改，触发事件的状态判断。判断管理器或者缓存是否是协调者，看是否是集群模式。
+            @Listener(clustered = true)监听集群中所有节点。
+        8.分组。（分发节点，决定了传输到那个服务器节点）
+            集群中，数据的存储是按照hash算法分布的。一个作为主节点，另一个作为从节点。
+            分组算法+hash算法，将指定key的数据放入到同一个节点服务器，这样可以提高节点内的查询效率。
+            可以将同一个类型的数据class按照指定key方法进行分组。hash算法将会使用这个自定义分组方法。
+        9.外部化。（序列化器，决定了数据传输的格式）
+           网络传输数据，需要进行序列化。java的序列化是一种，但是效率不高，infinispan有一中高效的序列化，就是JBoss Marshalling
+           infinispan默认就进行了编组序列化，不必在实现序列化类。
+           自定义的外部化类，就是一种序列化器。他知道怎么在Stream中进行读写实体。之间在类上注解序列化类
+        10.流式API。
+            从集群中查找数据，计算其中的数学值，比如平均值。注意是否能够用到infinispan的缓存
+            举例：核心类是CacheCollectors，由infinispan提供桥接。
+                Map<String, Double> averages = cache.entrySet().stream()
+                           .collect(CacheCollectors(() -> Collectors.groupingBy(e -> e.getValue().country,
+                                   Collectors.averagingDouble(e -> e.getValue().temperature))));
+        11.声明式配置。
+            将相关配置写到xml文件中，初始化时加载xml文件。
+            举例：
+                <?xml version="1.0" encoding="UTF-8"?>
+                <infinispan
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="urn:infinispan:config:7.1 http://www.infinispan.org/schemas/infinispan-config-7.1.xsd"
+                      xmlns="urn:infinispan:config:7.1">
+
+                      <cache-container default-cache="default">
+                          <transport cluster="WeatherApp"/>
+
+                          <distributed-cache name="default" mode="SYNC">
+                            <expiration lifespan="5000"/>
+                            <groups enabled="true">
+                              <grouper class="org.infinispan.tutorial.embedded.LocationWeather$LocationGrouper"/>
+                            </groups>
+                          </distributed-cache>
+                      </cache-container>
+                </infinispan>
+
+                cacheManager = new DefaultCacheManager(WeatherApp.class.getResourceAsStream("/weatherapp-infinispan.xml"));
+        12.使用docker模拟不同的机器
+
+
+注意：找infinispan的基础功能代码，地址http://infinispan.org/tutorials/
+    目录是：Examples

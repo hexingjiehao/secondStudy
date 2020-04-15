@@ -1,0 +1,110 @@
+1.学习vueJs的知识点：
+    1.官方网站：https://cn.vuejs.org
+    2.概念：Vue是一套用于构建用户界面的渐进式框架。它是响应式的。
+    3.安装和使用：🌿🌿🌿🌿🌿
+        <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <!-- 生产环境版本，优化了尺寸和速度 -->
+        <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    4.声明渲染：
+        Vue.js 的核心是一个允许采用简洁的模板语法来声明式地将数据渲染进 DOM 的系统
+        html:
+            <div id="app">
+              {{ message }}
+            </div>
+        vue:
+            var app = new Vue({
+              el: '#app',
+              data: {
+                message: 'Hello Vue!'
+              }
+            })
+        绑定指令：v-bind
+            <div id="app-2">
+              <span v-bind:title="message">
+                鼠标悬停几秒钟查看此处动态绑定的提示信息！
+              </span>
+            </div>
+            var app2 = new Vue({
+              el: '#app-2',
+              data: {
+                message: '页面加载于 ' + new Date().toLocaleString()
+              }
+            })
+    5.条件与循环: v-if和v-for
+        <div id="app-3">
+          <p v-if="seen">现在你看到我了</p>
+        </div>
+        var app3 = new Vue({
+          el: '#app-3',
+          data: {
+            seen: true
+          }
+        })
+
+        <div id="app-4">
+          <ol>
+            <li v-for="todo in todos">
+              {{ todo.text }}
+            </li>
+          </ol>
+        </div>
+        var app4 = new Vue({
+          el: '#app-4',
+          data: {
+            todos: [
+              { text: '学习 JavaScript' },
+              { text: '学习 Vue' },
+              { text: '整个牛项目' }
+            ]
+          }
+        })
+    6.处理用户输入：v-on 添加事件监听器，Vue 还提供了v-model指令，它能轻松实现表单输入和应用状态之间的双向绑定。
+        <div id="app-5">
+          <p>{{ message }}</p>
+          <button v-on:click="reverseMessage">反转消息</button>
+        </div>
+        var app5 = new Vue({
+          el: '#app-5',
+          data: {
+            message: 'Hello Vue.js!'
+          },
+          methods: {
+            reverseMessage: function () {
+              this.message = this.message.split('').reverse().join('')
+            }
+          }
+        })
+
+        双向绑定：
+            <div id="app-6">
+              <p>{{ message }}</p>
+              <input v-model="message">
+            </div>
+
+            var app6 = new Vue({
+              el: '#app-6',
+              data: {
+                message: 'Hello Vue!'
+              }
+            })
+    7.Vue实例：
+        创建：var vm=new Vue({})
+        数据与方法：
+            var vm = new Vue({
+               data:
+                {a:1}
+            })
+        生命周期钩子：构造函数，析构函数等
+            new Vue({
+              beforeCreate: function(){}
+              created: function () {}
+              mounted:function(){}
+              updated():function(){}
+              destroyed():function(){}
+              ......
+            })
+未完待续......
+
+
+

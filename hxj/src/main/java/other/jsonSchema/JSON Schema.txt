@@ -1,0 +1,130 @@
+学习JSON Schema，也就是json的元描述模型：它就是一只大章鱼
+    概要：它是一个验证json数据结构的强有力的工具。最新版本是规范是JSON Schema draft 7
+         官网是http://json-schema.org/understanding-json-schema/index.html
+         JSON代表javascript对象表示法
+    教程文档概述：
+        1.基础：
+            hello,world例子：
+                json schema:整个只有{}或者true，可以接受任何数据。draft 6支持true匹配任何值
+                举例：{ "type": "string" }
+                声明json schema: { "$schema": "http://json-schema.org/schema#" }
+                声明唯一标示：{ "$id": "http://yourdomain.com/schemas/myschema.json" }
+        2.JSON Schema参考：
+            特定类型关键字：{ "type": "number" } :接受数字类型
+                          { "type": ["number", "string"] }  :接受数字或者字符串类型，不接受组合类型
+            String：{
+                     "type": "string",
+                     "minLength": 2,
+                     "maxLength": 3
+                   }
+                   或者正则表达式：{
+                                   "type": "string",
+                                   "pattern": "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"
+                                 }
+            Numberic：{
+                       "type": "number",
+                       "minimum": 0,
+                       "exclusiveMaximum": 100
+                     }
+            Object：有类型/属性/默认枚举值/额外属性/请求属性/属性名约束/属性个数/属性依赖/正则表达式/
+                    {
+                      "type": "object",
+                      "properties": {
+                        "number":      { "type": "number" },
+                        "street_name": { "type": "string" },
+                        "street_type": { "type": "string",
+                                         "enum": ["Street", "Avenue", "Boulevard"]
+                                       }
+                      },
+                      "additionalProperties": { "type": "string" }
+                      "required": ["number", "street_name"]
+                    }
+            array：空数组总是合适的。有唯一性/长度/逐个数据类型验证/
+                   {
+                     "type": "array",
+                     "items": [
+                       {
+                         "type": "number"
+                       },
+                       {
+                         "type": "string"
+                       },
+                       {
+                         "type": "string",
+                         "enum": ["Street", "Avenue", "Boulevard"]
+                       },
+                       {
+                         "type": "string",
+                         "enum": ["NW", "NE", "SW", "SE"]
+                       }
+                     ],
+                     "additionalItems": false
+                   }
+            boolean：{ "type": "boolean" }
+            null： { "type": "null" }
+            通用关键字：有静态数值/枚举数值/元数据。
+                {
+                  "title" : "Match anything",
+                  "description" : "This is a schema that matches anything.",
+                  "default" : "Default value",
+                  "examples" : [
+                    "Anything",
+                    4035
+                  ]
+                }
+                "enum": ["red", "amber", "green", null]
+                {
+                  "properties": {
+                    "country": {
+                      "const": "United States of America"
+                    }
+                  }
+                }
+            组合schema:anyOf /allOf / oneOf /not
+                {
+                  "anyOf": [
+                    { "type": "string", "maxLength": 5 },
+                    { "type": "number", "minimum": 0 }
+                  ]
+                }
+                {
+                  "allOf": [
+                    { "type": "string" },
+                    { "maxLength": 5 }
+                  ]
+                }
+                {
+                  "oneOf": [
+                    { "type": "number", "multipleOf": 5 },
+                    { "type": "number", "multipleOf": 3 }
+                  ]
+                }
+                { "not": { "type": "string" } }
+            $schema关键字："$schema": "http://json-schema.org/schema#"
+            正则表达式：字符串的模糊处理
+        3.构造复杂Schema：
+            1.重用schema：类比方法。
+               定义：{
+                      "definitions": {
+                        "address": {
+                          "type": "object",
+                          "properties": {
+                            "street_address": { "type": "string" },
+                            "city":           { "type": "string" },
+                            "state":          { "type": "string" }
+                          },
+                          "required": ["street_address", "city", "state"]
+                        }
+                      }
+                    }
+               调用：{ "$ref": "#/definitions/address" }
+                    { "$ref": "definitions.json#/address" }
+            2.递归schema: 自己调用自己，类似于链表
+                         "items": { "$ref": "#/definitions/person" },
+            3.$id属性：是一个URL，作为唯一标识。
+                      { "$id": "http://foo.bar/schemas/address.json" }
+                      标记属性的唯一名字："$id": "#address",
+                                被调用：{ "$ref": "#address" },
+
+
+

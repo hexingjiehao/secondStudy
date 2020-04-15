@@ -1,0 +1,248 @@
+1.学习Nexus Repository oss的知识点：  搭建属于自己的jar包依赖仓库--私服仓库
+    1.概念图：
+        Maven仓库-->远程仓库-->中央仓库(默认)
+                          -->其他远程仓库
+                          -->私服(可以用作缓存)
+                -->本地仓库
+    2.官方网站：https://www.sonatype.com/product-nexus-repository
+        公司的Nexus Repository Manager仓库:
+            https://nexus.qjnext.com/repository/maven-public/
+    3.官方定义：跨软件供应链管理二进制文件和构建工件。
+              Nexus Repository manager需要依赖Oracle的jdk，openjdk不行。⚠️
+    4.最新版本：Repository Manager 3.19.1
+        目录结构：服务器目录：nexus-xx
+                工作目录：sonatype-work
+    5.下载插入: 🌿🌿🌿🌿🌿
+        可以使用docker下载安装: https://hub.docker.com/r/sonatype/nexus3/
+        mac版本：https://sonatype-download.global.ssl.fastly.net/nexus/3/latest-mac.tgz
+                brew install nexus
+                brew services start nexus
+        在百度网盘上找到一部分资源。
+        ⚠️⚠️：在官网上下载，速度太慢了。需要开启翻墙软件
+
+    6.开始最重要的操作：🀄️🀄️🀄️🀄️🀄️
+        1.启动Nexus Repository Manager服务器:
+            ./bin/nexus start   //需要等待一段时间
+            访问浏览器：http://localhost:8081/nexus
+            默认用户名：admin
+            默认密码：admin123
+            默认密码：在文件sonatype-work/nexus3/admin.password【如果存在这个文件的话】
+
+            服务器自带的仓库：proxy+group+hosted是一组仓库，需要一起更新
+                maven-central(proxy):   中央库，默认从https://repo1.maven.org/maven2/拉取jar
+                maven-releases(hosted): 私有仓库发行版jar，可以设置部署策略Deployment policy设置为Allow redeploy
+                maven-snapshots(hosted): 私有仓库快照版jar，可以设置部署策略Deployment policy设置为Allow redeploy
+                maven-public(group): 仓库分组，将上面3个仓库归为1组
+
+                nuget-group(group):
+                nuget-hosted(hosted):
+                nuget.org-proxy(proxy):
+        2.创建自己的私服仓库:
+            2.1 修改服务器的端口和用户等操作：nexus.properties
+                    application-port=8081
+                    application-host=0.0.0.0
+            2.2 通过浏览器创建3个类型的4个仓库：【其实也可以只创建一个hosted类型的仓库】
+                    xj-central(proxy): url设置为https://repo1.maven.org/maven2
+                    xj-releases(hosted):  不允许重新部署
+                    xj-snapshots(hosted): 允许重新部署
+                    xj-public(group): 将上述3个仓库归为1组
+            2.3 修改本机的maven服务器的配置文件settings.xml
+                    增加仓库的使用并激活，内容如下：
+                        <mirror>
+                          <id>xj-public</id>
+                          <name>xj-public</name>
+                          <url>http://localhost:8081/repository/xj-public/</url>
+                          <mirrorOf>*</mirrorOf>
+                        </mirror>
+
+                        </profiles>
+                            <profile>
+                              <id>xj-public</id>
+                              <repositories>
+                                <repository>
+                                  <id>xj-public</id>
+                                  <url>http://localhost:8081/repository/xj-public/</url>
+                                  <releases><enabled>true</enabled></releases>
+                                  <snapshots><enabled>true</enabled></snapshots>
+                                </repository>
+                              </repositories>
+
+                              <pluginRepositories>
+                                <pluginRepository>
+                                  <id>xj-public</id>
+                                  <url>http://localhost:8081/repository/xj-public/</url>
+                                  <releases><enabled>true</enabled></releases>
+                                  <snapshots><enabled>true</enabled></snapshots>
+                                </pluginRepository>
+                              </pluginRepositories>
+                            </profile>
+
+                        	<profile>
+                               <id>xj-releases</id>
+                               <repositories>
+                                 <repository>
+                                  <id>xj-releases</id>
+                                  <url>http://localhost:8081/repository/xj-releases/</url>
+                                  <releases><enabled>true</enabled></releases>
+                                  <snapshots><enabled>true</enabled></snapshots>
+                                 </repository>
+                               </repositories>
+                               <pluginRepositories>
+
+                                <pluginRepository>
+                                   <id>xj-releases</id>
+                                   <url>http://localhost:8081/repository/xj-releases/</url>
+                                   <releases><enabled>true</enabled></releases>
+                                  <snapshots><enabled>true</enabled></snapshots>
+                                 </pluginRepository>
+                                </pluginRepositories>
+                            </profile>
+
+                        	<profile>
+                               <id>xj-snapshots</id>
+                               <repositories>
+                                 <repository>
+                                  <id>xj-snapshots</id>
+                                  <url>http://localhost:8081/repository/xj-snapshots/</url>
+                                  <releases><enabled>true</enabled></releases>
+                                  <snapshots><enabled>true</enabled></snapshots>
+                                 </repository>
+                               </repositories>
+                               <pluginRepositories>
+                                 <pluginRepository>
+                                   <id>nexus-snapshots</id>
+                                   <url>http://localhost:8081/repository/maven-snapshots/</url>
+                                   <releases>
+                                    <enabled>true</enabled>
+                                   </releases>
+                                  <snapshots>
+                                    <enabled>true</enabled>
+                                  </snapshots>
+                                 </pluginRepository>
+                                </pluginRepositories>
+                            </profile>
+                        </profiles>
+
+                        <!-- 激活配置 -->
+                        <activeProfiles>
+                          <activeProfile>xj-public</activeProfile>
+                          <activeProfile>xj-releases</activeProfile>
+                          <activeProfile>xj-snapshots</activeProfile>
+                        </activeProfiles>
+        3.在自己的私服仓库中添加自己的jar包：这是上传操作upload
+            第一种：手动在浏览器选择jar包上传到nexus服务器🌿🌿🌿🌿🌿
+                将该jar包中的pom文件选中，点击上传即可。
+            第二种：在项目的pom.xml文件添加如下配置：该项目的jar包就会自动上传到私服仓库
+                ⚠️⚠️⚠️：<distributionManagement>可以配置快照版本和发布版本
+                    实际上传到私服仓库是根据项目的版本决定的，如果
+                        <version>1.0-SNAPSHOT</version>，那么上传到快照仓库
+                        <version>1.0</version>，那么上传到发布仓库
+
+                <distributionManagement>
+                    <repository>
+                        <id>xj-releases</id>
+                        <name>xj-releases</name>
+                        <url>http://localhost:8081/repository/xj-releases/</url>
+                    </repository>
+                    <snapshotRepository>
+                        <id>xj-snapshots</id>
+                        <name>xj-snapshots</name>
+                        <url>http://localhost:8081/repository/xj-snapshots/</url>
+                    </snapshotRepository>
+                </distributionManagement>
+        4.在项目中引用自己的私服仓库，并使用自己的jar包：这是下载操作download
+            一种方式是在settings.xml文件中添加配置；另一种是在pom.xml文件中添加配置，如下所示：
+            <repositories>
+                <repository>
+                    <id>xj-public</id>
+                    <url>http://localhost:8081/repository/xj-public/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+            </repositories>
+    7.具体操作举例：【OK成功】🀄️🀄️🀄️🀄️🀄️
+        1.在nexus上创建1个仓库hxj-snapshots,类型为hosted,允许重新部署策略
+        2.创建1个maven项目，在pom.xml添加上传到hxj-snapshots仓库的配置
+        3.将私服仓库的用户名密码配置到settings.xml文件，解决权限问题
+            <server>
+               <id>hxj-snapshots</id>
+               <username>admin</username>
+               <password>admin123</password>
+            </server>
+        4.随便添加一个jar，执行命令mvn deploy，看新仓库中是否有jar包:⬆️
+            <groupId>com.xj</groupId>
+                <artifactId>test</artifactId>
+                <version>1.0-SNAPSHOT</version>
+
+                <dependencies>
+                    <dependency>
+                        <groupId>org.elasticsearch</groupId>
+                        <artifactId>elasticsearch</artifactId>
+                        <version>7.4.0</version>
+                    </dependency>
+                </dependencies>
+
+
+                <distributionManagement>
+                    <snapshotRepository>
+                        <id>hxj-snapshots</id>
+                        <name>hxj-snapshots</name>
+                        <url>http://localhost:8081/repository/hxj-snapshots/</url>
+                    </snapshotRepository>
+                </distributionManagement>
+        5.在pom.xml文件中添加下载的配置，查看是否能够拉取特殊的jar包并在项目中使用⬇️
+            <repositories>
+                <repository>
+                    <id>hxj-snapshots</id>
+                    <name>hxj-snapshots</name>
+                    <url>http://localhost:8081/repository/hxj-snapshots/</url>
+                </repository>
+            </repositories>
+
+            <dependencies>
+                <dependency>
+                    <groupId>com.xj</groupId>
+                    <artifactId>test</artifactId>
+                    <version>1.0-SNAPSHOT</version>
+                </dependency>
+            </dependencies>
+
+    8.搭建gradle的私服仓库：
+        1.在nexus上创建1个仓库hxj-snapshots,类型为hosted,允许重新部署策略
+        2.创建1个gradle项目，在build.gradle添加上传到hxj-snapshots仓库的配置，同样是根据项目版本号决定上传到哪个仓库🌿🌿🌿🌿🌿
+        3.创建一个gralde项目，将该项目作为jar包上传到私服仓库⬆️🌿🌿🌿🌿🌿
+            plugins {
+                id 'java'
+                id 'maven-publish'
+            }
+
+            publishing {
+                publications {
+                    mavenJava(MavenPublication) {
+                        groupId = "com.xj"
+                        artifactId = "test"
+                        version = "1.0-SNAPSHOT"
+                        from components.java
+                    }
+                }
+                repositories {
+                    maven {
+                        name = "hxj-snapshots"
+                        url = "http://localhost:8081/repository/hxj-snapshots/"
+                        credentials {
+                            username = 'admin'
+                            password = 'admin123'
+                        }
+                    }
+                }
+            }
+            执行命令：gradle publish
+        4.创建另一个gradle项目，引用自己创建的私服jar包
+            repositories {
+                maven {
+                    url = "http://localhost:8081/repository/hxj-snapshots/"
+                }
+            }
+            dependencies {
+                compile 'com.xj:test:1.0-SNAPSHOT'
+            }

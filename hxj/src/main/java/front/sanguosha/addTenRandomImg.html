@@ -1,0 +1,41 @@
+<script lanage="javascript">
+    function addTenRandomImg() {
+        var number=10;
+        var div = document.createElement("div");
+        var array=new Array();
+
+        var imgRes=new Array();
+        imgRes.push("guanyu.gif");imgRes.push("guanyu.png");
+        imgRes.push("1.gif");imgRes.push("2.gif");imgRes.push("3.gif");imgRes.push("4.gif");
+        imgRes.push("5.gif");imgRes.push("6.png");imgRes.push("7.gif");imgRes.push("8.png");
+        imgRes.push("9.png");imgRes.push("10.png");imgRes.push("11.png");imgRes.push("12.png");
+        imgRes.push("13.png");imgRes.push("14.png");imgRes.push("15.png");imgRes.push("16.png");
+        imgRes.push("17.png");imgRes.push("18.png");imgRes.push("19.png");
+
+        var numArr=new Array();
+        //生成10张随机图片
+        for(var i= 0,j= 0;i<number;i++){
+            var randNum=parseInt(Math.random()*(20-0+1)+0,10);
+
+            var img = document.createElement("img");
+            img.setAttribute("src",  imgRes[randNum]);
+            img.style.position = "relative";
+            img.style.height = "250px";
+            img.style.width = "19%";
+            array.push(img);
+        }
+
+        for(var i= 0;i<number;i++){
+            div.appendChild(array[i]);
+
+            //设置div中的img的间隔，用input对象代替
+            var input= document.createElement("input");
+            input.style.width="1%";
+            input.style.borderColor="transparent";
+            div.appendChild(input);
+        }
+        document.body.appendChild(div);
+    }
+</script>
+<button style="font-size: 100% ;width: 436px; height: 50px; background: gold" onclick="addTenRandomImg()">添加10张随机图片</button>
+<div style="height: 12px"></div>

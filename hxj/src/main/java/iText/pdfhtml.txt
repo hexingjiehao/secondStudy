@@ -1,0 +1,792 @@
+1.学习iText-pdfhtml知识点：🌹🌹🌹
+    概念：使用HTML和CSS作为模板格式生成PDF文档
+    历史：HTMLWorker将简单的html转化为itext对象
+         HTMLWorker废弃
+         pdfHtml发布，完全不同的设计
+    入门电子书：《Converting HTML to PDF with pdfHTML.pdf》
+        第1章：hello,world程序，从html到pdf🌿🌿🌿🌿🌿
+            -示例的结构（核心是需要将许可证文件加载进来，是一个xml文件）
+                    public static final String HTML ="<h1>Test</h1><p>Hello World</p><img src=\"img/logo.png\">";
+                    public static final String BASEURI = "src/main/resources/html/hello.html";
+
+                    public static final String TARGET = "target/results/ch01/test-03.pdf";
+                    publicstaticvoidmain(String[]args)throwsIOException{
+                        LicenseKey.loadLicenseFile(System.getenv("ITEXT7_LICENSEKEY") + "/itextkey-html2pdf_typography.xml");
+                        new C01E01_HelloWorld().createPdf(HTML, TARGET);
+                    }
+            -转化html到pdf
+                字符串2Stream：
+                    public void createPdf(String baseUri, String html, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        HtmlConverter.convertToPdf(html, new FileOutputStream(dest), properties);
+                    }
+                文件2文件：
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        HtmlConverter.convertToPdf(new File(src), new File(dest));
+                    }
+                Stream2Stream：
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        HtmlConverter.convertToPdf(new FileInputStream(src), new FileOutputStream(dest), properties);
+                    }
+                Stream2Writer：
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        PdfWriter writer = new PdfWriter(dest,new WriterProperties().setFullCompressionMode(true));
+                        HtmlConverter.convertToPdf(new FileInputStream(src), writer, properties);
+                    }
+                Stream2document
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        PdfWriter writer = new PdfWriter(dest);
+                        PdfDocument pdf = new PdfDocument(writer);
+                        pdf.setTagged();
+                        HtmlConverter.convertToPdf(new FileInputStream(src), pdf, properties);
+                    }
+            -转化html到itext对象：（convertToDocument()和convertToElements()）
+                在转化过程中往pdf文件中添加东西
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        PdfWriter writer = new PdfWriter(dest);
+                        PdfDocument pdf = new PdfDocument(writer);
+                        Document document = HtmlConverter.convertToDocument(new FileInputStream(src), pdf, properties);
+                        document.add(new Paragraph("Goodbye!"));
+                        document.close();
+                    }
+
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        List<IElement> elements = HtmlConverter.convertToElements(new FileInputStream(src), properties);
+                        PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+                        Document document = new Document(pdf);
+                        for (IElement element : elements) {
+                            document.add(new Paragraph(element.getClass().getName()));
+                            document.add((IBlockElement)element);
+                        }
+                        document.close();
+                    }
+            -总结
+                核心是convertToPdf()、convertToDocument()和convertToElements()
+
+        第2章：用CSS定义样式
+            -传统html
+                在<body>中使用标签<i>,<font>等
+            -内联CSS
+               直接在标签中使用style，id，class等。
+            -内部的CSS
+                http头部定义样式标签
+            -外部的CSS
+                专门的样式文件。
+            -使用绝对定位
+                设置距离左边界和上边界的距离。
+            -@page注解样式：(设置当前页是总页数的第几页)
+                <head>
+                    <style>
+                        @page {
+                            @bottom-right {
+                                content: "Page " counter(page) " of " counter(pages);
+                            }
+                        }
+                    </style>
+                </head>
+            -添加分页符
+                <div style="page-break-after: always; width: 320pt;">
+            -总结
+                默认字体是Helvetica,浏览器默认字体serif
+
+        第3章：基于媒体查询生成PDF (不同布局)
+            -创建用于打印的PDF文件🌿🌿🌿🌿🌿
+                节约墨盒材料：显示时用一个css，打印时用另一个css
+                    <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <link rel="stylesheet" type="text/css" href="css/sxsw.css"/>
+                        <link rel="stylesheet" media="print only" href="css/sxsw_print.css">
+                    </head>
+
+                    //属性设置媒体设备
+                    public void createPdf(String baseUri, String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setBaseUri(baseUri);
+                        MediaDeviceDescription mediaDeviceDescription =new MediaDeviceDescription(MediaType.PRINT);
+                        properties.setMediaDeviceDescription(mediaDeviceDescription);
+                        HtmlConverter.convertToPdf(new FileInputStream(src), new FileOutputStream(dest), properties);
+                    }
+            -在HTML中的响应能力
+                只在页面显示的样式:(html页面和pdf的页面格式问题)
+                    @media only screen and (min-width: 600px) {
+                        .col-1-m {width: 24.9%;}
+                        .col-2-m {width: 49.9%;}
+                        .col-3-m {width:74%}
+                        .col-4-m {width: 99%;}
+                        p{
+                            font-size: 16pt;
+                        }
+                        h1{
+                        font-size: 24pt;
+                        }
+                        h2{
+                        font-size:18pt
+                        }
+                    }
+            -为桌面创建PDF
+                publicvoidcreatePdf(StringbaseUri,Stringsrc,Stringdest)throwsIOException{
+                    PdfWriter writer = new PdfWriter(dest);
+                    PdfDocument pdf = new PdfDocument(writer);
+                    pdf.setTagged();
+                    PageSize pageSize = PageSize.A4.rotate();
+                    pdf.setDefaultPageSize(pageSize);
+
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+
+                    MediaDeviceDescription mediaDeviceDescription = new MediaDeviceDescription(MediaType.SCREEN);
+                    mediaDeviceDescription.setWidth(pageSize.getWidth());
+                    properties.setMediaDeviceDescription(mediaDeviceDescription);
+
+                    HtmlConverter.convertToPdf(new FileInputStream(src), pdf, properties);
+                }
+            -为平板电脑创建PDF：（区别是页面的大小）
+                publicvoidcreatePdf(StringbaseUri,Stringsrc,Stringdest)throwsIOException{
+                    PdfWriter writer = new PdfWriter(dest);
+                    PdfDocument pdf = new PdfDocument(writer);
+                    pdf.setTagged();
+                    PageSize pageSize = new PageSize(575, 1500);
+                    pdf.setDefaultPageSize(pageSize);
+
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+
+                    MediaDeviceDescription mediaDeviceDescription= new MediaDeviceDescription(MediaType.SCREEN);
+                    mediaDeviceDescription.setWidth(pageSize.getWidth());
+                    properties.setMediaDeviceDescription(mediaDeviceDescription);
+
+                    HtmlConverter.convertToPdf(new FileInputStream(src), pdf, properties);
+                }
+            -为智能手机创建PDF：（一个页面变成了两列）
+                publicvoidcreatePdf(StringbaseUri,Stringsrc,Stringdest)throwsIOException{
+                     PdfWriter writer = new PdfWriter(dest);
+                     PdfDocument pdf = new PdfDocument(writer);
+                     pdf.setTagged();
+
+                     PageSize pageSize = new PageSize(440, 2000);
+                     pdf.setDefaultPageSize(pageSize);
+
+                     ConverterProperties properties = new ConverterProperties();
+                     properties.setBaseUri(baseUri);
+
+                     MediaDeviceDescription mediaDeviceDescription= new MediaDeviceDescription(MediaType.SCREEN);
+                     mediaDeviceDescription.setWidth(pageSize.getWidth());
+                     properties.setMediaDeviceDescription(mediaDeviceDescription);
+
+                     HtmlConverter.convertToPdf(new FileInputStream(src), pdf, properties);
+                }
+            -文档的语义结构
+                 pdf.setTagged();   //设置标记，用于保存页面的样式。在查看器的左边能看到树结构
+            -总结
+                600px = 6.25in = 450pt
+                768px = 8in = 576pt
+                我们使用一个响应HTML文件，并通过定义不同的媒体查询将该文件转换为不同的PDF文档。
+
+        第4章：使用pdfHTML创建报表
+            -用例的描述
+                三种方式创建pdf文档：
+                    从头创建一个pdf文档
+                    填充一个预先存在的表格（acroForm 或者 XFA）
+                    使用pdfhtml转化
+                使用一个xml文件描述信息，生成不同的pdf文件
+
+            -使用XSLT将XML转换为HTML：（xml -> html ->pdf ）🌿🌿🌿🌿🌿
+                app.createPdf(app.createHtml(XML, XSL), BASEURI, DEST);
+
+                public byte[] createHtml(String xmlPath, String xslPath) throws IOException, TransformerException {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    Writer writer = new OutputStreamWriter(baos);
+                    StreamSource xml = new StreamSource(new File(xmlPath));
+                    StreamSource xsl = new StreamSource(new File(xslPath));
+                    TransformerFactory factory = TransformerFactory.newInstance();
+                    Transformer transformer = factory.newTransformer(xsl);
+                    transformer.transform(xml, new StreamResult(writer));
+                    writer.flush();
+                    writer.close();
+                    return baos.toByteArray();
+                }
+
+                public void createPdf(byte[] html, String baseUri, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), new FileOutputStream(dest), properties);
+                }
+            -添加背景和自定义页眉或页脚（使用事件监听解决）
+                class Background implements IEventHandler{
+                    PdfXObject stationery;
+
+                    public Background(PdfDocument pdf, String src) throws IOException {
+                        PdfDocument template = new PdfDocument(new PdfReader(src));
+                        PdfPage page = template.getPage(1);
+                        stationery = page.copyAsFormXObject(pdf);
+                        template.close();
+                    }
+
+                    @Override
+                    public void handleEvent(Event event) {
+                        PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                        PdfDocument pdf = docEvent.getDocument();
+                        PdfPage page = docEvent.getPage();
+                        PdfCanvas pdfCanvas = new PdfCanvas(
+                        page.newContentStreamBefore(), page.getResources(), pdf);
+                        pdfCanvas.addXObject(stationery, 0, 0);
+
+                        Rectangle rect = new Rectangle(36, 32, 36, 64);
+                        Canvas canvas = new Canvas(pdfCanvas, pdf, rect);
+                        canvas.add(new Paragraph(String.valueOf(pdf.getNumberOfPages()))
+                              .setFontSize(48)
+                              .setFontColor(Color.WHITE));
+                        canvas.close();
+                    }
+                }
+
+                public void createPdf(byte[]html,String baseUri,String stationery,String dest)throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+                    PdfWriter writer = new PdfWriter(dest);
+                    PdfDocument pdf = new PdfDocument(writer);
+
+                    IEventHandler handler = new Background(pdf, stationery);
+                    pdf.addEventHandler(PdfDocumentEvent.START_PAGE, handler);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), pdf, properties);
+                }
+            -将HTML页面转换为单页PDF（将内容转化为能够存放到一张pdf的大小，否则超过的部分是空白）
+                public void createPdf(byte[] html,String baseUri,String dest) throws IOException {
+                     ConverterProperties properties = new ConverterProperties();
+                     properties.setBaseUri(baseUri);
+                     PdfWriter writer = new PdfWriter(dest);
+                     PdfDocument pdf = new PdfDocument(writer);
+                     pdf.setDefaultPageSize(new PageSize(595, 14400));
+
+                     Document document = HtmlConverter.convertToDocument(new ByteArrayInputStream(html), pdf, properties);
+                     EndPosition endPosition = new EndPosition();
+                     LineSeparator separator = new LineSeparator(endPosition);
+                     document.add(separator);
+                     document.getRenderer().close();
+
+                     PdfPage page = pdf.getPage(1);
+                     float y = endPosition.getY() - 36;
+                     page.setMediaBox(new Rectangle(0, y, 595, 14400 - y));
+                     document.close();
+                }
+
+                class EndPosition implements ILineDrawer{
+                    protected float y;
+
+                    public float getY() {
+                        return y;
+                    }
+
+                    @Override
+                    public void draw(PdfCanvas pdfCanvas, Rectangle rect) {
+                        this.y = rect.getY();
+                    }
+                    @Override
+                    public Color getColor() {return null;}
+                    @Override
+                    public float getLineWidth() {return 0;}
+                    @Override
+                    public void setColor(Color color) {}
+                    @Override
+                    public void setLineWidth(float lineWidth) {}
+                }
+            -向报表添加书签 (比如指定标题，能跳转到相应的详细信息--书签句柄)
+                public void createPdf(byte[] html, String baseUri, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+
+                    OutlineHandler outlineHandler = OutlineHandler.createStandardHandler();
+                    properties.setOutlineHandler(outlineHandler);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), new FileOutputStream(dest), properties);
+                }
+
+                public void createPdf(byte[] html, String baseUri, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+
+                    OutlineHandler outlineHandler = new OutlineHandler();
+                    outlineHandler.putTagPriorityMapping("h1", 1);
+                    outlineHandler.putTagPriorityMapping("p", 2);
+
+                    properties.setOutlineHandler(outlineHandler);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), new FileOutputStream(dest), properties);
+                }
+            -使用pdfHTML创建PDF/A文档
+                public void createPdf(byte[] html, String baseUri, String dest, String intent) throws IOException {
+                    PdfWriter writer = new PdfWriter(dest);
+                    PdfADocument pdf = new PdfADocument(writer,
+                                                        PdfAConformanceLevel.PDF_A_2B,
+                                                        new PdfOutputIntent("Custom",
+                                                                            "",
+                                                                            "http://www.color.org",
+                                                                            "sRGB IEC61966-2.1",
+                                                                            new FileInputStream(intent)));
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), pdf, properties);
+                }
+
+                //不同的权限
+                public void createPdf(byte[] html, String baseUri, String dest, String intent) throws IOException {
+                    PdfWriter writer = new PdfWriter(dest);
+                    PdfADocument pdf = new PdfADocument(writer,
+                                                        PdfAConformanceLevel.PDF_A_2A,
+                                                        new PdfOutputIntent("Custom",
+                                                                            "",
+                                                                            "http://www.color.org",
+                                                                            "sRGB IEC61966-2.1",
+                                                                            new FileInputStream(intent)));
+                    pdf.setTagged();
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), pdf, properties);
+                }
+
+                //添加附件
+                public void createPdf(byte[] xml, byte[] html, String baseUri, String dest, String intent) throws IOException {
+                    PdfWriter writer = new PdfWriter(dest);
+                    PdfADocument pdf = new PdfADocument(writer,
+                                                        PdfAConformanceLevel.PDF_A_3A,
+                                                        new PdfOutputIntent("Custom",
+                                                                            "",
+                                                                            "http://www.color.org",
+                                                                            "sRGB IEC61966-2.1",
+                                                                            new FileInputStream(intent)));
+                    pdf.setTagged();
+                    pdf.addFileAttachment("Movie info", xml, "movies.xml",PdfName.ApplicationXml, new PdfDictionary(), PdfName.Data);
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setBaseUri(baseUri);
+                    HtmlConverter.convertToPdf(new ByteArrayInputStream(html), pdf, properties);
+                }
+            -总结
+                PDF/A也称为ISO 19005标准。待转化的html不允许javascript和加密操作
+                我们使用XSLT从XML创建HTML，以便创建报告和发票
+
+        第5章：自定义工作标签和CSS应用程序
+            -更改标记的行为
+                核心是DefaultTagWorkerFactory和DefaultCssApplierFactory
+                标签对应的类：PTagWorker：<p>
+                            SpanTagWorker：<span>,<b>,<i>
+                            ATagWorker：<a>
+                核心接口和实现方法：
+                    ITagWorker和4个实现方法
+                案例代码：
+                    public void createPdf(String src, String dest) throws IOException {
+                        ConverterProperties converterProperties = new ConverterProperties();
+                        converterProperties.setTagWorkerFactory(new DefaultTagWorkerFactory() {
+
+                            @Override
+                            public ITagWorker getCustomTagWorker( IElementNode tag, ProcessorContext context) {
+                                if ("a".equalsIgnoreCase(tag.name()) ) {
+                                    return new SpanTagWorker(tag, context);
+                                }
+                                return null;
+                            }
+                        });
+                        HtmlConverter.convertToPdf(new File(src), new File(dest), converterProperties);
+                    }
+            -介绍自定义标签（用来做模版之类的）🌿🌿🌿🌿🌿
+                public void createPdf(String name, String src, String dest) throws IOException {
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH);
+                    ConverterProperties converterProperties = new ConverterProperties();
+                    converterProperties.setTagWorkerFactory(new DefaultTagWorkerFactory() {
+
+                        @Override
+                        public ITagWorker getCustomTagWorker( IElementNode tag, ProcessorContext context) {
+                            if ("name".equalsIgnoreCase(tag.name()) ) {
+                                return new SpanTagWorker(tag, context){
+
+                                            @Override
+                                            public boolean processContent(String content, ProcessorContext context) {
+                                                return super.processContent(name, context);
+                                            }
+                                        };
+                            }else if ("date".equalsIgnoreCase(tag.name()) ) {
+                                return new SpanTagWorker(tag, context) {
+
+                                            @Override
+                                            public boolean processContent(String content, ProcessorContext context) {
+                                                return super.processContent(sdf.format(new Date()), context);
+                                            }
+                                        };
+                            }
+                            return null;
+                        }
+                    });
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), converterProperties);
+                }
+            -创建自己的ITagWorker实现（实现二维码的pdf）
+                class QRCodeTagWorkerFactory extends DefaultTagWorkerFactory {
+                    @Override
+                    public ITagWorker getCustomTagWorker(IElementNode tag, ProcessorContext context) {
+                        if(tag.name().equals("qr")){
+                            return new QRCodeTagWorker(tag, context);
+                        }
+                        return null;
+                    }
+                }
+
+                static class QRCodeTagWorker implements ITagWorker{
+                    private static String[] allowedErrorCorrection ={"L","M","Q","H"};
+                    private static String[] allowedCharset ={"Cp437","Shift_JIS","ISO-8859-1","ISO-8859-16"};
+                    private BarcodeQRCode qrCode;
+                    private Image qrCodeAsImage;
+
+                    public QRCodeTagWorker(IElementNode element, ProcessorContext context){
+                        Map<EncodeHintType, Object> hints = new HashMap<>();
+                        String charset = element.getAttribute("charset");
+                        if(checkCharacterSet(charset)){
+                            hints.put(EncodeHintType.CHARACTER_SET, charset);
+                        }
+                        String errorCorrection = element.getAttribute("errorcorrection");
+                        if(checkErrorCorrectionAllowed(errorCorrection)){
+                            ErrorCorrectionLevel errorCorrectionLevel = getErrorCorrectionLevel(errorCorrection);
+                            hints.put(EncodeHintType.ERROR_CORRECTION, errorCorrectionLevel);
+                        }
+                        qrCode = new BarcodeQRCode("placeholder",hints);
+                    }
+
+                    @Override
+                    public boolean processContent(String content, ProcessorContext context) {
+                        qrCode.setCode(content);
+                        return true;
+                    }
+                    @Override
+                    public boolean processTagChild(ITagWorker childTagWorker, ProcessorContext context) {
+                        return false;
+                    }
+                    @Override
+                    public void processEnd(IElementNode element, ProcessorContext context) {
+                        qrCodeAsImage = new Image(qrCode.createFormXObject(context.getPdfDocument()));
+                    }
+
+                    @Override 🌿🌿🌿🌿🌿
+                    public IPropertyContainer getElementResult() {
+                        return qrCodeAsImage;
+                    }
+                    private static boolean checkErrorCorrectionAllowed(String toCheck){
+                        for(int i = 0; i<allowedErrorCorrection.length;i++){
+                            if(toCheck.toUpperCase().equals(allowedErrorCorrection[i])){
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                    private static boolean checkCharacterSet(String toCheck){
+                        for(int i = 0; i<allowedCharset.length;i++){
+                            if(toCheck.equals(allowedCharset[i])){
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                    private static ErrorCorrectionLevel getErrorCorrectionLevel(String level){
+                        switch(level) {
+                            case "L":
+                            return ErrorCorrectionLevel.L;
+                            case "M":
+                            return ErrorCorrectionLevel.M;
+                            case "Q":
+                            return ErrorCorrectionLevel.Q;
+                            case "H":
+                            return ErrorCorrectionLevel.H;
+                        }
+                        return null;
+                    }
+                }
+
+                class QRCodeTagCssApplierFactory extends DefaultCssApplierFactory {
+                    @Override
+                    public ICssApplier getCustomCssApplier(IElementNode tag) {
+                        if (tag.name().equals("qr")) {
+                            return new BlockCssApplier();
+                        }
+                        return null;
+                    }
+                }
+
+                public void createPdf(String src, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setCssApplierFactory(new QRCodeTagCssApplierFactory())
+                              .setTagWorkerFactory(new QRCodeTagWorkerFactory());
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                }
+            -创建自定义CSS应用程序
+                实现接口方法apply(),只作用于<div>
+                class GrayBackgroundBlockCssApplier implements ICssApplier {
+
+                    public void apply(ProcessorContext context,IStylesContainer stylesContainer, ITagWorker tagWorker){
+                        Map<String, String> cssProps = stylesContainer.getStyles();
+                        IPropertyContainer container = tagWorker.getElementResult();
+                        if (container != null && cssProps.containsKey(CssConstants.BACKGROUND_COLOR)) {
+                            cssProps.put(CssConstants.BACKGROUND_COLOR, "#dddddd");
+                            BackgroundApplierUtil.applyBackground(cssProps, context, container);
+                        }
+                    }
+                }
+            -实现你的自定义CSS:(在浏览器中无效，在pdf中有效)
+                public static final Map<String, String> KLEUR = new HashMap<String, String>();
+                static {
+                    KLEUR.put("wit", "white");
+                    KLEUR.put("zwart", "black");
+                    KLEUR.put("rood", "red");
+                    KLEUR.put("groen", "green");
+                    KLEUR.put("blauw", "blue");
+                }
+
+                classDutchColorCssApplierextendsBlockCssApplier{
+                    @Override
+                    public void apply(ProcessorContext context,IStylesContainer stylesContainer, ITagWorker tagWorker){
+                        Map<String, String> cssStyles = stylesContainer.getStyles();
+                        if(cssStyles.containsKey("kleur")){
+                            cssStyles.put(CssConstants.COLOR,KLEUR.get(cssStyles.get("kleur")));
+                            stylesContainer.setStyles(cssStyles);
+                        }
+                        if(cssStyles.containsKey("achtergrond")){
+                            cssStyles.put(CssConstants.BACKGROUND_COLOR,KLEUR.get(cssStyles.get("achtergrond")));
+                            stylesContainer.setStyles(cssStyles);
+                        }
+                        super.apply(context, stylesContainer,tagWorker);
+                    }
+                }
+
+                public void createPdf(String src, String dest) throws IOException {
+                    ConverterProperties converterProperties = new ConverterProperties();
+                    converterProperties.setCssApplierFactory(new DefaultCssApplierFactory() {
+
+                        ICssApplier dutchCssColor = new DutchColorCssApplier();
+                        @Override
+                        public ICssApplier getCustomCssApplier(IElementNode tag) {
+                            if(tag.name().equals(TagConstants.H1)|| tag.name().equals(TagConstants.DIV)){
+                                return dutchCssColor;
+                            }
+                            return null;
+                        }
+                    });
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), converterProperties);
+                }
+            -总结
+                我们通过改变标签和CSS的解释方式来改变pdfHTML附加组件的核心功能
+
+        第6章：使用pdfHTML中的字体
+            -标准字体（14种）
+                Times-Roman / Helvetica / Courier / Symbol
+                Times-Bold / Helvetica-Bold / Courier-Bold
+                Times-Italic / Helvetica-Oblique / Courier-Oblique / ZapfDingbats
+                Times-BoldItalic / Helvetica-Boldoblique / Courier-Boldoblique
+            -iText附带的字体(12种)
+                sans: 常规字体/粗体/斜体/粗斜体
+                serif: 常规字体/粗体/斜体/粗斜体
+                monospace: 常规字体/粗体/斜体/粗斜体
+            -系统字体
+                FontProvider provider = new DefaultFontProvider(true,true,false);
+                分别对应参数：
+                    registerStandardPdfFonts--注册14种标准字体,默认true
+                    registerShippedFreeFonts--注册12种已发布字体,默认true
+                    registerSystemFonts--注册系统字体,默认false
+
+                public void createPdf(String src, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    properties.setFontProvider(new DefaultFontProvider(true, true, true));
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                }
+            -Web开放字体格式的字体
+                @font-face {
+                    font-family: "SourceSerifPro-Regular";
+                    src: url("fonts/SourceSerifPro-Regular.otf.woff") format("woff");
+                }
+                .regular {
+                    font-family: "SourceSerifPro-Regular";
+                }
+                <td class="regular">lalalalalalal</td>
+            -向字体提供程序添加选定字体
+                //可以添加具体字体，也可以添加字体目录
+                public static final String FONT = "src/main/resources/fonts/cardo/Cardo-Regular.ttf";
+
+                public void createPdf(String src, String font, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+
+                    FontProvider fontProvider = new DefaultFontProvider();
+                    FontProgram fontProgram = FontProgramFactory.createFont(font);
+                    fontProvider.addFont(fontProgram);
+                    properties.setFontProvider(fontProvider);
+
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                }
+
+            -为字体选择器选择正确的顺序
+                添加目录时，无法控制字体注册的顺序
+                    public void createPdf(String src, String[] fonts, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        FontProvider fontProvider = new DefaultFontProvider(false, false, false);
+                        for (String font : fonts) {
+                                FontProgram fontProgram = FontProgramFactory.createFont(font);
+                                fontProvider.addFont(fontProgram);
+                            }
+                        properties.setFontProvider(fontProvider);
+                        HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                    }
+                顺序的重要性：第一个字体包含所有渲染需求,第二个字体被抛弃了,反过来也一样
+                    public static final String[] FONTS = {
+                        "src/main/resources/fonts/cardo/Cardo-Regular.ttf",
+                        "src/main/resources/fonts/noto/NotoSans-Regular.ttf"
+                    };
+                先从html中找字体，然后才是循环方式找字体提供程序
+            -选择适合您的编码
+                至少应该是toUnicode的映射
+                public static final String FONT = "src/main/resources/fonts/cardo/Cardo-Regular.ttf";
+                public void createPdf(String src, String font, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    FontProvider fontProvider = new DefaultFontProvider(false, false, false);
+                    FontProgram fontProgram = FontProgramFactory.createFont(font);
+                    fontProvider.addFont(fontProgram, "Winansi");
+                    properties.setFontProvider(fontProvider);
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                }
+
+                使用(Win)Ansi编码，每个字符存储为一个字节；使用Identity-H编码，每个字符存储为两个字节
+            -国际化
+                标明文件的类型。否则可能乱码。比如<meta charset="UTF-8">
+                不同的语言可能需要特殊排版功能，这需要pdfCalligraph附加组件
+                可以通过导入相关的字体解决乱码和排版问题
+
+                public static final String[] FONTS = {
+                    "src/main/resources/fonts/noto/NotoSans-Regular.ttf",
+                    "src/main/resources/fonts/noto/NotoSans-Bold.ttf",
+                    "src/main/resources/fonts/noto/NotoSansCJKsc-Regular.otf",
+                    "src/main/resources/fonts/noto/NotoSansCJKjp-Regular.otf",
+                    "src/main/resources/fonts/noto/NotoSansCJKkr-Regular.otf",
+                    "src/main/resources/fonts/noto/NotoNaskhArabic-Regular.ttf",
+                    "src/main/resources/fonts/noto/NotoSansHebrew-Regular.ttf"
+                };
+
+                public void createPdf(String src, String[] fonts, String dest) throws IOException {
+                    ConverterProperties properties = new ConverterProperties();
+                    FontProvider fontProvider = new DefaultFontProvider(false, false, false);
+                    for (String font : fonts) {
+                        FontProgram fontProgram = FontProgramFactory.createFont(font);
+                        fontProvider.addFont(fontProgram);
+                    }
+                    properties.setFontProvider(fontProvider);
+                    HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                }
+            -总结
+                支持的字体类型有(.AFM/.PFB/.TTF/.otf/.ttf/.ttc/.woff)
+                核心组件DefaultFontProvider
+
+        第7章：有关pdfHTML的常见问题
+            -如何将ASP或JSP页面转换为PDF? 🌿🌿🌿🌿🌿
+                答：对html的抽象，需要开发者自行将其创建为html。pdfHtml只能解析htm和css
+
+            -如何将多个HTML文件解析为一个PDF?
+                答：第一种：将每个HTML转换为内存中的一个单独的PDF文件。使用pdfmerge将这些文件合并为单个PDF。可能存在中间有大量空格
+                        public void createPdf(String baseUri, String[] src, String dest) throws IOException {
+                            ConverterProperties properties = new ConverterProperties();
+                            properties.setBaseUri(baseUri);
+                            PdfWriter writer = new PdfWriter(dest);
+                            PdfDocument pdf = new PdfDocument(writer);
+                            PdfMerger merger = new PdfMerger(pdf);
+
+                            for (String html : src) {
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                PdfDocument temp = new PdfDocument(new PdfWriter(baos));
+                                HtmlConverter.convertToPdf(new FileInputStream(html), temp, properties);
+
+                                temp = new PdfDocument(new PdfReader(new ByteArrayInputStream(baos.toByteArray())));
+                                merger.merge(temp, 1, temp.getNumberOfPages());
+                                temp.close();
+                            }
+                            pdf.close();
+                        }
+                   第二种：(推荐--页面更加紧凑) 将不同的HTML文件解析为一系列iText元素。我们将所有这些元素添加到一个PDF文档中。
+                        public void createPdf(String baseUri, String[] src, String dest) throws IOException {
+                            ConverterProperties properties = new ConverterProperties();
+                            properties.setBaseUri(baseUri);
+                            PdfWriter writer = new PdfWriter(dest);
+                            PdfDocument pdf = new PdfDocument(writer);
+                            Document document = new Document(pdf);
+                            for (String html : src) {
+                                List<IElement> elements =
+                                HtmlConverter.convertToElements(new FileInputStream(html), properties);
+                                for (IElement element : elements) {
+                                    document.add((IBlockElement)element);
+                                }
+                            }
+                            document.close();
+                        }
+
+            -pdfHTML可以将Base64图像呈现为PDF格式吗?
+                答：可以
+
+            -我可以从URL生成PDF而不是从磁盘上的文件?
+                答：可以。可以从任何HTML InputStream生成PDF
+                    new C07E04_CreateFromURL().createPdf(new URL("https://stackoverflow.com/help/on-topic"), DEST);
+                    public void createPdf(URL url, String dest) throws IOException {
+                        HtmlConverter.convertToPdf(url.openStream(), new FileOutputStream(dest));
+                    }
+
+                    //自定义页面大小来适应结果
+                    public void createPdf(URL url, String dest) throws IOException {
+                        PdfWriter writer = new PdfWriter(dest);
+                        PdfDocument pdf = new PdfDocument(writer);
+                        PageSize pageSize = new PageSize(850, 1700);
+                        pdf.setDefaultPageSize(pageSize);
+
+                        ConverterProperties properties = new ConverterProperties();
+                        MediaDeviceDescription mediaDeviceDescription = new MediaDeviceDescription(MediaType.SCREEN);
+                        mediaDeviceDescription.setWidth(pageSize.getWidth());
+                        properties.setMediaDeviceDescription(mediaDeviceDescription);
+
+                        HtmlConverter.convertToPdf(url.openStream(), pdf, properties);
+                    }
+
+            -我们是否需要一个浏览器引擎来将HTML+CSS呈现为PDF？
+                答：不需要。
+
+            -我的HTML必须是有效的XML吗?
+                答：iText5需要。pdfHTML不需要
+
+            -如何使用pdfHTML向PDF添加元数据?
+                答：public void createPdf(String src, String dest) throws IOException {
+                      PdfWriter writer = new PdfWriter(dest, new WriterProperties().addXmpMetadata());
+                      HtmlConverter.convertToPdf(new FileInputStream(src), writer);
+                   }
+
+            -HTML中的度量系统如何与PDF中的度量系统相关联?
+                答：1 in = 25.4 mm = 2.54 cm = 0.254 dm = 0.0254 m = 72 user units = 72pt = 96 px =6 pc
+
+            -我可以把HTML表单转换成PDF格式吗?
+                答：可以。但是局限于文本。
+                    public void createPdf(String src, String dest) throws IOException {
+                        ConverterProperties properties = new ConverterProperties();
+                        properties.setCreateAcroForm(true);  //设置交互式表单
+                        HtmlConverter.convertToPdf(new File(src), new File(dest), properties);
+                    }
+
+            -如何呈现特定的HTML实体(如箭头)成PDF?
+                答：特定符号可以使用专门的字体表现。
+
+            -为什么我不能嵌入字体由于许可证的限制?
+                答：有些字体是需要付费许可的。
+
+            -pdfHTML支持哪些语言?
+                答：只要提供适当的字体，就支持每种语言
+
+            -如何将包含阿拉伯/希伯来字符的HTML转换为PDF?
+                答：使用专门字体。添加pdfCalligraph组件到类路径
+
+            -为什么我的PDF少了几个字符?
+                答：您没有提供能够呈现这些字符的字体。提供对应的字体即可解决。
+
+

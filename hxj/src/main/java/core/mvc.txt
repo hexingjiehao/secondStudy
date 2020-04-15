@@ -1,0 +1,137 @@
+1.常用mvc框架知识复习：
+
+    1.业务层数据依赖：
+        spring：(反转控制(IOC)框架--整个框架的核心)----基于spring容器的一系列操作
+            Spring表达式语言: EL语言--xml形式：#{itemBean}和注解：@Value
+            Spring JavaConfig： @Import、@Configuration、@Bean定义类。
+            Spring 依赖注入： Setter注入对象
+            Spring Bean： 从Spring容器中返回指定bean给调用者。
+                scope的作用域：
+                    1.singleton：
+                        单例,对象在一个容器中只创建1个对象实例。scope="singleton"或者singleton="true"
+                    2.prototype:
+                        非单例，每次new一个对象。scope="prototype"或者singleton="false"
+                    3.request:每次http请求的request内有效，产生一个bean。scope="request"
+                        web.xml中的配置：
+                            Servlet 2.4及以上的web容器：RequestContextListener
+                                <web-app>
+                                   ...
+                                  <listener>
+                                    <listener-class>org.springframework.web.context.request.RequestContextListener</listener-class>
+                                  </listener>
+                                   ...
+                                </web-app>
+                            Servlet2.4以前的web容器：javax.servlet.Filter的实现
+                                <web-app>
+                                 ..
+                                 <filter>
+                                    <filter-name>requestContextFilter</filter-name>
+                                    <filter-class>org.springframework.web.filter.RequestContextFilter</filter-class>
+                                 </filter>
+                                 <filter-mapping>
+                                    <filter-name>requestContextFilter</filter-name>
+                                    <url-pattern>/*</url-pattern>
+                                 </filter-mapping>
+                                   ...
+                                </web-app>
+                    4.session:
+                        每次http请求的session内有效,产生一个bean。scope="session"。和request相同的web.xml配置
+                    5.global session：
+                        全局portlet Session的生命周期范围内，被web应用中各种组件共享。scope="global session"
+                    6.自定义bean装配作用域：
+                        实现接口即可org.springframework.beans.factory.config.Scope。但是不能覆盖singleton和prototype
+            Spring自动组件扫描：扫描、检测并自动注册bean的：@Component
+            Spring自动装配Bean：(no：byName：byType：constructor：autodetect：)
+            Spring JDBC支持：JdbcTemplate
+            Spring E-mail支持:MailSender
+            Spring AOP + AspectJ框架：面向切面编程
+            Spring Object/XML映射器：
+        springboot:参考springbootdemo的学习
+
+    2.前后台交互：(mvc框架)
+        structs: (OGNL+特有标签)
+            核心部件：
+                Actions:url动作
+                Interceptors：url拦截器
+                Value Stack/OGNL：页面使用ognl语法从数据模型获取的值栈
+                Results/Result types:返回给浏览器的结果
+                View technologies:显示的浏览器视图
+            生命周期：
+                1.请求url
+                2.FilterDispatcher拦截请求，然后确定适当的动作。
+                3.将过滤后的动作action进行执行
+                5.返回结果视图给浏览器
+            必要配置：
+                1.web.xml配置FilterDispatcher
+                2.struts.xml配置action和页面的映射关系
+
+        springmvc:（mvc架构的中央前端控制器。servlet发送请求并返回响应页面--围绕DispatcherServlet大管家，类似于消息中间件）
+            web请求的流程：
+                1.接收到HTTP请求后，DispatcherServlet会查询HandlerMapping以调用相应的Controller。
+                2.Controller接受请求并根据使用的GET或POST方法调用相应的服务方法。
+                3.服务方法将基于定义的业务逻辑设置模型数据，并将视图名称返回给DispatcherServlet。
+                4.DispatcherServlet将从ViewResolver获取请求的定义视图。
+                5.当视图完成，DispatcherServlet将模型数据传递到最终的视图，并在浏览器上呈现。
+            必要配置:
+                1.@controller+@RequestMapping()
+                2.web.xml配置DispatcherServlet、url和控制器的路径映射
+                3.servlet.xml配置控制器和页面的映射关系
+                4.对应的jsp页面
+            表单和标签库处理：ModelAndView,在控制器种处理url和页面对应关系
+            控制器：ModelAndView + HttpServletRequest + HttpServletResponse
+            视图解析器：InternalResourceViewResolver将字符串映射成页面
+
+    3.数据库交互：(orm框架)
+        hibernate:
+            架构层级：
+                1.Java应用层
+                2.hibernate框架层: 会话工厂、事务工厂、连接工厂、会话、事务
+                3.反手api层：jdbc,jndi,jta
+                4.数据库层
+            必要配置：
+                1.???.hbm.xml：配置持久化对象
+                2.hibernate.cfg.xml：配置session-factory,数据库连接参数
+            持久化类的注释:
+                @Entity
+                @Table
+                @Id
+                @Column
+            映射关系：
+                1.持久化对象和xml对应关系
+                2.集合映射：1v1,1vN,NvN。<list name="???" cascade="???">
+                                            <key column="???"></key>
+                                            <index column="???"></index>
+                                            <one-to-many class="???" />
+                                        </list>
+
+        mybatis:主要是注解接口和xml配置
+            SQL块的使用：
+                    <sql id="field">
+                        `id`,
+                        `username`,
+                        `password`
+                    </sql>
+                    <select id="getById" parameterType="int" resultType="UserPojo">
+                        SELECT <include refid="field"/> FROM user WHERE id = #{id}
+                    </select>
+            常用判NULL语句：
+                <if test="@Ognl@isNotEmpty(id)">
+                    AND id  =#{id}
+                </if>
+            多表查询：
+                直接连接查询：1v1=(inner)join table on t.id=v.id;
+                            1vN=left join table on t.id=v.id
+                嵌套查询(本质是多次查询)：
+                    <select id="getClass2" parameterType="int" resultMap="ClassResultMap2">
+                        select * from class where c_id=#{id}
+                    </select>
+
+                    <resultMap type="me.gacl.domain.Classes" id="ClassResultMap2">
+                        <id property="id" column="c_id"/>
+                        <result property="name" column="c_name"/>
+                        <association property="teacher" column="teacher_id" select="getTeacher"/>
+                    </resultMap>
+
+                    <select id="getTeacher" parameterType="int" resultType="me.gacl.domain.Teacher">
+                        SELECT t_id id, t_name name FROM teacher WHERE t_id=#{id}
+                    </select>

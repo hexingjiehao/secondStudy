@@ -1,0 +1,29 @@
+1.git版本管理工具的学习：
+    1.原则：(每次提交前，先拉取一遍代码，以免覆盖别人的代码)
+    2.常用的git命令：
+        git init:初始化当前目录为本地仓库
+        git clone [url]:克隆仓库当前目录
+        git add 文件名: 将文件添加到版本控制
+        git commit 文件名：提交修改到本地仓库
+        git push:将本地仓库的修改推送到远程仓库
+            git push origin master:推送本地origin分支到远程master分支
+        git pull:将远程仓库的修改拉去到本地仓库并合并
+        对已经本地提交的文件进行撤销：
+            git reset HEAD 文件名：取消之前文件的git add的存缓存的操作
+            git checkout 文件名：把指定文件不写入本地缓存
+        对远程仓库进行回滚：
+            git checkout <tag或者分支>
+            删除最后1次远程提交：
+                git reverse HEAD <commitid>:(回滚到某次提交，默认上一次。保留提交记录)
+                git reset --hard HEAD^ ：(不保留提交记录)
+        分支：
+            git branch (branchname)：创建分支
+            git branch -d (branchname):删除分支
+            git checkout (branchname)：切换分支
+            git merge (branchname): 合并分支,将分支合并到当前分支
+        发布：
+            git tag -a 注解名：创建带注解的标签
+            git tag -d 注解名：删除某个标签
+
+在页面右上角增加forx me on github的操作是：
+    <a href="https://github.com/hexingjiehao"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/82b228a3648bf44fc1163ef44c62fcc60081495e/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_red_aa0000.png"></a>

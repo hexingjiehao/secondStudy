@@ -1,0 +1,21 @@
+{
+	"name":"上海市拖欠工资自动举报插件",
+	"version":"1.0",
+	"manifest_version":2,
+	"description":"上海市拖欠工资自动举报插件",
+	"browser_action":{
+	},
+	"web_accessible_resources":[
+		"autoclick.js"
+	],
+	"content_scripts": [
+		{
+			"js": ["autoclick.js"],
+			"matches": [
+				"http://rsj.sh.gov.cn/wszx/ldjcjb.shtml",
+				"http://rsj.sh.gov.cn/ldjcjb/ldjcjb.jsp"
+			],
+			"run_at": "document_end"
+		}
+	]
+}

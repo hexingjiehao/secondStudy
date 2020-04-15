@@ -1,0 +1,10 @@
+eventbus:
+  pg:
+    connect:
+      database: postgres
+      user: postgres
+      password: postgres
+      host: localhost
+      port: 5432
+    pool:
+      maxSize: 1

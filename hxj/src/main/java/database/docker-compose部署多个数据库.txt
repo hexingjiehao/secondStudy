@@ -1,0 +1,170 @@
+1.使用docker-compose部署mysql：
+    1.目录结构：
+        /docker-compose.yml
+        /my.cnf
+        /db/:
+        /init:
+            /init.sql
+    2.文件内容：
+        docker-compose.yml:
+            version: '2.1'
+            services:
+                mysql:
+                    image: "mysql:5.5"
+                    restart: always
+                    ports:
+                        - "3306:3306"
+                    environment:
+                        MYSQL_ROOT_PASSWORD: "123456"       //表示root用户的密码
+                        MYSQL_USER: 'admin'
+                        MYSQL_PASS: '123456'
+                    volumes:
+                        - "./db:/var/lib/mysql"
+                        - "./my.cnf:/etc/my.cnf"
+                        - "./init:/docker-entrypoint-initdb.d/"
+                    network_mode: "bridge"
+        my.cnf:
+            [mysqld]
+            user=mysql
+            default-storage-engine=INNODB
+            character-set-server=utf8
+            [client]
+            default-character-set=utf8
+            [mysql]
+            default-character-set=utf8
+        init.sql:   启动mysql时初始化执行的sql语句
+            create database test;
+            use test;
+            create table user
+            (
+            id int auto_increment primary key,
+            username varchar(64) unique not null,
+            email varchar(120) unique not null,
+            password_hash varchar(128) not null,
+            avatar varchar(128) not null
+            );
+            insert into user values(1, "zhangsan","test12345@qq.com","passwd","avaterpath");
+            insert into user values(2, "lisi","12345test@qq.com","passwd","avaterpath");
+    3.执行命令：
+        docker-compose pull: 将mysql的那个镜像拉取下来
+        docker-compose up -d: 后台启动docker中的mysql容器
+    4.部署mysql8.0版本：增加了额外的命令配置，可以通过navicat进行连接
+        version: '2.1'
+        services:
+            mysql:
+                image: mysql
+                restart: always
+                environment:
+                  MYSQL_ROOT_PASSWORD: 123456
+                command:
+                  --default-authentication-plugin=mysql_native_password
+                  --character-set-server=utf8mb4
+                  --collation-server=utf8mb4_general_ci
+                  --explicit_defaults_for_timestamp=true
+                  --lower_case_table_names=1
+                  --max_allowed_packet=128M;
+                ports:
+                  - 3306:3306
+                volumes:
+                  - ./data:/var/lib/mysql
+
+
+
+2.使用docker-compose部署postgre：
+    1.文件内容：
+        使用postgre的集群封装citus部署postgre数据库：
+            docker-compose.yml:
+                version: '2.1'
+                services:
+                  master:
+                    container_name: "citus_master"
+                    image: 'citusdata/citus:8.1.1'
+                    networks:
+                      - demo-network
+                    ports: ["${MASTER_EXTERNAL_PORT:-5432}:5432"]
+                    labels: ['com.citusdata.role=Master']
+                    volumes:
+                      - "./sql-import:/sql-import"
+                  worker:
+                    image: 'citusdata/citus:8.1.1'
+                    networks:
+                      - demo-network
+                    labels: ['com.citusdata.role=Worker']
+                    depends_on: { manager: { condition: service_healthy } }
+                  manager:
+                    container_name: "citus_manager"
+                    image: 'citusdata/membership-manager:0.2.0'
+                    networks:
+                      - demo-network
+                    volumes: ['/var/run/docker.sock:/var/run/docker.sock']
+                    depends_on: { master: { condition: service_healthy } }
+                networks:
+                  demo-network:
+                    external: true
+        使用postgres直接部署数据库：
+            文件目录：
+                /docker-compose.yml
+                /pg_data
+            文件内容：
+                docker-compose.yml
+                    version: '2.1'
+                    services:
+                      postgres:
+                        image: "postgres:latest"
+                        ports:
+                          - "5432:5432"
+                        restart: always
+                        environment:
+                          POSTGRES_PASSWORD: "postgres"
+                          PGDATA: "/var/lib/postgresql/data/pgdata"
+                        volumes:
+                          - "./pg_data:/var/lib/postgresql/data/pgdata"
+
+3.使用docker-compose部署mongo：
+    1.目录结构：
+        /docker-compose.yml
+        /db
+    2.文件内容：
+        docker-compose.yml
+            version: '2.1'
+            services:
+              mongo:
+                image: mongo:latest
+                restart: always
+                ports:
+                  - 27017:27017
+                environment:
+                  TZ: Asia/Shanghai
+                  MONGO_INITDB_ROOT_USERNAME: admin
+                  MONGO_INITDB_ROOT_PASSWORD: 123456
+                volumes:
+                  - ./db:/data/db
+
+4.使用docker-compose部署redis：
+    1.目录结构：
+        /docker-compose.yml
+        /conf
+        /data
+    2.文件内容：
+        version: '2.1'
+        services:
+          redis:
+            image: redis:4
+            ports:
+              - 6379:6379
+            volumes:
+              - "./conf:/usr/local/etc/redis"
+              - "./data:/data"
+            command:
+              redis-server
+
+
+
+
+
+
+
+
+
+
+

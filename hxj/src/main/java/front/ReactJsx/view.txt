@@ -1,0 +1,917 @@
+1.大略的学习前端技术React：🌿🌿🌿🌿🌿
+    概述：react用于构建用户界面的javaScript库
+        0.隐藏风险：react是facebook的，之前曾修改开源协议，大厂放弃使用过。后来16版本后修改为mit协议
+        1.官方网站：https://zh-hans.reactjs.org
+        1.5. 前端idea工具：webstorm。在线编辑工具：https://codepen.io/gaearon/pen/ZpVxNq?editors=0011
+        2.当前最新版本：v16.11.0。 React Native可以开发原生移动应用
+        2.5 React和JSX并不是同一个东西，react也使用javascript的语法，但是自己进行了部分封装。
+            另外react自己封装了一个JSX的语法，用于简化开发，可以使用，也可以不使用。
+        3.简单实例：
+            简单组件：通过 this.props 访问
+                React 组件使用一个名为 render() 的方法，接收输入的数据并返回需要展示的内容。
+                在示例中这种类似 XML 的写法被称为 JSX。被传入的数据可在组件中通过 this.props 在 render() 访问。
+                例子；自定义了一个元素🌿🌿🌿🌿
+                    class HelloMessage extends React.Component {
+                      render() {
+                        return (
+                          <div>
+                            Hello {this.props.name}
+                          </div>
+                        );
+                      }
+                    }
+                    ReactDOM.render(
+                      <HelloMessage name="Taylor" />,
+                      document.getElementById('hello-example')
+                    );
+                    等价的代码：Babel REPL语法编写🌿🌿🌿🌿
+                        class HelloMessage extends React.Component {
+                          render() {
+                            return React.createElement(
+                              "div",
+                              null,
+                              "Hello ",
+                              this.props.name
+                            );
+                          }
+                        }
+                        ReactDOM.render(React.createElement(HelloMessage, { name: "Taylor" }),
+                            document.getElementById('hello-example')
+                        );
+            有状态组件：通过 this.state 访问
+                除了使用外部数据（通过 this.props 访问）以外，组件还可以维护其内部的状态数据（通过 this.state 访问）。
+                当组件的状态数据改变时，组件会再次调用 render() 方法重新渲染对应的标记。
+                class Timer extends React.Component {
+                  constructor(props) {
+                    super(props);
+                    this.state = { seconds: 0 };
+                  }
+                  tick() {
+                    this.setState(state => ({
+                      seconds: state.seconds + 1
+                    }));
+                  }
+                  componentDidMount() {
+                    this.interval = setInterval(() => this.tick(), 1000);
+                  }
+                  componentWillUnmount() {
+                    clearInterval(this.interval);
+                  }
+                  render() {
+                    return (
+                      <div>
+                        Seconds: {this.state.seconds}
+                      </div>
+                    );
+                  }
+                }
+                ReactDOM.render(
+                  <Timer />,
+                  document.getElementById('timer-example')
+                );
+            应用：创建基本的todo应用
+                class TodoApp extends React.Component {
+                  constructor(props) {
+                    super(props);
+                    this.state = { items: [], text: '' };
+                    this.handleChange = this.handleChange.bind(this);
+                    this.handleSubmit = this.handleSubmit.bind(this);
+                  }
+                  render() {
+                    return (
+                      <div>
+                        <h3>TODO</h3>
+                        <TodoList items={this.state.items} />
+                        <form onSubmit={this.handleSubmit}>
+                          <label htmlFor="new-todo">
+                            What needs to be done?
+                          </label>
+                          <input
+                            id="new-todo"
+                            onChange={this.handleChange}
+                            value={this.state.text}
+                          />
+                          <button>
+                            Add #{this.state.items.length + 1}
+                          </button>
+                        </form>
+                      </div>
+                    );
+                  }
+                  handleChange(e) {
+                    this.setState({ text: e.target.value });
+                  }
+                  handleSubmit(e) {
+                    e.preventDefault();
+                    if (!this.state.text.length) {
+                      return;
+                    }
+                    const newItem = {
+                      text: this.state.text,
+                      id: Date.now()
+                    };
+                    this.setState(state => ({
+                      items: state.items.concat(newItem),
+                      text: ''
+                    }));
+                  }
+                }
+                class TodoList extends React.Component {
+                  render() {
+                    return (
+                      <ul>
+                        {this.props.items.map(item => (
+                          <li key={item.id}>{item.text}</li>
+                        ))}
+                      </ul>
+                    );
+                  }
+                }
+                ReactDOM.render(
+                  <TodoApp />,
+                  document.getElementById('todos-example')
+                );
+            在组件中使用外部插件：
+                class MarkdownEditor extends React.Component {
+                  constructor(props) {
+                    super(props);
+                    this.handleChange = this.handleChange.bind(this);
+                    this.state = { value: 'Hello, **world**!' };
+                  }
+                  handleChange(e) {
+                    this.setState({ value: e.target.value });
+                  }
+                  getRawMarkup() {
+                    const md = new Remarkable();
+                    return { __html: md.render(this.state.value) };
+                  }
+                  render() {
+                    return (
+                      <div className="MarkdownEditor">
+                        <h3>Input</h3>
+                        <label htmlFor="markdown-content">
+                          Enter some markdown
+                        </label>
+                        <textarea
+                          id="markdown-content"
+                          onChange={this.handleChange}
+                          defaultValue={this.state.value}
+                        />
+                        <h3>Output</h3>
+                        <div
+                          className="content"
+                          dangerouslySetInnerHTML={this.getRawMarkup()}
+                        />
+                      </div>
+                    );
+                  }
+                }
+                ReactDOM.render(
+                  <MarkdownEditor />,
+                  document.getElementById('markdown-example')
+                );
+
+
+2.入门教程的学习🌿🌿🌿🌿🌿
+    1.一分钟上手React{这是在一个网站服务器中}： React会替换DOM容器内的任何已有内容。这里使用的是ES6的语法规范。
+                      这里应该有专门的启动方式
+        第1步：添加一个DOM容器到HTML
+            <div id="like_button_container"></div>
+        第2步：添加Script标签
+             <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+             <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+             <!-- 加载我们的 React 组件。-->
+             <script src="like_button.js"></script>
+        第3步：创建一个React组件{也就是创建like_button.js文件}
+            'use strict';
+            const e = React.createElement;
+            class LikeButton extends React.Component {
+              constructor(props) {
+                super(props);
+                this.state = { liked: false };
+              }
+
+              render() {
+                if (this.state.liked) {
+                  return 'You liked this.';
+                }
+                return e(
+                  'button',
+                  { onClick: () => this.setState({ liked: true }) },
+                  'Like'
+                );
+              }
+            }
+            const domContainer = document.querySelector('#like_button_container');
+            ReactDOM.render(e(LikeButton), domContainer);
+    2.为生产环境压缩javascript代码。换一个引用包即可
+        <script src="https://unpkg.com/react@16/umd/react.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js" crossorigin></script>
+    3.快速尝试JSX: 需要使用到工具Babel
+        3.1 html文件引入js文件：
+            <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+            在<script>标签中使用JSX的方法：添加属性type="text/babel"
+        3.2 在机器上安装Node.js并且安装JSX预处理器
+            注意可能之前有node安装，需要先卸载brew uninstall node
+            npm init -y
+            npm install babel-cli@6 babel-preset-react-app@3
+        3.3 使用nodejs初始化一个项目文件：运行 JSX 预处理器
+            npx babel --watch src --out-dir . --presets react-app/prod
+    4.创建一个新的React应用🌿🌿🌿🌿
+        4.1 创建新的单页应用：事先安装node8.10和npm5.6。内部实现是Babel和webpack
+                npx create-react-app my-app
+                cd my-app
+                npm start
+                npm run build  //用于生产部署，优化内容在build文件夹中
+        4.2 使用Next.js框架，使用Node.js作为服务器
+        4.3 Gasty使用React创建静态网站的最佳方式
+        4.4 自定义的操作过程：
+                package管理器{yarn 或者 npm}： 类似于maven，打包各类js文件
+                打包器{webpack 或者 parcel}: 编写模块代码，并组合成小的package
+                编译器{Babel}： 兼容各种版本的额javascript语法
+
+
+3.React的核心概念🌿🌿🌿🌿🌿
+    1. 最简单代码：
+        ReactDOM.render(
+          <h1>Hello, world!</h1>,
+          document.getElementById('root')
+        );
+        ⚠️⚠️⚠️：使用let和const定义变量，等价于var
+                 使用class定义javascript类
+    2. JSX简介：是javascript的语法扩展
+        const element = <h1>Hello, world!</h1>;
+        嵌入表达式：可以是变量，也可以是函数调用
+            const name = 'Josh Perez';
+            const element = <h1>Hello, {name}</h1>;
+            ReactDOM.render(
+              element,
+              document.getElementById('root')
+            );
+        JSX的特定属性：使用{},""来指定属性，但是二者不能同时使用
+        JSX防止注入攻击：所有的内容在渲染之前都被转换成了字符串
+            const title = response.potentiallyMaliciousInput;
+            // 直接使用是安全的：
+            const element = <h1>{title}</h1>;
+        JSX表示对象：
+            Babel会把JSX转译成一个名为React.createElement()函数调用。
+            const element = (
+              <h1 className="greeting">
+                Hello, world!
+              </h1>
+            );
+            //等价操作
+            const element = React.createElement(
+              'h1',     //标签名
+              {className: 'greeting'},   //标签属性
+              'Hello, world!'           //标签中间值
+            );
+            //本质替换
+            const element = {
+              type: 'h1',
+              props: {
+                className: 'greeting',
+                children: 'Hello, world!'
+              }
+            };
+    3. 元素渲染：元素是构成React应用的最小砖块。组件是由元素构成的
+        将一个元素渲染为DOM:
+            const element = <h1>Hello, world</h1>;
+            ReactDOM.render(element, document.getElementById('root'));
+        更新已经渲染的元素：只更新它需要更新的部分
+            React元素是不可变对象。更新UI唯一的方式是创建一个全新的元素，并将其传入ReactDOM.render()。
+            function tick() {
+              const element = (
+                <div>
+                  <h1>Hello, world!</h1>
+                  <h2>It is {new Date().toLocaleTimeString()}.</h2>
+                </div>
+              );
+              ReactDOM.render(element, document.getElementById('root'));
+            }
+            setInterval(tick, 1000);
+    4. 组件和Props：类似于函数和参数，返回React对象
+        组件允许你将UI拆分为独立可复用的代码片段，并对每个片段进行独立构思。
+        函数组件和class组件：本质是javascript函数
+            function Welcome(props) {
+              return <h1>Hello, {props.name}</h1>;
+            }
+            //等价替换
+            class Welcome extends React.Component {
+              render() {
+                return <h1>Hello, {this.props.name}</h1>;
+              }
+            }
+        渲染组件：html标签和自定义标签。自定义标签上的属性转化为对象的props
+            const element = <div />;
+            const element = <Welcome name="Sara" />;
+            步骤：
+            1.我们调用 ReactDOM.render()函数，并传入<Welcome name="Sara"/> 作为参数。
+            2.React调用Welcome组件，并将 {name: 'Sara'}作为props传入。
+            3.Welcome组件将<h1>Hello, Sara</h1>元素作为返回值。
+            4.React DOM将DOM高效地更新为<h1>Hello, Sara</h1>。
+            ⚠️⚠️⚠️：消息字母开头组件视为原生dom标签，大小开头视为自定义标签
+        组合组件：嵌套使用组件
+            function Welcome(props) {
+              return <h1>Hello, {props.name}</h1>;
+            }
+
+            function App() {
+              return (
+                <div>
+                  <Welcome name="Sara" />
+                  <Welcome name="Cahal" />
+                  <Welcome name="Edite" />
+                </div>
+              );
+            }
+
+            ReactDOM.render(
+              <App />,
+              document.getElementById('root')
+            );
+        提取组件：将组件拆分为更小的组件。比如将组件的某个属性拆分成新的组件
+            function Avatar(props) {
+              return (
+                <img className="Avatar"
+                  src={props.user.avatarUrl}
+                  alt={props.user.name}
+                />
+              );
+            }
+
+            function UserInfo(props) {
+              return (
+                <div className="UserInfo">
+                  <Avatar user={props.user} />
+                  <div className="UserInfo-name">
+                    {props.user.name}
+                  </div>
+                </div>
+              );
+            }
+
+            function Comment(props) {
+              return (
+                <div className="Comment">
+                  <UserInfo user={props.author} />
+                  <div className="Comment-text">
+                    {props.text}
+                  </div>
+                  <div className="Comment-date">
+                    {formatDate(props.date)}
+                  </div>
+                </div>
+              );
+            }
+        Props的只读性：入参是否被修改
+            所有React组件都必须像纯函数一样保护它们的props不被更改。使用State来实现动态展现功能
+    5. State和生命周期
+        state是私有变量，完全受控于当前组件,存在于class中，纯组件不能使用。而且state修改自动调整相关渲染
+        将函数组件转换成class组件：🌿🌿🌿🌿🌿
+            1.创建一个同名的ES6 class，并且继承于React.Component。
+            2.添加一个空的render()方法。
+            3.将函数体移动到render()方法之中。
+            4.在render()方法中使用this.props替换props。
+            5.删除剩余的空函数声明。
+        向class组件中添加局部的state：Class组件应该始终使用props参数来调用父类的构造函数
+            1.把render()方法中的this.props.date替换成this.state.date
+            2.添加一个class构造函数，然后在该函数中为this.state 赋初值
+            3.移除<Clock />元素中的date属性
+            class Clock extends React.Component {
+              constructor(props) {
+                super(props);
+                this.state = {date: new Date()};
+              }
+
+              //等价于类的默认接口实现方法
+              render() {
+                return (
+                  <div>
+                    <h1>Hello, world!</h1>
+                    <h2>It is {this.state.date.toLocaleTimeString()}.</h2>
+                  </div>
+                );
+              }
+            }
+
+            ReactDOM.render(
+              <Clock />,
+              document.getElementById('root')
+            );
+        将生命周期方法添加到Class中：
+            类中有挂载和卸载方法,这是生命周期方法。可以添加定时器等操作
+            componentDidMount() {......}  //在dom渲染后自动执行，可以设置定时器，并临时保存起来timerid
+            componentWillUnmount() {......}  //dom清除时执行，可以清除定时器
+
+            class Clock extends React.Component {
+                //构造函数
+              constructor(props) {
+                super(props);
+                this.state = {date: new Date()};
+              }
+                //  启动后执行函数
+              componentDidMount() {
+                this.timerID = setInterval(
+                  () => this.tick(),
+                  1000
+                );
+              }
+              //    清除后执行函数
+              componentWillUnmount() {
+                clearInterval(this.timerID);
+              }
+              tick() {
+                this.setState({
+                  date: new Date()
+                });
+              }
+              //    渲染页面函数
+              render() {
+                return (
+                  <div>
+                    <h1>Hello, world!</h1>
+                    <h2>It is {this.state.date.toLocaleTimeString()}.</h2>
+                  </div>
+                );
+              }
+            }
+
+            ReactDOM.render(
+              <Clock />,
+              document.getElementById('root')
+            );
+            整理方法的调用顺序：
+                1.当<Clock />被传给ReactDOM.render()的时候，React会调用Clock组件的构造函数。
+                  因为Clock需要显示当前的时间，所以它会用一个包含当前时间的对象来初始化this.state。
+                  我们会在之后更新 state。
+                2.之后React会调用组件的render()方法。这就是React确定该在页面上展示什么的方式。
+                  然后React更新DOM来匹配Clock渲染的输出。
+                3.当Clock的输出被插入到DOM中后，React就会调用ComponentDidMount()生命周期方法。
+                  在这个方法中，Clock组件向浏览器请求设置一个计时器来每秒调用一次组件的tick()方法。
+                4.浏览器每秒都会调用一次tick()方法。在这方法之中,Clock组件会通过调用setState()来计划进行一次UI更新。
+                  得益于setState()的调用，React能够知道state已经改变了，然后会重新调用render()方法来确定页面上该显示什么。
+                  这一次，render()方法中的this.state.date就不一样了，如此以来就会渲染输出更新过的时间。
+                  React也会相应的更新DOM。
+                5.一旦Clock组件从DOM中被移除，React就会调用componentWillUnmount()生命周期方法，这样计时器就停止了。
+        正确的使用state：
+            不要直接修改State。要使用setState()方法。构造函数是唯一可以给this.state赋值的地方
+                // Correct
+                this.setState({comment: 'Hello'});
+            State的更新可能是异步的：在方法中直接使用state和props可能不立刻执行。应该设置为函数修改方式
+                // Correct
+                this.setState((state, props) => ({
+                  counter: state.counter + props.increment
+                }));
+            State的更新会被合并：也就是相同的setState操作，后执行的操作会将前面的操作无效掉
+        数据是向下流动的：
+            组件可以选择把它的state作为props向下传递到它的子组件中
+    6. 事件处理：
+        React事件命名使用驼峰写法。使用JSX语法时你需要传入一个函数作为事件处理函数，而不是一个字符串
+            <button onClick={activateLasers}>
+              Activate Lasers
+            </button>
+        React需要明显的阻止默认行为。而不是在javascript中执行return false
+            function ActionLink() {
+              function handleClick(e) {
+                e.preventDefault();
+                console.log('The link was clicked.');
+              }
+
+              return (
+                <a href="#" onClick={handleClick}>
+                  Click me
+                </a>
+              );
+            }
+
+            //开关切换
+            class Toggle extends React.Component {
+              constructor(props) {
+                super(props);
+                this.state = {isToggleOn: true};
+
+                // 为了在回调中使用 `this`，这个绑定是必不可少的，否则报错this找不到
+                this.handleClick = this.handleClick.bind(this);
+              }
+
+              handleClick() {
+                this.setState(state => ({
+                  isToggleOn: !state.isToggleOn
+                }));
+              }
+
+              render() {
+                return (
+                  <button onClick={this.handleClick}>
+                    {this.state.isToggleOn ? 'ON' : 'OFF'}
+                  </button>
+                );
+              }
+            }
+
+            ReactDOM.render(
+              <Toggle />,
+              document.getElementById('root')
+            );
+        向事件处理程序传递参数：
+            <button onClick={(e) => this.deleteRow(id, e)}>
+                Delete Row
+            </button>
+            <button onClick={this.deleteRow.bind(this, id)}>
+                Delete Row
+            </button>
+    7. 条件渲染：只渲染一部分，在React组件中使用了if等语句
+        元素变量：点击事件函数都可以被传递
+            function UserGreeting(props) {
+              return <h1>Welcome back!</h1>;
+            }
+            function GuestGreeting(props) {
+              return <h1>Please sign up.</h1>;
+            }
+
+            function Greeting(props) {
+              const isLoggedIn = props.isLoggedIn;
+              if (isLoggedIn) {
+                return <UserGreeting />;
+              }
+              return <GuestGreeting />;
+            }
+
+            function LoginButton(props) {
+              return (
+                <button onClick={props.onClick}>
+                  Login
+                </button>
+              );
+            }
+
+            function LogoutButton(props) {
+              return (
+                <button onClick={props.onClick}>
+                  Logout
+                </button>
+              );
+            }
+
+            class LoginControl extends React.Component {
+              constructor(props) {
+                super(props);
+                this.handleLoginClick = this.handleLoginClick.bind(this);
+                this.handleLogoutClick = this.handleLogoutClick.bind(this);
+                this.state = {isLoggedIn: false};
+              }
+
+              handleLoginClick() {
+                this.setState({isLoggedIn: true});
+              }
+
+              handleLogoutClick() {
+                this.setState({isLoggedIn: false});
+              }
+
+              render() {
+                const isLoggedIn = this.state.isLoggedIn;
+                let button;
+
+                //渲染不同的自定义组件，而且每个组件的事件监听方法不同
+                if (isLoggedIn) {
+                  button = <LogoutButton onClick={this.handleLogoutClick} />;
+                } else {
+                  button = <LoginButton onClick={this.handleLoginClick} />;
+                }
+
+                return (
+                  <div>
+                    <Greeting isLoggedIn={isLoggedIn} />
+                    {button}
+                  </div>
+                );
+              }
+            }
+            //开始渲染
+            ReactDOM.render(
+              <LoginControl />,
+              document.getElementById('root')
+            );
+        与运算符$$:
+            true && 表达式：右边表达式被渲染
+            false && 表达式：右边不渲染
+                function Mailbox(props) {
+                  const unreadMessages = props.unreadMessages;
+                  return (
+                    <div>
+                      <h1>Hello!</h1>
+                      {unreadMessages.length > 0 &&
+                        <h2>
+                          You have {unreadMessages.length} unread messages.
+                        </h2>
+                      }
+                    </div>
+                  );
+                }
+                const messages = ['React', 'Re: React', 'Re:Re: React'];
+                ReactDOM.render(
+                  <Mailbox unreadMessages={messages} />,
+                  document.getElementById('root')
+                );
+        三目运算符： condition ? true : false。
+        阻止组件渲染：在render()中返回null。这并不会影响组件生命周期，它还存在。
+    8. 列表和Key：每个列表项最好有一个key进行唯一表示
+        渲染多个组件：使用{}在JSX内构建一个元素集合
+            const numbers = [1, 2, 3, 4, 5];
+            const listItems = numbers.map((number) =>
+              <li>{number}</li>
+            );
+            ReactDOM.render(
+              <ul>{listItems}</ul>,
+              document.getElementById('root')
+            );
+        基础列表组件：
+            function NumberList(props) {
+              const numbers = props.numbers;
+              const listItems = numbers.map((number) =>
+                <li key={number.toString()}>
+                      {number}
+                </li>
+              );
+              return (
+                <ul>{listItems}</ul>
+              );
+            }
+
+            const numbers = [1, 2, 3, 4, 5];
+            ReactDOM.render(
+              <NumberList numbers={numbers} />,
+              document.getElementById('root')
+            );
+        Key的使用：key帮助React识别哪些元素改变了，比如被添加或删除。因此你应当给数组中的每一个元素赋予一个确定的标识。
+                  最好使用数据id，最后使用index作为key
+            const todoItems = todos.map((todo) =>
+              <li key={todo.id}>
+                {todo.text}
+              </li>
+            );
+
+            const todoItems = todos.map((todo, index) =>
+              // Only do this if items have no stable IDs
+              <li key={index}>
+                {todo.text}
+              </li>
+            );
+        用Key提取组件：在map()方法中的元素需要设置key属性🌿🌿🌿🌿🌿
+            function ListItem(props) {
+              return <li>{props.value}</li>;
+            }
+
+            function NumberList(props) {
+              const numbers = props.numbers;
+              const listItems = numbers.map((number) =>
+                // 正确！key 应该在数组的上下文中被指定
+                <ListItem key={number.toString()} value={number} />
+              );
+              return (
+                <ul>
+                  {listItems}
+                </ul>
+              );
+            }
+
+            const numbers = [1, 2, 3, 4, 5];
+            ReactDOM.render(
+              <NumberList numbers={numbers} />,
+              document.getElementById('root')
+            );
+        key只是在兄弟节点之间必须唯一：不需要全局唯一
+        在JSX中嵌入map():
+            function NumberList(props) {
+              const numbers = props.numbers;
+              return (
+                <ul>
+                  {numbers.map((number) =>
+                    <ListItem key={number.toString()}
+                              value={number} />
+                  )}
+                </ul>
+              );
+            }
+    9. 表单
+        受控组件：可变状态（mutable state）通常保存在组件的state属性中，并且只能通过使用setState()来更新
+                使得state成为React的唯一数据源
+            class NameForm extends React.Component {
+              constructor(props) {
+                super(props);
+                this.state = {value: ''};
+                this.handleChange = this.handleChange.bind(this);
+                this.handleSubmit = this.handleSubmit.bind(this);
+              }
+
+              handleChange(event) {
+                this.setState({value: event.target.value});
+              }
+              handleSubmit(event) {
+                alert('提交的名字: ' + this.state.value);
+                event.preventDefault();     //防止事件冒泡
+              }
+
+              render() {
+                return (
+                  <form onSubmit={this.handleSubmit}>
+                    <label>
+                      名字:
+                      <input type="text" value={this.state.value} onChange={this.handleChange} />
+                    </label>
+                    <input type="submit" value="提交" />
+                  </form>
+                );
+              }
+            }
+        textarea标签：定义文本
+        select标签：下拉标签。在React中添加到了select上
+             <select multiple={true} value={['B', 'C']}>  #下拉标签多选
+             render() {
+                return (
+                  <form onSubmit={this.handleSubmit}>
+                    <label>
+                      选择你喜欢的风味:
+                      <select value={this.state.value} onChange={this.handleChange}>
+                        <option value="grapefruit">葡萄柚</option>
+                        <option value="lime">酸橙</option>
+                        <option value="coconut">椰子</option>
+                        <option value="mango">芒果</option>
+                      </select>
+                    </label>
+                    <input type="submit" value="提交" />
+                  </form>
+                );
+              }
+        文件input标签：在react中是一个非受控组件，value只读。
+        处理多个输入：相同函数根据不同的 event.target.name 进行不同的操作
+            this.setState({
+              [name]: value
+            });
+    10. 状态提升：将公共变化的值提升到共同的父组件中去，多个输入框的值能够同步。🌿🌿🌿🌿🌿
+            将this.state替换为this.props；
+            在子组件的函数中，调用父组件的方法来替代setState(),进而响应变化；
+            const scaleNames = {
+              c: 'Celsius',
+              f: 'Fahrenheit'
+            };
+            //工具函数
+            function toCelsius(fahrenheit) {
+              return (fahrenheit - 32) * 5 / 9;
+            }
+
+            function toFahrenheit(celsius) {
+              return (celsius * 9 / 5) + 32;
+            }
+
+            function tryConvert(temperature, convert) {
+              const input = parseFloat(temperature);
+              if (Number.isNaN(input)) {
+                return '';
+              }
+              const output = convert(input);
+              const rounded = Math.round(output * 1000) / 1000;
+              return rounded.toString();
+            }
+            //选择操作
+            function BoilingVerdict(props) {
+              if (props.celsius >= 100) {
+                return <p>The water would boil.</p>;
+              }
+              return <p>The water would not boil.</p>;
+            }
+            //中间类操作
+            class TemperatureInput extends React.Component {
+              constructor(props) {
+                super(props);
+                this.handleChange = this.handleChange.bind(this);
+              }
+
+              handleChange(e) {
+                this.props.onTemperatureChange(e.target.value);
+              }
+
+              render() {
+                const temperature = this.props.temperature;
+                const scale = this.props.scale;
+                return (
+                  <fieldset>
+                    <legend>Enter temperature in {scaleNames[scale]}:</legend>
+                    <input value={temperature}
+                           onChange={this.handleChange} />
+                  </fieldset>
+                );
+              }
+            }
+
+            class Calculator extends React.Component {
+              constructor(props) {
+                super(props);
+                this.handleCelsiusChange = this.handleCelsiusChange.bind(this);
+                this.handleFahrenheitChange = this.handleFahrenheitChange.bind(this);
+                this.state = {temperature: '', scale: 'c'};
+              }
+
+              handleCelsiusChange(temperature) {
+                this.setState({scale: 'c', temperature});
+              }
+
+              handleFahrenheitChange(temperature) {
+                this.setState({scale: 'f', temperature});
+              }
+
+              render() {
+                const scale = this.state.scale;
+                const temperature = this.state.temperature;
+                const celsius = scale === 'f' ? tryConvert(temperature, toCelsius) : temperature;
+                const fahrenheit = scale === 'c' ? tryConvert(temperature, toFahrenheit) : temperature;
+
+                return (
+                  <div>
+                    <TemperatureInput
+                      scale="c"
+                      temperature={celsius}
+                      onTemperatureChange={this.handleCelsiusChange} />
+                    <TemperatureInput
+                      scale="f"
+                      temperature={fahrenheit}
+                      onTemperatureChange={this.handleFahrenheitChange} />
+                    <BoilingVerdict
+                      celsius={parseFloat(celsius)} />
+                  </div>
+                );
+              }
+            }
+
+            //程序启动
+            ReactDOM.render(
+              <Calculator />,
+              document.getElementById('root')
+            );
+    11. 组合和继承：推荐使用组合进行代码重用
+        包含关系：解决侧边栏无法知道子组件的具体内容问题--{props.children}。类似与占位符🌿🌿🌿🌿🌿
+            function FancyBorder(props) {
+              return (
+                <div className={'FancyBorder FancyBorder-' + props.color}>
+                  {props.children}
+                </div>
+              );
+            }
+            function WelcomeDialog() {
+              return (
+                <FancyBorder color="blue">
+                  <h1 className="Dialog-title">
+                    Welcome
+                  </h1>
+                  <p className="Dialog-message">
+                    Thank you for visiting our spacecraft!
+                  </p>
+                </FancyBorder>
+              );
+            }
+        特例关系：类似与实现接口。就是在上一个组件中传入了参数而已，就重新渲染成新的组件
+    12. React哲学：{已知api返回json和界面设计稿}
+            React是用JavaScript构建快速响应的大型Web应用程序的首选方式
+            第一步：将设计好的UI划分为组件层级
+            第二步：用 React 创建一个静态版本
+            第三步：确定 UI state 的最小（且完整）表示
+            第四步：确定 state 放置的位置
+            第五步：添加反向数据流
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

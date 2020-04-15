@@ -1,0 +1,95 @@
+1.学习OAuth2知识点：
+    1.概念：是开放授权的一个标准。即想访问我的资源，你先在别人那里登录，获得它们的授权令牌，
+           然后把令牌给我，我再去别人那里验证一下。成功则给你资源
+
+           第三方登录，也可以叫做授权登录。
+           认证服务器的种类：可以有QQ，微博等应用型，也可以有keycloak，Spring Security等代码型
+
+    2.OAuth2有4个角色：
+        User Agent：用户代理，本文中就是指浏览器。
+        HTTP service：HTTP服务提供商，本文中简称"服务提供商"，即上一节例子中的Google。只是一个名字而已
+
+        资源所有者：用户User
+        资源服务器：服务提供商存放用户生成的资源的服务器
+        第三方客户端（client）： 和（服务提供商-资源服务器）有py交易，但是授权服务器阻碍了它们
+        授权服务器：  管理上面3者的关系。
+
+        ⚠️⚠️⚠️第三方客户端想要获取资源服务器的东西，必须通过授权服务器的令牌才行。
+        client ->resource owner
+                 Authorization
+                 resource servcer
+
+        逻辑顺序：client请求资源拥有者给它资源，资源拥有者只给了它一个code,让他去资源服务器自己取
+                 到了资源服务器，它说你去授权服务器拿到令牌再说，
+                 于是client又去令牌服务器要令牌，授权服务器说，你把code给我。client给了它code，于是授权服务器将令牌给了client，
+                 client拿着令牌到资源服务器，资源服务器看到令牌后给它资源
+
+    3.部署OAuth2:
+        4种授权许可：
+            授权码 Authorization Code：【最复杂操作，二次授权】
+                操作步骤如下：授权码请求： 第一次请求授权服务器，拿到授权码
+                            授权码返回
+                            访问令牌请求： 获取授权码后访问授权服务器获取access_token
+                            访问令牌返回
+                            受限资源获取:  拿着access_token去访问资源
+
+            隐式许可 Implicit：【简化了授权码的获取】
+                操作步骤如下：授权请求：直接访问授权服务器获取access_token
+                            授权返回：
+                            受限资源获取
+
+            资源所有者密码凭证 Resource Owner Password Credentials：【最信任方法】
+                操作步骤如下：访问令牌请求：使用用户名密码访问授权服务器获取access_token
+                            访问令牌返回
+                            受限资源获取
+
+            客户端凭证 Client Credentials：【最粗暴方法】
+                操作步骤如下：授权请求（以自己的名义）：直接请求获取所有资源信息，而不是单个信息
+                            授权返回
+                            受限资源获取
+
+    4.刷新令牌：
+        刷新令牌请求：拿刷新令牌去授权服务器拿最新的access_token
+        刷新令牌返回
+
+    5.令牌和密码的差异：
+        相同点；都可以进入系统
+        差异点：令牌短期无法修改，密码长期有效可以修改
+               令牌可以被撤销，密码不可以
+               令牌有权限范围，密码是完整权限
+
+
+2.学习vertx-OAuth2:
+    1.包依赖：<dependency>
+               <groupId>io.vertx</groupId>
+               <artifactId>vertx-auth-oauth2</artifactId>
+               <version>3.7.0</version>
+             </dependency>
+    2.几种模式：
+        Authorization Code Flow【授权代码流】：适用于服务器可以存储持久信息的应用程序。
+            可能使用的场景，比如第三方的QQ登录等。
+        Password Credentials Flow【密码凭证流】： 当以前的流不能使用或在开发期间。
+            目前的公司微服务项目使用
+        Client Credentials Flow【客户端凭证流】： 客户端只能使用其客户端凭据请求访问令牌。
+
+    3.OpenID Connect是OAuth2协议上的简单身份层。
+
+    4.OAuth2+keycloak:
+        JsonObject keycloakJson = new JsonObject()
+          .put("realm", "master")
+          .put("auth-server-url", "http://localhost:9000/auth")
+          .put("credentials", new JsonObject()
+            .put("secret", "2fbf5e18-b923-4a83-9657-b4ebd5317f60"));
+
+        OAuth2Auth oauth2 = KeycloakAuth.create(vertx, OAuth2FlowType.PASSWORD, keycloakJson);
+
+        oauth2.authenticate(new JsonObject().put("username", "user").put("password", "secret"), res -> {
+          if (res.failed()) {
+            ......
+
+          } else {
+            AccessToken token = (AccessToken) res.result();
+            ......
+
+          }
+        });

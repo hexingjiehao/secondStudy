@@ -1,0 +1,664 @@
+1.学习iText 7 Building Blocks知识点：文档是2016年8月27日出版
+    电子书名：《iText 7 -Building Blocks.pdf》
+    接口之间关系：
+        IPropertyContainer-->IRenderer
+                          -->IElement-->ILargeElement
+                                     -->ILeafElement
+    实现类关系：
+        IPropertyContainer-->ElementPropertyContainer-->AbstractElement
+                                                     -->Style
+                                                     -->RootElement-->Canvas
+                                                                   -->Document
+    第1章：PdfFont类的介绍----主要是字体。建立在Document类上
+        创建PdfFont对象：
+            PdfFont font = PdfFontFactory.createFont(FontConstants.TIMES_ROMAN);
+        嵌入一个字体：
+            PdfFont font = PdfFontFactory.createFont(REGULAR, true);
+            Paragraph p = new Paragraph().setFont(italic).add(title).add(" by ").add(author);
+        选择一个合适的编码：
+            PdfFont font1250 = PdfFontFactory.createFont(FONT, PdfEncodings.CP1250, true);
+            document.add(new Paragraph().setFont(font1250).add(CZECH).add(" by Robert Louis Stevenson"));
+        字体属性：
+            Text title1 = new Text("The Strange Case of ").setFontSize(12);
+            Text title2 = new Text("Dr. Jekyll and Mr. Hyde").setBold();
+            Text title3 = new Text("The Strange Case of ").setFontColor(Color.BLUE);
+        重用styles：一个样式多次使用
+            Style normal = new Style();
+            PdfFont font = PdfFontFactory.createFont(FontConstants.TIMES_ROMAN);
+            normal.setFont(font).setFontSize(14);
+            Paragraph p = new Paragraph();
+            p.add(new Text("The Strange Case of ").addStyle(normal));
+        总结：
+            字体的各种属性设置
+
+    第2章：处理根元素(Document)----主要是边界和渲染器。建立在Document类和Canvas类上
+        使用Canvas在矩形里面添加内容：【不匹配的内容将会被丢弃--即空间不够了】
+            PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+            PdfPage page = pdf.addNewPage();
+            PdfCanvas pdfCanvas = new PdfCanvas(page);
+            Rectangle rectangle = new Rectangle(36, 650, 100, 100);
+            pdfCanvas.rectangle(rectangle);
+            pdfCanvas.stroke();
+
+            iText7是重新编写的。CanvasRenderer有一个重写方法addChild，能够知道当前画布是否填满
+            画布内添加画布：PdfPage page2 = pdf.addNewPage();
+                          PdfCanvas pdfCanvas2 = new PdfCanvas(page2);
+                          Canvas canvas2 = new Canvas(pdfCanvas2, pdf, rectangle);
+                          canvas2.add(new Paragraph("Dr. Jekyll and Mr. Hyde"));
+        使用Document类将文本转换为PDF：
+            PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+            Document document = new Document(pdf);
+            BufferedReader br = new BufferedReader(new FileReader(SRC));
+            String line;
+            while ((line = br.readLine()) != null) {
+                document.add(new Paragraph(line));
+            }
+            document.close();
+
+            保持段落连续：BufferedReader br = new BufferedReader(new FileReader(SRC));
+                        String line;
+                        Paragraph p;
+                        boolean title = true;
+                        while ((line = br.readLine()) != null) {
+                            p = new Paragraph(line);
+                            p.setKeepTogether(true);
+                            if (title) {
+                                p.setFont(bold).setFontSize(12);
+                                title = false; }
+                            else {
+                                p.setFirstLineIndent(36);
+                            }
+                            if (line.isEmpty()) {
+                                p.setMarginBottom(12);
+                                title = true; }
+                            else {
+                                p.setMarginBottom(0);
+                            }
+                           document.add(p);
+                        }
+        改变文档渲染器：
+            float offSet = 36;
+            float gutter = 23;
+            float columnWidth = (PageSize.A4.getWidth() - offSet * 2) / 2 - gutter;
+            float columnHeight = PageSize.A4.getHeight() - offSet * 2;
+            Rectangle[] columns = {
+                new Rectangle(offSet, offSet, columnWidth, columnHeight),
+                new Rectangle(offSet + columnWidth + gutter, offSet, columnWidth, columnHeight)
+            };
+            document.setRenderer(new ColumnDocumentRenderer(document, columns));
+
+            改变区域的渲染器：document.add(nextArea);
+                           AreaBreak nextArea = new AreaBreak(AreaBreakType.NEXT_AREA);
+                           AreaBreak nextPage = new AreaBreak(AreaBreakType.NEXT_PAGE);
+        切换不同的渲染器：
+            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+            ... // Define column areas
+            document.setRenderer(new ColumnDocumentRenderer(document, columns));
+            document.add(new AreaBreak(AreaBreakType.LAST_PAGE));
+            在切换一个渲染器后，会自动跳转到开始，因此需要跳转到最新的地方
+        刷新文档呈现程序：
+            iText构造函数默认为rtue，所有内容都会立即刷新。
+            renderer.flush();
+        更改先前添加的内容：（使用了占位符）
+            Document document = new Document(pdf, PageSize.A4, false);   //不立刻刷新文档
+
+            String total = renderer.toString().replace("{totalpages}",String.valueOf(pdf.getNumberOfPages()));
+            ((TextRenderer)renderer).setText(total);
+            ((Text)renderer.getModelElement()).setNextRenderer(renderer);
+            document.relayout();
+            document.close();
+        增加页脚：(指定位置的文字而已)
+            int n = pdf.getNumberOfPages();
+            Paragraph footer;
+            for (int page = 1; page <= n; page++) {
+                footer = new Paragraph(String.format("Page %s of %s", page, n));
+                document.showTextAligned(footer, 297.5f, 20, page,TextAlignment.CENTER, VerticalAlignment.MIDDLE, 0);
+                document.close();
+            }
+            document.close();
+        添加文本与显示文本对齐：
+            Paragraph author = new Paragraph("by Robert Louis Stevenson");
+            document.showTextAligned(author, 36, 806,TextAlignment.LEFT, VerticalAlignment.TOP);
+        使用iText 7插件：
+            可能需要许可证：<dependency>
+                            <groupId>com.itextpdf</groupId>
+                            <artifactId>typography</artifactId>
+                            <version>1.0.0</version>
+                            <scope>compile</scope>
+                        </dependency>
+
+                        <dependency>
+                            <groupId>com.itextpdf</groupId>
+                            <artifactId>itext-licensekey</artifactId>
+                            <version>2.0.0</version>
+                            <scope>compile</scope>
+                        </dependency>
+
+                LicenseKey.loadLicenseFile(new FileInputStream(KEY));
+        提高排版：
+            document.showTextAlignedKerned("The Strange Case of Dr. Jekyll and Mr. Hyde", 36, 790,TextAlignment.LEFT, VerticalAlignment.BOTTOM, 0);
+        总结：
+            各种渲染器的排版
+
+    第3章：使用ILeafElement实现----主要是图像
+        使用制表符元素：
+            List<List<String>> resultSet = CsvTo2DList.convert(SRC, "|");
+            for (List<String> record : resultSet) {
+                Paragraph p = new Paragraph();
+                p.addTabStops(tabstops);
+                p.add(record.get(0).trim()).add(new Tab())
+                    .add(record.get(1).trim()).add(new Tab())
+                    .add(record.get(2).trim()).add(new Tab())
+                    .add(record.get(3).trim()).add(new Tab())
+                    .add(record.get(4).trim()).add(new Tab())
+                    .add(record.get(5).trim());
+                    document.add(p);
+            }
+        制表符功能的限制：
+            页面布局可能并不美观
+        增加链接：
+            PdfAction uri = PdfAction.createURI(String.format("http://www.imdb.com/title/tt%s", record.get(0)));
+            Link link = new Link(record.get(2).trim(), uri);
+            p.add(record.get(1).trim()).add(new Tab())
+                .add(link).add(new Tab())
+        文本类中提供的额外方法：
+            文本状态的改变，比如三维立体
+            Text t2 = new Text("Dr. Jekyll").setTextRise(5);
+            Text t3 = new Text(" and ").setHorizontalScaling(2);
+            Text t4 = new Text("Mr. Hyde").setSkew(10, 45);
+        介绍图像：
+            Image img = new Image(ImageDataFactory.create(MARY));
+            document.add(img);
+            相同的图像会存储相同的的空间，造成冗余
+        改变一张图像的位置和宽度：
+            Image img = new Image(ImageDataFactory.create(MARY), 320, 750, 50);
+            img.setFixedPosition(320, 750, UnitValue.createPointValue(50));
+            document.add(img);
+        添加一张图像到一个存在的pdf中：【在原来模版的基础上创建一个新的文档】
+            PdfReader reader = new PdfReader(src);
+            PdfWriter writer = new PdfWriter(dest);
+            PdfDocument pdfDoc = new PdfDocument(reader, writer);
+            Document document = new Document(pdfDoc);
+            Image img = new Image(ImageDataFactory.create(MARY));
+            img.setFixedPosition(1, 350, 750, UnitValue.createPointValue(50));
+            document.add(img);
+            document.close();
+        重新设置图像的大小和旋转图像：
+            Image img = new Image(ImageDataFactory.create(MARY));
+            img.setHorizontalAlignment(HorizontalAlignment.CENTER);
+            img.setWidthPercent(80);
+            document.add(img);
+
+            可以向文档或者块元素添加图像
+
+            Image img = new Image(ImageDataFactory.create(MARY));
+            img.scale(0.5f, 0.5f);
+            img.setRotationAngle(-Math.PI / 6);
+        iText支持的图像类型：
+            JPEG、JPEG2000、BMP、PNG、GIF、JBIG2、TIFF和WMF
+            Raw image data(渐变颜色)：
+                byte data[] = new byte[256 * 3];
+                for(inti=0;i<256;i++){
+                    data[i * 3] = (byte) (255 - i);
+                    data[i * 3 + 1] = (byte) (255 - i);
+                    data[i * 3 + 2] = (byte) i;
+                }
+                ImageData raw = ImageDataFactory.create(256, 1, 3, 8, data, null);
+                Image img = new Image(raw);
+                img.scaleAbsolute(256, 10);
+                document.add(img);
+
+            AWT images:
+                java.awt.Image awtImage =Toolkit.getDefaultToolkit().createImage(TEST5);
+                Image awt =new Image(ImageDataFactory.create(awtImage, java.awt.Color.yellow));
+                awt.setMarginTop(10);
+                document.add(awt);
+            pdf中不支持gif图像
+            WMF / PDF：
+                PdfFormXObject xObject1 = new PdfFormXObject(new WmfImageData(WMF), pdf);
+                Image img1 = new Image(xObject1);
+                document.add(img1);
+        总结：
+            讲了Tab ,text，image
+
+    第4章：增加抽象元素对象（上）----主要是段落内容
+        使用Div类对元素进行分组:
+            Div div = new Div()
+                .setKeepTogether(true)
+                .setBorderLeft(new SolidBorder(2))
+                .setPaddingLeft(3)
+                .setMarginBottom(10);
+        使用LineSeparator对象绘制水平线:
+            SolidLine line = new SolidLine(1f);
+            line.setColor(Color.RED);
+            LineSeparator ls = new LineSeparator(line);
+            ls.setWidthPercent(50);
+            ls.setMarginTop(5);
+        保持内容一起：
+            document.add(new Paragraph(line)
+                .setFont(bold)
+                .setFontSize(12)
+                .setMarginBottom(0)
+                .setKeepWithNext(true));   //核心
+        改变段落的开头：
+            div.add(
+            new Paragraph(line)
+                    .setMarginBottom(0)
+                    .setFirstLineIndent(36)
+                    .setMultipliedLeading(1.2f)
+            );
+        创建自定义渲染器：
+            p2.setNextRenderer(new MyParagraphRenderer(p2));
+
+            class MyParagraphRenderer extends ParagraphRenderer {
+
+                public MyParagraphRenderer(Paragraph modelElement) {
+                    super(modelElement);
+                }
+
+                @Override
+                public void drawBackground(DrawContext drawContext) {
+
+                    Background background = this.<Background>getProperty(Property.BACKGROUND);
+
+                    if (background != null) {
+                        Rectangle bBox = getOccupiedAreaBBox();
+                        boolean isTagged = drawContext.isTaggingEnabled() && getModelElement() instanceof IAccessibleElement;
+                        if (isTagged) {
+                            drawContext.getCanvas().openTag(new CanvasArtifact());
+                        }
+                        Rectangle bgArea = applyMargins(bBox, false);
+                        if (bgArea.getWidth() <= 0 || bgArea.getHeight() <= 0) {
+                            return;
+                        }
+                        drawContext.getCanvas()
+                            .saveState()
+                            .setFillColor(background.getColor())
+                            .roundRectangle( (double)bgArea.getX() - background.getExtraLeft(),
+                                             (double)bgArea.getY() - background.getExtraBottom(),
+                                             (double)bgArea.getWidth() + background.getExtraLeft() + background.getExtraRight(),
+                                             (double)bgArea.getHeight() + background.getExtraTop() + background.getExtraBottom(),
+                                           5)
+                            .fill().restoreState();
+                        if (isTagged) {
+                            drawContext.getCanvas().closeTag();
+                        }
+                    }
+                }
+        列表和列表符号：
+            List list = new List();
+            list.add("Dr. Jekyll");
+            list = new List(ListNumberingType.DECIMAL);
+            list.add("Dr. Jekyll");
+            list = new List(ListNumberingType.ENGLISH_LOWER);
+            list.add("Dr. Jekyll");
+
+            List list = new List();
+            list.setListSymbol("\u2022");
+            list.setListSymbol(new Text("*").setFont(font).setFontColor(Color.ORANGE));
+            list.setSymbolIndent(10);
+
+            list.setListSymbol(ListNumberingType.ENGLISH_LOWER);
+            list.setPostSymbolText("- ");
+
+            list = new List(ListNumberingType.DECIMAL);
+            list.setItemStartIndex(5);
+
+            列表符号可以是符号，也可以是图片，可以是数字序号。
+
+        将ListItem对象添加到列表中：
+            com.itextpdf.layout.element.List list = new com.itextpdf.layout.element.List(ListNumberingType.DECIMAL);
+            ListItem li = new ListItem();
+            li.setKeepTogether(true);
+            ......
+            list.add(li);
+        嵌套列表:
+            List list = new List();
+                ListItem E = new ListItem();
+                    List F = new List(ListNumberingType.DECIMAL);
+                        ListItem C = new ListItem();
+                            List A = new List(ListNumberingType.ENGLISH_LOWER);
+                        C.add(A);
+                        ListItem D = new ListItem();
+                            List B = new List(ListNumberingType.ENGLISH_UPPER);
+                        D.add(B);
+
+                        F.add(C);
+                        F.add(D);
+                E.add(F);
+            list.add(E);
+        总结：
+            主要是段落列表
+
+    第5章：增加抽象元素对象（下）----主要是表格内容
+        我的第一张表：主要元素是Table和Cell
+            Table table = new Table(3);
+            table.addCell(new Cell(1, 3));
+
+            Table table = new Table(new float[]{2, 1, 1});
+            table.setWidthPercent(80);
+            table.setHorizontalAlignment(HorizontalAlignment.CENTER);
+        表与单元格对齐：
+            table.setTextAlignment(TextAlignment.CENTER);
+            table.addCell(new Cell(2, 1)
+                .add("Cell with rowspan 2")
+                .setTextAlignment(TextAlignment.RIGHT));
+            cell = new Cell().add("Middle").setVerticalAlignment(VerticalAlignment.MIDDLE);
+        行和单元格高度：
+            Cell cell = new Cell().setHeight(16).add(p);
+            table.addCell(cell);
+
+            cell = new Cell().add(p).setRotationAngle(Math.PI / 6);
+            table.addCell(cell);
+        单元格边距和填充：
+            table.addCell(
+                        new Cell(1, 3).add("Cell with colspan 3")
+                            .setPadding(10)
+                            .setMargin(5)
+                            .setBackgroundColor(Color.GREEN)
+                         );
+        表和单元格边框：
+            table1.addCell(
+                            new Cell().add("row 2; cell 1")
+                                .setMargin(10)
+                                .setBorderBottom(new SolidBorder(2))
+                          );
+
+
+            Table table2 = new Table(new float[]{2, 1, 1});
+            table2.setMarginTop(10);
+            table2.setBorder(new SolidBorder(1));
+            table2.setWidthPercent(80);
+            table2.setHorizontalAlignment(HorizontalAlignment.CENTER);
+            table2.addCell(new Cell(1, 3).add("Cell with colspan 3").setBorder(Border.NO_BORDER));
+
+
+            private class RoundedCornersCellRenderer extends CellRenderer {
+                public RoundedCornersCellRenderer(Cell modelElement) {
+                    super(modelElement);
+                }
+                @Override
+                public void drawBorder(DrawContext drawContext) {
+                    Rectangle occupiedAreaBBox = getOccupiedAreaBBox();
+                    float[] margins = getMargins();
+                    Rectangle rectangle = applyMargins(occupiedAreaBBox, margins, false);
+                    PdfCanvas canvas = drawContext.getCanvas();
+                    canvas.roundRectangle(rectangle.getX() + 1, rectangle.getY() + 1,rectangle.getWidth() - 2, rectangle.getHeight() -2, 5).stroke();
+                    super.drawBorder(drawContext);
+                }
+            }
+            Cell cell = new Cell();
+            cell.setNextRenderer(new RoundedCornersCellRenderer(cell));
+        嵌套表：
+            Table table = new Table(2);
+            Table inner = new Table(2);
+            table.addCell(inner);
+        重复页眉和页脚：
+            Cell cell = new Cell(1, 6).add("Continued on next page...");
+            table.addHeaderCell("Continued from previous page:")
+                .addFooterCell(cell)
+                .setSkipLastFooter(true);
+        表格中的图像：
+            Image img = new Image(ImageDataFactory.create(file.getPath()));
+            img.setAutoScaleWidth(true);
+            cell.add(img);
+        切分单元格还是保持内容在一起：
+            cell.setKeepTogether(true);
+        表格和单元格渲染器：
+            table.setNextRenderer(new AlternatingBackgroundTableRenderer(table, new Table.RowRange(0, nRows - 1)));
+
+            private class RunlengthRenderer extends CellRenderer {
+                private int runlength;
+                public RunlengthRenderer(Cell modelElement, String duration) {
+                    super(modelElement);
+                    if (duration.trim().isEmpty())
+                        runlength = 0;
+                    else
+                        runlength = Integer.parseInt(duration);
+                }
+
+                @Override
+                public CellRenderer getNextRenderer() {
+                    return new RunlengthRenderer(getModelElement(), String.valueOf(runlength));
+                }
+
+                @Override
+                public void drawBackground(DrawContext drawContext) {
+                    if (runlength == 0)
+                        return;
+                    PdfCanvas canvas = drawContext.getCanvas();
+                    canvas.saveState();
+                    if (runlength < 90) {
+                        canvas.setFillColor(Color.GREEN);
+                    } else if (runlength > 240) {
+                        runlength = 240;
+                        canvas.setFillColor(Color.RED);
+                    } else {
+                        canvas.setFillColor(Color.ORANGE);
+                    }
+                    Rectangle rect = getOccupiedAreaBBox();
+                    canvas.rectangle(rect.getLeft(), rect.getBottom(),rect.getWidth() * runlength / 240, rect.getHeight());
+                    canvas.fill();
+                    canvas.restoreState();
+                    super.drawBackground(drawContext);
+                }
+            }
+        表和内存使用：
+            table.complete();
+        总结：
+            主要是表和单元格的渲染
+
+    第6章：创建动作，目标和书签
+        URI的动作：
+            String url = String.format("http://www.imdb.com/title/tt%s", record.get(0));
+            ListItem li = new ListItem();
+            li.setAction(PdfAction.createURI(url));
+            list.add(li);
+        命名的动作：
+            Paragraph p = new Paragraph().add("Go to last page").setAction(PdfAction.createNamed(PdfName.LastPage));
+            document.add(p);
+            p = new Paragraph()
+                .add("Go to first page")
+                .setAction(PdfAction.createNamed(PdfName.FirstPage));
+            document.add(p);
+        GOTO的动作：
+            p = new Paragraph().addTabStops(tabstops)
+                    .add(entry.getKey())
+                    .add(new Tab())
+                    .add(String.valueOf(entry.getValue()))
+                    .setAction(PdfAction.createGoTo(PdfExplicitDestination.createFit(entry.getValue())));
+        指定的目的地：
+            p = new Paragraph().setFont(bold)
+                    .add("Table of Contents")
+                    .setDestination("toc");
+        远程GoTo行动：
+            用链接替代文档
+               Link link1 = new Link("", PdfAction.createGoToR(new File(TOC_GoToNamed.DEST).getName(), 1, true));
+               Link link2 = new Link("",PdfAction.createGoToR(new File(TOC_GoToNamed.DEST).getName(), "toc", false));
+               Paragraph p = new Paragraph().add("Read the amazing horror story ")
+                    .add(link1.setFontColor(Color.BLUE))
+                    .add(".");
+               document.add(p);
+        javascript动作：
+            Link link = new Link("here", PdfAction.createJavaScript("app.alert('Boo!');"));
+            Paragraph p = new Paragraph().add("Click ")
+                .add(link.setFontColor(Color.BLUE))
+                .add(" if you want to be scared.");
+            document.add(p);
+        链式动作：
+            多个动作连续
+            PdfAction action = PdfAction.createJavaScript("app.alert('Boo');");
+            action.next(PdfAction.createGoToR(
+            new File(C06E04_TOC_GoToNamed.DEST).getName(), 1, true));
+            Link link = new Link("here", action);
+            Paragraph p = new Paragraph()
+                .add("Click ")
+                .add(link.setFontColor(Color.BLUE))
+                .add(" if you want to be scared.");
+            document.add(p);
+        目的地：
+            PdfDestination jekyll = PdfExplicitDestination.createFitH(1, 416);
+            document.add(new Paragraph().add(new Link("Link to Dr. Jekyll", jekyll)));
+        链接注释：
+            PdfAction js = PdfAction.createJavaScript("app.alert('Boo!');");
+            PdfAnnotation la1 = new PdfLinkAnnotation(new Rectangle(0, 0, 0, 0))
+                .setHighlightMode(PdfAnnotation.HIGHLIGHT_INVERT)
+                .setAction(js)
+                .setBorderStyle(PdfAnnotation.STYLE_UNDERLINE);
+            Link link1 = new Link("here", (PdfLinkAnnotation)la1);
+        轮廓aka书签：
+            大纲树，点击跳转到指定页面
+            PdfOutline outline = pdf.getOutlines(false);
+            outline = outline.addOutline(title);
+            outline.addDestination(
+            PdfDestination.makeDestination(new PdfString(name)));
+        轮廓元素的颜色和样式：
+            PdfOutline imdb = movie.addOutline("Link to IMDB");
+            imdb.setOpen(false);
+            imdb.setColor(Color.BLUE);
+            imdb.setStyle(PdfOutline.FLAG_BOLD);
+            String url = String.format("http://www.imdb.com/title/tt%s", record.get(0));
+            imdb.addAction(PdfAction.createURI(url));
+        总结：
+            主要是文档的交互和导航
+
+    第7章：处理事件;设置查看器首选项和写入器属性
+        实现IEventHandler接口：
+            protected class PageRotationEventHandler implements IEventHandler {
+                protected PdfNumber rotation = PORTRAIT;
+
+                public void setRotation(PdfNumber orientation) {
+                    this.rotation = orientation;
+                )
+
+                @Override
+                public void handleEvent(Event event) {
+                    PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                    docEvent.getPage().put(PdfName.Rotate, rotation);
+                }
+            }
+
+            PageRotationEventHandler eventHandler = new PageRotationEventHandler();
+            pdf.addEventHandler(PdfDocumentEvent.START_PAGE, eventHandler);
+        为每个页面添加背景和文本：
+            pdf.addEventHandler(PdfDocumentEvent.END_PAGE,new TextWatermark());
+
+            protected class TextWatermark implements IEventHandler {
+                Color lime, blue;
+                PdfFont helvetica;
+                protected TextWatermark() throws IOException {
+                    helvetica = PdfFontFactory.createFont(FontConstants.HELVETICA);
+                    lime = new DeviceCmyk(0.208f, 0, 0.584f, 0);
+                    blue = new DeviceCmyk(0.445f, 0.0546f, 0, 0.0667f);
+                }
+
+                @Override
+                public void handleEvent(Event event) {
+
+                    PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                    PdfDocument pdf = docEvent.getDocument();
+                    PdfPage page = docEvent.getPage();
+                    int pageNumber = pdf.getPageNumber(page);
+                    Rectangle pageSize = page.getPageSize();
+                    PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf);
+                    pdfCanvas.saveState()
+                        .setFillColor(pageNumber % 2 == 1 ? lime : blue)
+                        .rectangle(pageSize.getLeft(), pageSize.getBottom(),pageSize.getWidth(), pageSize.getHeight())
+                        .fill().restoreState();
+                    if (pageNumber > 1) {
+                        pdfCanvas.beginText()
+                                    .setFontAndSize(helvetica, 10)
+                                    .moveText(pageSize.getWidth() / 2 - 120, pageSize.getTop() - 20)
+                                    .showText("The Strange Case of Dr. Jekyll and Mr. Hyde")
+                                    .moveText(120, -pageSize.getTop() + 40)
+                                    .showText(String.valueOf(pageNumber))
+                                    .endText();
+                    }
+                    pdfCanvas.release();
+                }
+            }
+        解决当前是总页数的第几页问题：
+            protected class PageXofY implements IEventHandler {
+
+                protected PdfFormXObject placeholder;
+                protected float side = 20;
+                protected float x = 300;
+                protected float y = 25;
+                protected float space = 4.5f;
+                protected float descent =3;
+
+                public PageXofY(PdfDocument pdf) {
+                    placeholder = new PdfFormXObject(new Rectangle(0, 0, side, side));
+                }
+
+                @Override
+                public void handleEvent(Event event) {
+                    PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                    PdfDocument pdf = docEvent.getDocument();
+                    PdfPage page = docEvent.getPage();
+                    int pageNumber = pdf.getPageNumber(page);
+                    Rectangle pageSize = page.getPageSize();
+                    PdfCanvas pdfCanvas = new PdfCanvas(page.getLastContentStream(), page.getResources(), pdf);
+                    Canvas canvas = new Canvas(pdfCanvas, pdf, pageSize);
+                    Paragraph p = new Paragraph()
+                                .add("Page ")
+                                .add(String.valueOf(pageNumber))
+                                .add(" of");
+                    canvas.showTextAligned(p, x, y, TextAlignment.RIGHT);
+                    pdfCanvas.addXObject(placeholder, x + space, y - descent);
+                    pdfCanvas.release();
+                }
+
+                public void writeTotal(PdfDocument pdf) {
+                    Canvas canvas = new Canvas(placeholder, pdf);
+                    canvas.showTextAligned(String.valueOf(pdf.getNumberOfPages()),0, descent, TextAlignment.LEFT);
+                }
+            }
+        添加一个透明的背景图像：
+            canvas.add(img.scaleAbsolute(pageSize.getWidth(), pageSize.getHeight()));
+        插入和移除页面事件：
+            pdf.addEventHandler(PdfDocumentEvent.REMOVE_PAGE, new RemovePageHandler());
+            pdf.removeAllHandlers();
+        页面标签：
+            page.setPageLabel(PageLabelNumberingStyleConstants.LOWERCASE_ROMAN_NUMERALS, null);
+        页面显示和页面模式：
+            pdf.getCatalog().setPageLayout(PdfName.TwoColumnRight);
+            pdf.getCatalog().setPageMode(PdfName.UseThumbs);
+
+            pdf.getCatalog().setPageMode(PdfName.FullScreen);
+            PdfViewerPreferences preferences = new PdfViewerPreferences();
+            preferences.setNonFullScreenPageMode(PdfViewerPreferencesConstants.USE_THUMBS);
+            pdf.getCatalog().setViewerPreferences(preferences);
+        查看器首选项
+            PdfViewerPreferences preferences = new PdfViewerPreferences();
+            preferences.setFitWindow(true);
+            preferences.setHideMenubar(true);
+            preferences.setHideToolbar(true);
+            preferences.setHideWindowUI(true);
+            preferences.setCenterWindow(true);
+            preferences.setDisplayDocTitle(true);
+            pdf.getCatalog().setViewerPreferences(preferences);
+        打印机首选项
+            PdfViewerPreferences preferences = new PdfViewerPreferences();
+            preferences.setPrintScaling(PdfViewerPreferencesConstants.NONE);
+            preferences.setNumCopies(5);
+            pdf.getCatalog().setViewerPreferences(preferences);
+        打开动作和附加动作
+            PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+            pdf.getCatalog().setOpenAction(PdfDestination.makeDestination(new PdfString("toc")));
+            pdf.getCatalog().setAdditionalAction(PdfName.WC,PdfAction.createJavaScript("app.alert('Thank you for reading');"));
+            pdf.addNewPage().setAdditionalAction(PdfName.O,PdfAction.createJavaScript("app.alert('This is where it starts!');"));
+        写入器属性
+            XMP元数据：PdfDocument pdf = new PdfDocument(new PdfWriter(dest,new WriterProperties()
+                                                                               .addXmpMetadata()
+                                                                               .setPdfVersion(PdfVersion.PDF_1_6)));
+            压缩：PdfDocument pdf = new PdfDocument(new PdfWriter(dest,new WriterProperties().setFullCompressionMode(true)));
+            加密：
+                byte[] user = "It's Hyde".getBytes();
+                byte[] owner = "abcdefg".getBytes();
+                PdfDocument pdf = new PdfDocument(new PdfWriter(dest,new WriterProperties()
+                                                                        .setStandardEncryption(user, owner, EncryptionConstants.ALLOW_PRINTING
+                                                                        | EncryptionConstants.ALLOW_ASSEMBLY,
+                                                                        EncryptionConstants.ENCRYPTION_AES_256)));
+        总结：
+            主要是事件

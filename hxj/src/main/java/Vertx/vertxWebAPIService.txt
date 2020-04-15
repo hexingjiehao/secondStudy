@@ -1,0 +1,74 @@
+1.学习vert.x-web-api-service语法：
+    1.概念：将vertx web和vertx web api contract构建API 请求路由到EventBus服务。
+    2.jar包依赖：<dependency>
+                  <groupId>io.vertx</groupId>
+                  <artifactId>vertx-codegen</artifactId>
+                  <version>3.7.0</version>
+                  <classifier>processor</classifier>
+                </dependency>
+                <dependency>
+                  <groupId>io.vertx</groupId>
+                  <artifactId>vertx-web-api-service</artifactId>
+                  <version>3.7.0</version>
+                </dependency>
+    3.代码使用：配合vertx web api contract
+        routerFactory.addHandlerByOperationId("operationId", routingContext -> {
+          RequestParameters parameters = routingContext.get("parsedParameters");
+          // Process the request
+        });
+    4.定义服务接口：
+        yaml文件内容：
+            /api/transactions:
+             get:
+               operationId: getTransactionsList
+               parameters:
+                 - name: from
+                   in: query
+                   style: form
+                   explode: false
+                   required: false
+                   schema:
+                     type: string
+                 - name: to
+                   in: query
+                   style: form
+                   explode: false
+                   required: false
+                   schema:
+                     type: string
+               responses: ...
+
+        Java代码interface内容：
+            @WebApiServiceGen
+            interface TransactionService {
+             void getTransactionsList(String from, String to, OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
+             void putTransaction(JsonObject body, OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
+            }
+
+        Java代码impl内容:
+            resultHandler.handle(
+              Future.succeededFuture(
+                OperationResponse.completedWithPlainText(Buffer.buffer("Hello world!"))
+              )
+            );
+
+        挂载到路由工厂：【多种方式】
+            mountOperationToEventBus： 将操作挂载到指定地址
+            mountServiceFromTag： 将操作通过tag挂载到指定地址
+            mountServiceInterface： 指定接口和服务的地址
+            mountServicesFromExtensions：【x-vertx-event-bus扩展使用】
+                /api/transactions:
+                 get:
+                   operationId: getTransactionsList
+                   parameters: ...
+                   responses: ...
+                   x-vertx-event-bus:
+                     address: transaction_service.my_application   【eventbus上的服务名】
+                     method: getTransactionsList
+
+        运行服务：
+            TransactionService service = new TransactionServiceImpl();
+            final ServiceBinder serviceBinder = new ServiceBinder(vertx).setAddress("address");
+            MessageConsumer<JsonObject> serviceConsumer = serviceBinder.register(TransactionService.class, service);
+
+

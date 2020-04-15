@@ -1,0 +1,118 @@
+1.学习nginx知识点：
+    1.概述：Nginx可以作为http服务器，邮件服务器，反向代理服务器。总而言之，就是一台服务器。
+    2.代理和反向代理的区别：nginx服务器转发的是客户端还是服务器。总而言之，就是不同的转发策略。🌿🌿🌿🌿🌿
+        正向代理：n个客户端-->代理服务器-->网络-->n个服务器
+        反向代理：n个客户端-->网络-->代理服务器-->n个服务器
+    3.官方网站：http://nginx.org/en/  文档地址：http://nginx.org/en/docs/
+    4.插入nginx：默认端口80
+        ubuntu的插入教程：
+            先决条件：sudo apt install curl gnupg2 ca-certificates lsb-release
+            为nginx设置apt存储库：echo "deb http://nginx.org/packages/ubuntu `lsb_release -cs` nginx" \ | sudo tee /etc/apt/sources.list.d/nginx.list
+            使用主线nginx包：echo "deb http://nginx.org/packages/mainline/ubuntu `lsb_release -cs` nginx" \ | sudo tee /etc/apt/sources.list.d/nginx.list
+            导入官方的nginx签名秘钥：curl -fsSL https://nginx.org/keys/nginx_signing.key | sudo apt-key add -
+            验证拥有的秘钥：sudo apt-key fingerprint ABF5BD827BD9BF62
+            插入nginx：🌿🌿🌿🌿🌿
+                    sudo apt update
+                    sudo apt install nginx
+        mac安装nginx：brew install nginx
+    5.初学者教程：
+        nginx.conf放置到 /usr/local/nginx/conf,/etc/nginx,或者/usr/local/etc/nginx
+        启动nginx运行可执行文件：nginx  -s  stop/quit/reload/reopen
+    6.nginx如何处理一个请求
+        在配置文件添加服务器：/usr/local/etc/nginx/nginx.conf  🌿🌿🌿🌿🌿
+            server {
+               listen      80 default_server;
+               server_name example.org www.example.org;
+            }
+            server {
+               listen      80;
+               server_name example.net www.example.net;
+            }
+            server {
+               listen      80;
+               server_name example.com www.example.com;
+            }
+        如何防止使用未定义的服务器名处理请求:
+            server {
+                listen      80;
+                server_name "";
+                return      444;
+            }
+        混合基于名称和基于ip的虚拟服务器:🌿🌿🌿🌿🌿
+            server {
+                listen      192.168.1.1:80;
+                server_name example.org www.example.org;
+            }
+            server {
+                listen      192.168.1.1:80 default_server;
+                server_name example.net www.example.net;
+            }
+            server {
+                listen      192.168.1.2:80 default_server;
+                server_name example.com www.example.com;
+            }
+        简单的php网站nginx配置：
+            server {
+                listen      80;
+                server_name example.org www.example.org;
+                root        /data/www;
+                location / {
+                    index   index.html index.php;
+                }
+                location ~* \.(gif|jpg|png)$ {
+                    expires 30d;
+                }
+
+                location ~ \.php$ {
+                    fastcgi_pass  localhost:9000;
+                    fastcgi_param SCRIPT_FILENAME
+                                  $document_root$fastcgi_script_name;
+                    include       fastcgi_params;
+                }
+            }
+    7.服务器名字格式：第一个匹配的服务器将会被使用
+        匹配顺序：具体的全名
+                以*号开头的长字符串：比如*.xxxxxxx
+                以*号结尾的长字符串：比如xxxxxxx。*
+                第一个匹配的正则表达式
+    8.使用nginx作为http的负载均衡：主要有4个策略
+        负载平衡方法：
+            循环：对应用服务器的请求以循环方式分发
+            最少连接：下一个请求被分配给活动连接最少的服务器
+            ip-hash：使用hash函数来确定下一个请求对应哪一个服务器
+        默认负载平衡配置：使用循环策略🌿🌿🌿🌿🌿
+            http {
+                upstream myapp1 {
+                    server srv1.example.com;
+                    server srv2.example.com;
+                    server srv3.example.com;
+                }
+                server {
+                    listen 80;
+                    location / {
+                        proxy_pass http://myapp1;
+                    }
+                }
+            }
+        最小连接负载平衡：
+             upstream myapp1 {
+                least_conn;
+                server srv1.example.com;
+                server srv2.example.com;
+                server srv3.example.com;
+             }
+        会话持久性平衡(ip-hash策略)：相同客户端访问专属服务器
+            upstream myapp1 {
+                ip_hash;
+                server srv1.example.com;
+                server srv2.example.com;
+                server srv3.example.com;
+            }
+        加权负载平衡：
+            upstream myapp1 {
+                server srv1.example.com weight=3;
+                server srv2.example.com;
+                server srv3.example.com;
+            }
+
+

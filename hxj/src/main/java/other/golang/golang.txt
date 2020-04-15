@@ -1,0 +1,44 @@
+1.学习golang语言，又称为go语言。
+    1.官网地址：https://golang.google.cn
+    2.定义：Go是一种开源编程语言，它使构建简单、可靠和高效的软件变得容易。
+           目前最新版本Go 1.13
+           使用的编辑器：IDEA+GoLand 插件
+                       Visual Studio Code
+    3.入门教程hello:
+        package main
+        import "fmt"
+
+        func main() {
+        	fmt.Println("Hello, 世界")
+        }
+    4.golang语法的文档学习：
+        1.下载配置：
+            tar -C /usr/local -xzf go$VERSION.$OS-$ARCH.tar.gz
+            export PATH=$PATH:/usr/local/go/bin         //在etc/profile文件中修改
+        2.测试：
+            创建hello.go文件，编写main方法
+            编译命令：go build
+            执行命令：./hello
+        3.卸载golang:
+            删除目录：/usr/local/go
+            删除环境变量：编辑etc/profile文件中修改
+        4.教程：go get golang.org/x/tour表示下载2进制字节到本地目录
+            1.常用的命令行操作：
+                go env: 打印golang的环境变量
+                go version: 打印golang的版本
+            2.基本语法和数据结构：
+                引入包名：import "fmt"
+
+            2.方法和接口：
+
+            3.并发原语：
+
+语法和c语言类似。
+
+未完待续......
+
+
+
+
+
+

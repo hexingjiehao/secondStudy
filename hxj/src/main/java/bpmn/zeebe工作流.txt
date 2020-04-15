@@ -1,0 +1,822 @@
+1.学习zeebe分布式的工作流
+    1.官网地址：https://zeebe.io
+    2.代码地址：https://github.com/zeebe-io/zeebe
+    3.文档地址：https://docs.zeebe.io
+    3.最新生产版本：0.20.0，另外最新的版本0.21.0-alpha2
+    4.特点：支持微服务所需BPMN符号，可以在Kubernetes上部署，目前的所谓企业版是源代码免费的。目前没有正式企业版
+    5.重要的博客：里面的内容值的一看https://zeebe.io/blog/  【🌿🌿🌿🌿🌿】
+    6.Zeebe常见问题：https://zeebe.io/faq/  【🌿🌿🌿🌿🌿】
+    7.Zeebe是由Camunda创建，是对工作流的进一步简化封装
+
+2.Zeebe的相关介绍
+    1.定义：Zeebe是一个用于微服务编排的工作流引擎。Zeebe使用客户机/服务器模型
+    2.工作流引擎的定义：是管理业务流程的系统。它监视工作流中的活动状态，并根据定义的流程确定要转换到哪个新活动。
+    3.解决工作流问题的步骤：
+        3.1 工作流感知事件监视：发布订阅模式
+        3.2 微服务编排：将消息时间使用特定微服务进行代替执行
+
+3.Zeebe官方文档学习
+    1.介绍
+        1.1 Zeebe是什么？
+            答：是一个用于微服务编排的工作流引擎
+        1.2 下载Zeebe 🌿🌿🌿🌿🌿
+            使用docker-compose：🌿🌿🌿🌿🌿
+                git clone https://github.com/zeebe-io/zeebe-docker-compose
+                cd zeebe-docker-compose
+                cd operation
+                docker-compose up -d
+                部署bpmn图形：
+                    cd zeebe-docker-compose
+                    bin/zbctl deploy ../path/to/your-file.bpmn
+            使用Docker：
+                docker run --name zeebe -p 26500:26500 camunda/zeebe:latest
+                ⚠️注意暴露的端口：
+                    26500: Gateway API
+                    26501: Command API (gateway-to-broker)
+                    26502: Internal API (broker-to-broker)
+                默认的数据卷：
+                    /usr/local/zeebe/data
+                配置文件：
+                    /usr/local/zeebe/conf/zeebe.cfg.toml
+                    /usr/local/zeebe/conf/log4j2.xml
+                    环境变量修改配置：
+                        ZEEBE_LOG_LEVEL: 默认值info
+                        ZEEBE_HOST: 设置主机地址而不是容器的IP地址
+                        BOOTSTRAP: 设置内部系统分区的副本元素
+                        ZEEBE_CONTACT_POINTS: 设置集群中其他brokers的连接点
+                        DEPLOY_ON_KUBERNETES: 取值微true/false
+                注意：使用虚拟机虚拟该docker容器，至少需要分配4GB的内存😺😺😺😺😺
+                    以下是docker-machine来运行docker容器：docker-machine也是需要安装的
+                        docker-machine create --driver virtualbox --virtualbox-memory 4000 zeebe
+                        docker-machine ls
+                        配置终端：eval $(docker-machine env zeebe)
+                        运行Zeebe:
+                            docker run --rm -p 26500:26500 camunda/zeebe:latest
+                        查看IP地址：
+                            docker-machine ip zeebe
+                        测试连接Zeebe：🌿🌿🌿🌿🌿
+                            telnet 具体IP 26500
+            下载发行版：https://github.com/zeebe-io/zeebe/releases
+                内部主要包含：broker, clients/go ,clients/java, clients/zbctl
+                linux用户启动：
+                    tar -xzf zeebe-distribution-X.Y.Z.tar.gz -C zeebe/
+                    ./bin/broker
+                windows用户：双击/bin/broker.bat
+
+        1.3 快速开始：(命令行的方式完成一套流程)🌿🌿🌿🌿🌿
+                下载Zeebe发行版
+                启动Zeebe broker： ./bin/broker
+                    查看broker的状态： ./bin/zbctl status
+                部署一个工作流 ( bpmn图文件 ): 在broker上部署一个bpmn文件
+                    ./bin/zbctl deploy order-process.bpmn
+                创建一个工作流实例:
+                    ./bin/zbctl create instance order-process --variables '{"orderId": 1234}'
+                完成一个工作流实例：
+                    需要为每个job创建一个worker
+                    ./bin/zbctl create worker payment-service --handler cat &
+                    ./bin/zbctl create worker inventory-service --handler cat &
+                    ./bin/zbctl create worker shipment-service --handler cat &
+                    关闭所有的worker：
+                        kill  %1 %2 %3
+                    另外可以启动Zeebe simple monitor，对流程状态进行监视
+    2.基础
+        2.1 架构组成：
+                client (我们需要写代码的地方) : 客户机是嵌入到应用程序(例如执行业务逻辑的微服务)中的库，用于连接到Zeebe集群
+                gateway：将请求代理给broker,充当Zeebe集群单一入口。无状态和无会话。实现负载平衡和高可用性
+                broker：是保持活动工作流实例状态的分布式工作流引擎。功能是：存储和管理活动工作流实例的状态，向客户分发工作项
+                exporter：提供Zeebe中状态更改的事件流信息。也就是操作日志
+        2.2 工作流：
+                工作流是类似流程图的蓝图，定义任务的编排。每个任务都表示一段业务逻辑，以便有序执行产生有意义的结果。
+                两个步骤:将工作流提交给Zeebe
+                        创建可以从Zeebe请求作业并完成它们的作业worker。
+                重要元素：
+                    箭头逻辑序列+数据流箭头+基于数据的状态+事件+分叉和合并并发
+        2.3 Job Worker：
+                它是能够在工作流中执行特定步骤的组件。
+                job是工作流中的工作项。属性有Type,Variables,Custom Headers
+                worker向Broker申请对应的job。broker确保将每个job发送到唯一一个worker上
+                job队列，可以存储大量的job，等待woker请求进行处理
+        2.4 分区：
+                Zeebe中的数据被组织成分区。可以用于负载均衡。可以设置分区的数量
+        2.5 协议：
+                Zeebe客户端通过无状态网关连接到代理。客户端和网关之间的通信采用gRPC。通信协议是使用协议缓冲区v3 (proto3)
+        2.6 内部处理：
+                Zeebe实现为在记录流(分区)上工作的流处理器的集合
+                状态机： created --> activated --> completed
+                状态机中的每个状态更改都称为事件。Zeebe将每个事件作为流上的记录发布。
+        2.7 导出器：
+                Zeebe上的所有操作被单一入口点进行处理，然后保存到自定义的数据存储位置
+        2.8 集群：
+                节点是Broker，形成一个对等网络
+                使用Gossip Membership协议。配置接触点：
+                    [network.gossip]
+                    initialContactPoints = [ "node1.mycluster.loc:26502" ]
+                为了确保容错，Zeebe使用Raft协议在机器之间复制数据。数据有领导者和跟随者的区别
+                commit操作：新的数据进入分区时，将在其他分区进行复制数据
+    3.开始教程🌿🌿🌿🌿
+        3.1 数据准备：
+                最简单方法：docker-compose up -d   部署zeebe-docker-compose的仓库
+                Zeebe Modeler: 创建bpmn的工具
+                Zeebe Distribution: 工作流引擎
+                Camunda Operate: 实时监视工作流状态的工具
+                Elasticsearch 6.8.0: 一个开源的分布式数据存储，可以连接到Zeebe来存储用于审计、可视化、分析等的工作流数据
+
+                注意：elasticsearch软件的下载地址：https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-版本号.zip
+        3.2 在Zeebe Modeler中创建工作流图
+        3.3 部署工作流到Zeebe引擎上
+                手动配置和启动Zeebe和Operate工具：
+                    1. 打开broke工具的conf目录下的zeebe.cfg.toml文件，修改数据导出
+                        [[exporters]]
+                        id="elasticsearch"
+                        className="io.zeebe.exporter.ElasticsearchExporter"
+                    2.在另一个命令行窗口执行elasticsearch
+                        cd elasticsearch-6.7.0
+                        bin/elasticsearch
+                    3.启动broker
+                        cd zeebe-broker-0.17.0
+                        ./bin/broker
+                    4.启动Operate，并访问 http://localhost:8080，用户名密码是demo/demo
+                        cd camunda-operate-distro-1.0.0-RC2
+                        bin/operate
+                检查broker状态：
+                    ./bin/zbctl status
+                    ./bin/zbctl.darwin status
+
+                    ./bin/zbctl deploy order-process.bpmn  【命令行部署bpmn】
+        3.4 创建和完成工作流实例
+                ./bin/zbctl create instance order-process --variables '{"orderId": "1234", "orderValue":99}'
+                以简单命令行处理创建的job:
+                    ./bin/zbctl.darwin create worker initiate-payment --handler cat
+                zbctl支持消息发布：
+                    ./bin/zbctl publish message "payment-received" --correlationKey="1234"
+                    ./bin/zbctl publish message "payment-received" --correlationKey="2345"
+                剩余的操作worker：
+                    ./bin/zbctl create worker ship-without-insurance --handler cat
+                    ./bin/zbctl create worker ship-with-insurance --handler cat
+    4.BPMN工作流
+        4.1 BPMN Primer:
+                核心概念是流程开始时生成的token的移动操作。过程中token有各种操作，包括增加，减少等
+                在部分核心任务的外围添加消息捕获事件，可以做到订单取消等操作
+        4.2 BPMN Coverage:
+                目前Zeebe实现的元素有：
+                    Participants
+                    子流程
+                    服务任务
+                    接收任务
+                    并行网关，事件网关，异或网关
+                    正常消息，捕获消息，边界消息，边界非中断消息  【都是事件】
+                    正常定时器，捕获定时器，边界定时器，边界非中断定时器  【都是事件】
+        4.3 Data Flow:
+                数据格式是键值对。其中Job Worker对数据进行各种操作
+                变量是工作流的一部分，而不是token的一部分
+        4.4 Tasks:
+            4.4.1 Service Tasks
+                    任务定义：<zeebe:taskDefinition type="payment-service" retries="5" />
+                    任务头：
+                        <zeebe:taskHeaders>
+                          <zeebe:header key="method" value="VISA" />
+                        </zeebe:taskHeaders>
+                    变量映射：
+                        <serviceTask id="collectMoney">
+                          <extensionElements>
+                            <zeebe:ioMapping>
+                              <zeebe:input source="price" target="total"/>
+                              <zeebe:output source="method" target="paymentMethod"/>
+                             </zeebe:ioMapping>
+                          </extensionElements>
+                        </serviceTask>
+            4.4.2 Receive Tasks
+                    消息可以由一个或多个接收任务引用。它包含用于消息关联的信息
+                    <bpmn:message id="Message_1iz5qtq" name="Money collected">
+                       <bpmn:extensionElements>
+                         <zeebe:subscription correlationKey="orderId" />
+                       </bpmn:extensionElements>
+                    </bpmn:message>
+
+                    <bpmn:receiveTask id="money-collected" name="Money collected" messageRef="Message_1iz5qtq">
+                    </bpmn:receiveTask>
+                    变量映射：
+                        <bpmn:receiveTask id="money-collected" name="Money collected" messageRef="Message_1iz5qtq">
+                            <bpmn:extensionElements>
+                            <zeebe:ioMapping>
+                              <zeebe:output source="price" target="totalPrice"/>
+                             </zeebe:ioMapping>
+                          </bpmn:extensionElements>
+                        </bpmn:receiveTask>
+        4.5 Gateways:
+            4.5.1 排他网关:
+                    <bpmn:exclusiveGateway id="exclusiveGateway" default="else" />
+
+                    <bpmn:sequenceFlow id="priceGreaterThan100" name="totalPrice &#62; 100" sourceRef="exclusiveGateway" targetRef="shipParcelWithInsurance">
+                      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">
+                        <![CDATA[ totalPrice > 100 ]]>
+                      </bpmn:conditionExpression>
+                    </bpmn:sequenceFlow>
+
+                    <bpmn:sequenceFlow id="else" name="else" sourceRef="exclusiveGateway" targetRef="shipParcel" />
+            4.5.2 平行网关：
+                    多条分支的事件是并发执行的，并且等待所有分支完成才继续往下执行
+            4.5.3 基于事件的网关
+                     每个传出序列流都需要连接到一个中间catch事件
+                     当其中一个事件出发时，该分支继续执行，其他分支停止
+                     输出序列只能是消息和定时器🌿🌿🌿🌿🌿
+
+                     <bpmn:eventBasedGateway id="gateway" />
+
+                     <bpmn:sequenceFlow id="s1" sourceRef="gateway" targetRef="payment-details-updated" />
+
+                     <bpmn:intermediateCatchEvent id="payment-details-updated" name="Payment Details Updated">
+                       <bpmn:messageEventDefinition messageRef="message-payment-details-updated" />
+                     </bpmn:intermediateCatchEvent>
+
+                     <bpmn:sequenceFlow id="s2" sourceRef="gateway" targetRef="wait-one-hour" />
+
+                     <bpmn:intermediateCatchEvent id="wait-one-hour" name="1 hour">
+                       <bpmn:timerEventDefinition>
+                         <bpmn:timeDuration>PT1H</bpmn:timeDuration>
+                       </bpmn:timerEventDefinition>
+                     </bpmn:intermediateCatchEvent>
+        4.6 Events:
+                边界事件必须是中间捕获事件，可以是中断事件，也可以是非中断事件
+                4.6.1 空事件：
+                        <bpmn:startEvent id="order-placed" name="Order Placed" />
+                        <bpmn:endEvent id="order-delivered" name="Order Delivered" />
+                4.6.2 消息事件
+                        只能使用Zeebe客户机之一在外部发布消息
+                        <bpmn:message id="Message_1iz5qtq" name="Money collected">
+                           <bpmn:extensionElements>
+                             <zeebe:subscription correlationKey="orderId" />
+                           </bpmn:extensionElements>
+                        </bpmn:message>
+
+                        <bpmn:intermediateCatchEvent id="money-collected">
+                          <bpmn:messageEventDefinition messageRef="Message_1iz5qtq" />
+                        </bpmn:intermediateCatchEvent>
+
+                        消息开始事件：
+                            <bpmn:message id="newOrder" name="New order">
+                            </bpmn:message>
+
+                            <bpmn:startEvent id="messageStart">
+                              <bpmn:messageEventDefinition messageRef="newOrder" />
+                            </bpmn:startEvent>
+                4.6.3 定时器事件
+                        如果向延迟执行某个事件，可以在该事件之前添加一个定时器事件
+                        时间格式举例：
+                            PT15S： 15秒钟
+                            PT1H30M： 1小时30分钟
+                            P14D： 14天
+                            P1Y6M： 1年6个月
+                            取值为负数，立即触发
+
+                        <bpmn:intermediateCatchEvent id="wait-for-coffee" name="4 minutes">
+                          <bpmn:timerEventDefinition>
+                            <bpmn:timeDuration>PT4M</bpmn:timeDuration>
+                          </bpmn:timerEventDefinition>
+                        </bpmn:intermediateCatchEvent>
+
+                        定时器边界事件：可以用作超时处理
+                            R/PT5S： 每5秒执行1次
+                            R5/PT1S： 每秒钟最多5次
+
+                            <bpmn:serviceTask id="brew-coffee">
+                              <bpmn:incoming>incoming</bpmn:incoming>
+                            </bpmn:serviceTask>
+                            <bpmn:boundaryEvent id="send-reminder" cancelActivity="true" attachedToRef="brew-coffee">
+                              <bpmn:timerEventDefinition>
+                                <bpmn:timeDuration>PT4M</bpmn:timeDuration>
+                              </bpmn:timerEventDefinition>
+                            </bpmn:boundaryEvent>
+
+                        定时器开始事件：用于做定时任务
+                             <bpmn:startEvent id="timer-start">
+                              <bpmn:timerEventDefinition>
+                                <bpmn:timeCycle>R3/PT10H</bpmn:timeCycle>
+                              </bpmn:timerEventDefinition>
+                            </bpmn:startEvent>
+
+                            子进程不能有计时器启动事件。⚠️
+        4.7 Sub Process:
+                <bpmn:subProcess id="shipping" name="Shipping">
+                  <bpmn:startEvent id="shipping-start" />
+                  ... more contained elements ...
+                </bpmn:subProcess>
+    5.BPMN建模器
+        下载页： https://github.com/zeebe-io/zeebe-modeler/releases
+        源码仓库： https://github.com/zeebe-io/zeebe-modeler
+    6.YAML工作流: 使用yaml格式编写流程图文件
+        6.1 Tasks：
+                有4个属性：id,type,retries,headers
+                name: order-process
+                tasks:
+                    - id: collect-money
+                      type: payment-service
+                    - id: fetch-items
+                      type: inventory-service
+                      retries: 5
+                    - id: ship-parcel
+                      type: shipment-service
+                      headers:
+                            method: "express"
+                            withInsurance: false
+        6.2 Control Flow:
+                默认在文件中自上而下执行，也可以使用goto和end和switch进行设定
+                name: order-process
+                tasks:
+                    - id: collect-money
+                      type: payment-service
+                    - id: fetch-items
+                      type: inventory-service
+                      switch:
+                          - case: totalPrice > 100
+                            goto: ship-parcel-with-insurance
+                          - default: ship-parcel
+                    - id: ship-parcel-with-insurance
+                      type: shipment-service-premium
+                      end: true
+                    - id: ship-parcel
+                      type: shipment-service
+        6.3 Data Flow：
+                就是数据映射input/output==source/target
+                name: order-process
+                tasks:
+                    - id: collect-money
+                      type: payment-service
+                      inputs:
+                          - source: totalPrice
+                            target: price
+                      outputs:
+                          - source: success
+                            target: paymentSuccess
+                    - id: fetch-items
+                      type: inventory-service
+                    - id: ship-parcel
+                      type: shipment-service
+    7.参考
+        7.1 工作流生命周期
+                相同类型的元素有相同的生命周期
+                子流程/活动/网关：
+                    activating --> activated --> completing --> completed
+                                             --> terminating --> terminated
+                事件：
+                    activating --> activated --> occurred --> completing --> completed
+                                             --> terminating --> terminated
+        7.2 变量
+                变量取值被存储作为Json。可以用点符号访问json中的属性。它有以下数据类型：
+                    String
+                    Number
+                    Boolean
+                    Array
+                    Document/Object
+                    Null
+
+                <serviceTask id="collectMoney" name="Collect Money">
+                    <extensionElements>
+                      <zeebe:ioMapping>
+                        <zeebe:input source="customer.name" target="sender"/>
+                        <zeebe:input source="customer.iban" target="iban"/>
+                        <zeebe:input source="totalPrice" target="price"/>
+                        <zeebe:input source="reference" target="orderId"/>
+                        <zeebe:output source="status" target="paymentStatus"/>
+                       </zeebe:ioMapping>
+                    </extensionElements>
+                </serviceTask>
+        7.3 条件：
+                文字/操作符号/逻辑操作符号
+        7.4 消息相关性
+                某个服务结束后，使用zeebe客户端发消息
+                消息可以设置生存时间ttl,进行一定程度的缓冲
+                消息可以有唯一性ID，发消息时，会检查缓冲区是否存在相同消息，存在则拒绝
+        7.5 事故失败检查：
+                可以人为标记事故已经解决
+                解决job关联的问题：
+                    client.newSetVariablesCommand(incident.getElementInstanceKey())
+                        .variables(NEW_PAYLOAD)
+                        .send()
+                        .join();
+
+                    client.newUpdateRetriesCommand(incident.getJobKey())
+                        .retries(3)
+                        .send()
+                        .join();
+
+                    client.newResolveIncidentCommand(incident.getKey())
+                        .send()
+                        .join();
+                解决工作流实例关联的问题：原因是变量有问题
+                    首先更新变量，然后标记为已经解决
+                    client.newSetVariablesCommand(incident.getElementInstanceKey())
+                        .variables(NEW_VARIABLES)
+                        .send()
+                        .join();
+
+                    //这个操作表示该job问题解决，请继续往下执行🌿🌿🌿🌿🌿
+                    client.newResolveIncidentCommand(incident.getKey())
+                        .send()
+                        .join();
+        7.5.5 gRPC API 索引：
+            异常处理：
+                GRPC_STATUS_RESOURCE_EXHAUSTED: 表示请求太多无法处理。解决办法：减少请求速率
+                GRPC_STATUS_UNAVAILABLE：网关内存溢出
+                GRPC_STATUS_INTERNAL：网关和代理之间发生的内部错误
+            网关服务：远端过程调用的方法
+                ActivateJobs RPC：循环遍历所有已知的分区，并激活到所请求的最大值，并在激活分区时将它们流回客户机。
+                    异常：GRPC_STATUS_INVALID_ARGUMENT, 原因是type/worker/timeout/amount为null或者小于1
+
+                CancelWorkflowInstance RPC：取消一个运行中的工作流实例
+                    异常：GRPC_STATUS_NOT_FOUND, 原因工作流实例不存在或者已完成
+
+                CompleteJob RPC：使用给定的有效负载完成作业，从而允许完成相关的服务任务。
+                    异常：GRPC_STATUS_NOT_FOUND, 原因工作流实例不存在或者已完成
+
+                CreateWorkflowInstance RPC：创建并启动指定工作流的实例
+                CreateWorkflowInstanceWithResult RPC：创建并启动指定工作流的实例。响应在工作流完成时返回。🌿🌿🌿🌿🌿
+                    异常：GRPC_STATUS_NOT_FOUND, 工作流id或者版本不存在
+                         GRPC_STATUS_FAILED_PRECONDITION: 工作流定义不包含空启动事件
+                         GRPC_STATUS_INVALID_ARGUMENT: 给定的参数不是合法的json文档
+
+                DeployWorkflow RPC：将一个或多个工作流部署到Zeebe。注意，这是一个原子调用，即要么部署所有工作流，要么一个也不部署
+                    异常：GRPC_STATUS_ARGUMENT: 没有流程文件
+
+                FailJob RPC：将工作标记为失败;如果重试参数为正，则作业将立即再次激活，工作人员可以再次尝试处理它。
+                             但是，如果是0或负数，则会引发一个事件，并使用给定的errorMessage进行标记，并且在事件解决之前作业不会被激活。
+                    异常：GRPC_STATUS_NOT_FOUND： 没有job发现
+                         GRPC_STATUS_FAILED_PRECONDITION： job没有激活或者已经失败了
+
+                PublishMessage RPC：发布一条消息到特定分区
+                    异常：GRPC_STATUS_ALREDAY_EXISTS: 相同id的消息已经发送了
+
+                ResolveIncident RPC：解决给定的事件
+                    异常：GRPC_STATUS_NOT_FOUND: 给定的流程没有异常
+
+                SetVariables RPC：设置变量
+                    异常：GRPC_SATUS_NOT_FOUND: 没有给定的元素
+                         GRPC_STATUS_INVALID_ARGUMENT: 给定的变量不是json文档
+
+                Topology RPC：获取网关所在集群的当前拓扑结构。
+                UpdateJobRetries RPC：更新一个作业剩余的重试次数
+                    异常：GRPC_STATUS_NOT_FOUND: 不存在job
+                         GRPC_STATUS_INVALID_ARGUMENT: 重试参数不大于0
+
+        7.6 日志操作导出
+                通过Exporter接口与broker交互
+                因为存在多分区的重复导出，最后好在导出时进行重复数据删除操作
+                导出程序越简单越好
+    8.java客户端
+        8.1 设置需要：🌿🌿🌿🌿🌿
+                Java 8
+                <dependency>
+                  <groupId>io.zeebe</groupId>
+                  <artifactId>zeebe-client-java</artifactId>
+                  <version>${zeebe.version}</version>
+                </dependency>
+
+                ZeebeClient client = ZeebeClient.newClientBuilder()
+                  .brokerContactPoint("127.0.0.1:26500")
+                  .build();
+        8.2 使用Java client启动：
+                启动broker: 默认主机是localhost:26500
+                设置项目依赖：<dependency>
+                             <groupId>io.zeebe</groupId>
+                             <artifactId>zeebe-client-java</artifactId>
+                             <version>${zeebe.version}</version>
+                           </dependency>
+                创建引导类：
+                    package io.zeebe;
+                    import io.zeebe.client.ZeebeClient;
+
+                    public class App{
+                        public static void main(String[] args){
+                            final ZeebeClient client = ZeebeClient.newClientBuilder()
+                                // change the contact point if needed
+                                .brokerContactPoint("127.0.0.1:26500")
+                                .build();
+                            System.out.println("Connected.");
+                            // ...
+                            client.close();
+                            System.out.println("Closed.");
+                        }
+                    }
+                构建可执行jar： mvn package   -->  java -jar target/${JAR file}
+                    <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-shade-plugin</artifactId>
+                      <version>2.3</version>
+                      <executions>
+                        <execution>
+                          <phase>package</phase>
+                          <goals>
+                            <goal>shade</goal>
+                          </goals>
+                          <configuration>
+                            <transformers>
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <mainClass>io.zeebe.App</mainClass>
+                              </transformer>
+                            </transformers>
+                          </configuration>
+                        </execution>
+                      </executions>
+                    </plugin>
+                部署1个工作流：
+                    package io.zeebe;
+                    import io.zeebe.client.api.response.DeploymentEvent;
+
+                    public class Application{
+                        public static void main(String[] args){
+                            // after the client is connected
+                            final DeploymentEvent deployment = client.newDeployCommand()
+                                .addResourceFromClasspath("order-process.bpmn")
+                                .send()
+                                .join();
+
+                            final int version = deployment.getWorkflows().get(0).getVersion();
+                            System.out.println("Workflow deployed. Version: " + version);
+                        }
+                    }
+                创建1个工作流实例：
+                    package io.zeebe;
+                    import io.zeebe.client.api.response.WorkflowInstanceEvent;
+
+                    public class Application{
+                        public static void main(String[] args){
+                            // after the workflow is deployed
+
+                            final WorkflowInstanceEvent wfInstance = client.newCreateInstanceCommand()
+                                .bpmnProcessId("order-process")
+                                .latestVersion()
+                                .send()
+                                .join();
+
+                            final long workflowInstanceKey = wfInstance.getWorkflowInstanceKey();
+                            System.out.println("Workflow instance created. Key: " + workflowInstanceKey);
+                        }
+                    }
+                    验证方式；docker启动，访问http://localhost:8082
+                             其他方式启动:Java -jar zeebe-simple-monitor-app-*.jar
+                                        访问http://localhost:8080/
+                执行一个job：
+                    package io.zeebe;
+                    import io.zeebe.client.api.worker.JobWorker;
+
+                    public class App{
+                        public static void main(String[] args){
+                            // after the workflow instance is created
+
+                            final JobWorker jobWorker = client.newWorker()
+                                .jobType("payment-service")
+                                .handler((jobClient, job) ->{
+                                    System.out.println("Collect money");
+                                    // ...
+                                    jobClient.newCompleteCommand(job.getKey())
+                                        .send()
+                                        .join();
+                                })
+                                .open();
+
+                            // waiting for the jobs
+                            // Don't close, we need to keep polling to get work
+                            // jobWorker.close();
+                        }
+                    }
+                数据的处理传递：
+                    package io.zeebe;
+                    public class App{
+                        public static void main(String[] args){
+                            // after the workflow is deployed
+
+                            final Map<String, Object> data = new HashMap<>();
+                            data.put("orderId", 31243);
+                            data.put("orderItems", Arrays.asList(435, 182, 376));
+
+                            final WorkflowInstanceEvent wfInstance = client.newCreateInstanceCommand()
+                                .bpmnProcessId("order-process")
+                                .latestVersion()
+                                .variables(data)
+                                .send()
+                                .join();
+                            // ...
+
+                            final JobWorker jobWorker = client.newWorker()
+                                .jobType("payment-service")
+                                .handler((jobClient, job) ->{
+                                    final Map<String, Object> variables = job.getVariablesAsMap();
+                                    System.out.println("Process order: " + variables.get("orderId"));
+                                    double price = 46.50;
+                                    System.out.println("Collect money: $" + price);
+
+                                    // ...
+
+                                    final Map<String, Object> result = new HashMap<>();
+                                    result.put("totalPrice", price);
+
+                                    jobClient.newCompleteCommand(job.getKey())
+                                        .variables(result)
+                                        .send()
+                                        .join();
+                                })
+                                .fetchVariables("orderId")
+                                .open();
+                            // ...
+                        }
+                    }
+        8.3 日志：
+                使用SLF4J进行日志记录
+                <dependency>
+                  <groupId>org.apache.logging.log4j</groupId>
+                  <artifactId>log4j-slf4j-impl</artifactId>
+                  <version>2.8.1</version>
+                </dependency>
+
+                <dependency>
+                  <groupId>org.apache.logging.log4j</groupId>
+                  <artifactId>log4j-core</artifactId>
+                  <version>2.8.1</version>
+                </dependency>
+
+                配置文件：
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Configuration status="WARN" strict="true"
+                        xmlns="http://logging.apache.org/log4j/2.0/config"
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                        xsi:schemaLocation="http://logging.apache.org/log4j/2.0/config https://raw.githubusercontent.com/apache/logging-log4j2/log4j-2.8.1/log4j-core/src/main/resources/Log4j-config.xsd">
+                      <Appenders>
+                        <Console name="Console" target="SYSTEM_OUT">
+                          <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level Java Client: %logger{36} - %msg%n"/>
+                        </Console>
+                      </Appenders>
+                      <Loggers>
+                        <Root level="info">
+                          <AppenderRef ref="Console"/>
+                        </Root>
+                      </Loggers>
+                    </Configuration>
+        8.4 测试案例：
+                使用zeebe-test模块编写Junit测试，并提供一些基础断言
+                <dependency>
+                  <groupId>io.zeebe</groupId>
+                  <artifactId>zeebe-test</artifactId>
+                  <scope>test</scope>
+                </dependency>
+
+                import io.zeebe.client.ZeebeClient;
+                import io.zeebe.client.api.response.WorkflowInstanceEvent;
+                import org.junit.Before;
+                import org.junit.Rule;
+                import org.junit.Test;
+
+                public class MyTest {=
+                  @Rule public final ZeebeTestRule testRule = new ZeebeTestRule();
+                  private ZeebeClient client;
+
+                  @Test
+                  public void test() {
+                    client = testRule.getClient();
+                    client
+                        .newDeployCommand()
+                        .addResourceFromClasspath("process.bpmn")
+                        .send()
+                        .join();
+
+                    final WorkflowInstanceEvent workflowInstance =
+                        client
+                            .newCreateInstanceCommand()
+                            .bpmnProcessId("process")
+                            .latestVersion()
+                            .send()
+                            .join();
+
+                    ZeebeTestRule.assertThat(workflowInstance)
+                        .isEnded()
+                        .hasPassed("start", "task", "end")
+                        .hasVariable("result", 21.0);
+                  }
+                }
+        8.5 案例
+            8.5.3 创建非阻塞的工作流实例
+                     final ZeebeFuture<WorkflowInstanceEvent> future =
+                            client.newCreateInstanceCommand()
+                              .bpmnProcessId(bpmnProcessId)
+                              .latestVersion()
+                              .send();
+            8.5.4 打开一个job worker：
+                    final JobWorker workerRegistration =
+                            client
+                              .newWorker()
+                              .jobType(jobType)
+                              .handler(new ExampleJobHandler())
+                              .timeout(Duration.ofSeconds(10))
+                              .open();
+
+                     private static class ExampleJobHandler implements JobHandler {
+                        @Override
+                        public void handle(final JobClient client, final ActivatedJob job) {
+                              System.out.println(job);
+                              client.newCompleteCommand(job.getKey()).send().join();
+                        }
+                      }
+            8.5.5 处理对象变量：
+                    public class HandleVariablesAsPojo {
+                      public static void main(final String[] args) {
+                        final String broker = "127.0.0.1:26500";
+                        final ZeebeClientBuilder builder = ZeebeClient.newClientBuilder().brokerContactPoint(broker);
+
+                        try (ZeebeClient client = builder.build()) {
+                          final Order order = new Order();
+                          order.setOrderId(31243);
+
+                          client
+                              .newCreateInstanceCommand()
+                              .bpmnProcessId("demoProcess")
+                              .latestVersion()
+                              .variables(order)
+                              .send()
+                              .join();
+
+                          client.newWorker().jobType("foo").handler(new DemoJobHandler()).open();
+                        }
+                      }
+
+                      private static class DemoJobHandler implements JobHandler {
+                        @Override
+                        public void handle(final JobClient client, final ActivatedJob job) {
+                          final Order order = job.getVariablesAsType(Order.class);
+                          System.out.println("new job with orderId: " + order.getOrderId());
+                          order.setTotalPrice(46.50);
+                          client.newCompleteCommand(job.getKey()).variables(order).send();
+                        }
+                      }
+
+                      public static class Order {
+                        private long orderId;
+                        private double totalPrice;
+
+                        public long getOrderId() {
+                          return orderId;
+                        }
+
+                        public void setOrderId(final long orderId) {
+                          this.orderId = orderId;
+                        }
+
+                        public double getTotalPrice() {
+                          return totalPrice;
+                        }
+
+                        public void setTotalPrice(final double totalPrice) {
+                          this.totalPrice = totalPrice;
+                        }
+                      }
+                    }
+            8.5.6 请求集群拓扑逻辑
+                    package io.zeebe.example.cluster;
+                    import io.zeebe.client.ZeebeClient;
+                    import io.zeebe.client.ZeebeClientBuilder;
+                    import io.zeebe.client.api.response.Topology;
+
+                    public class TopologyViewer {
+                      public static void main(final String[] args) {
+                        final String broker = "127.0.0.1:26500";
+                        final ZeebeClientBuilder builder = ZeebeClient.newClientBuilder().brokerContactPoint(broker);
+
+                        try (ZeebeClient client = builder.build()) {
+                          System.out.println("Requesting topology with initial contact point " + broker);
+                          final Topology topology = client.newTopologyRequest().send().join();
+
+                          System.out.println("Topology:");
+                          topology
+                              .getBrokers()
+                              .forEach(
+                                  b -> {
+                                    System.out.println("    " + b.getAddress());
+                                    b.getPartitions()
+                                        .forEach(
+                                            p ->
+                                                System.out.println(
+                                                    "      " + p.getPartitionId() + " - " + p.getRole()));
+                                  });
+                          System.out.println("Done.");
+                        }
+                      }
+                    }
+    10.Zeebe Operation工具
+        开发用docker，生产用kubernetes和容器镜像
+        10.1 zeebe.cfg.toml配置文件
+        10.2 设置集群：不同的节点，有不同的配置，
+                [cluster]
+                nodeId = 0
+                partitionsCount = 5
+                replicationFactor = 3
+                clusterSize = 5
+                initialContactPoints = [
+                  ADDRESS_AND_PORT_OF_NODE_0,
+                  ADDRESS_AND_PORT_OF_NODE_1,
+                  ADDRESS_AND_PORT_OF_NODE_2,
+                  ADDRESS_AND_PORT_OF_NODE_3,
+                  ADDRESS_AND_PORT_OF_NODE_4
+                ]
+    11.Operation的用户指导
+        11.1 插入和启动：使用zeebe-docker-compose
+                cd camunda-operate-distro-1.0.0-*
+                bin/operate
+                

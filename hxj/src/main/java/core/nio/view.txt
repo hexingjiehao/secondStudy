@@ -1,0 +1,73 @@
+1.学习NIO(非阻塞式的输入输出)的知识点：(重点时非阻塞)
+    1.重要概念：
+        通道：类似于流,但是可以异步读写数据(流只能同步读写),通道是双向的,(流是单向的)，通道的数据总是要先读到一个buffer或者从一个buffer写入，即通道与buffer进行数据交互。
+            通道类型：　　
+               FileChannel：从文件中读写数据。它可以与通道进行数据交互,不能切换到非阻塞模式；
+               DatagramChannel：能通过UDP读写网络中的数据。
+               SocketChannel：能通过TCP读写网络中的数据。套接字通道可以切换到非阻塞模式
+               ServerSocketChannel：可以监听新进来的TCP连接，像Web服务器那样。对每一个新进来的连接都会创建一个SocketChannel。
+        缓冲区：本质上是一块可以存储数据的内存，被封装成了buffer对象而已！
+        　　缓冲区类型：(数据类型)
+                ByteBuffer:
+                CharBuffer:
+                ShortBuffer:
+                IntBuffer:
+                LongBuffer:
+                FloatBuffer:　
+                DoubleBuffer:
+                MappedByteBuffer:
+        　　常用方法：
+                allocate()：分配一块缓冲区　　
+                put()：向缓冲区写数据
+                get()：向缓冲区读数据　　
+                filp()：将缓冲区从写模式切换到读模式　　
+                clear()：从读模式切换到写模式，不会清空数据，但后续写数据会覆盖原来的数据，即使有部分数据没有读，也会被遗忘；　　
+                compact()：从读数据切换到写模式，数据不会被清空，会将所有未读的数据copy到缓冲区头部，后续写数据不会覆盖，而是在这些数据之后写数据
+                mark()：对position做出标记，配合reset使用
+                reset()：将position置为标记值　　　　
+            缓冲区的一些属性：
+        　　　　capacity：缓冲区大小，无论是读模式还是写模式，此属性值不会变；
+        　　　　position：写数据时，position表示当前写的位置，每写一个数据，会向下移动一个数据单元，初始为0；最大为capacity - 1
+        　　　　　　　　   切换到读模式时，position会被置为0，表示当前读的位置
+        　　　　limit：写模式下，limit 相当于capacity 表示最多可以写多少数据，切换到读模式时，limit 等于原先的position，表示最多可以读多少数据。
+        选择器：相当于一个观察者，用来监听通道感兴趣的事件，一个选择器可以绑定多个通道
+            通道向选择器注册事件的取值：            会返回对象SelectionKey：属性如下：
+                SelectionKey.OP_CONNECT                     interest集合
+                SelectionKey.OP_ACCEPT                      ready集合
+                SelectionKey.OP_READ                        Channel
+                SelectionKey.OP_WRITE                       Selector
+        reactor(反应器)模式:
+            使用单线程模拟多线程，提高资源利用率和程序的效率，增加系统吞吐量。
+            比方说老板安排店小二在客人叫时才招呼，否则去招呼别的客人。
+    2.java IO和NIO的使用场景：
+        二者区别：IO	                NIO
+                 Stream oriented	Buffer oriented
+                 Blocking IO	    Non blocking IO
+ 	                                Selectors
+        应用的方面：
+            对NIO或IO类的API调用
+            数据处理
+            用来处理数据的线程数
+        特点：NIO可让您只使用一个（或几个）单线程管理多个通道（网络连接或文件），
+             但付出的代价是解析数据可能会比从一个阻塞流中读取数据更复杂。
+             聊天服务器适合这种NIO模式。
+    3.分散(Scatter)/聚集(Gather):
+        分散:在读操作时将读取的数据写入多个buffer中
+        聚集:在写操作时将多个buffer的数据写入同一个Channel
+
+    4.总结：                　　
+        hannel 通道
+        Buffer 缓冲区
+        Selector 选择器
+        其中Channel对应以前的流，Buffer不是什么新东西，Selector是因为nio可以使用异步的非堵塞模式才加入的东西。
+
+        以前的流总是堵塞的，一个线程只要对它进行操作，其它操作就会被堵塞，也就相当于水管没有阀门，你伸手接水的时候，不管水到了没有，你就都只能耗在接水（流）上。
+        nio的Channel的加入，相当于增加了水龙头（有阀门），虽然一个时刻也只能接一个水管的水，但依赖轮换策略，在水量不大的时候，各个水管里流出来的水，都可以得到妥善接纳，
+        这个关键之处就是增加了一个接水工，也就是Selector，他负责协调，也就是看哪根水管有水了的话，在当前水管的水接到一定程度的时候，就切换一下：临时关上当前水龙头，试着打开另一个水龙头（看看有没有水）。
+        当其他人需要用水的时候，不是直接去接水，而是事前提了一个水桶给接水工，这个水桶就是Buffer。
+        也就是，其他人虽然也可能要等，但不会在现场等，而是回家等，可以做其它事去，水接满了，接水工会通知他们。
+        这其实也是非常接近当前社会分工细化的现实，也是统分利用现有资源达到并发效果的一种很经济的手段，而不是动不动就来个并行处理，虽然那样是最简单的，但也是最浪费资源的方式。
+                　　
+
+
+            　　

@@ -1,0 +1,180 @@
+学习vert.x Config：
+    1.概念：为vert.x的异步应用提供配置。
+        使用场景：在公司的项目中，在配置文件中配置verticle的名字和配置选项。
+                 配置pgsql的执行语句
+
+    2.配置语法：json,propertie文件，yaml文件等
+      配置存储：文件，目录，http,git redis,系统属性和环境属性
+      定义处理顺序和重载，支持运行时重新配置
+    3.配置检索器：<dependency>
+                 <groupId>io.vertx</groupId>
+                 <artifactId>vertx-config</artifactId>
+                 <version>3.7.0</version>
+                </dependency>
+        ConfigRetriever retriever = ConfigRetriever.create(vertx);
+
+    4.创建配置检索器实例：
+        按指定顺序：config()
+                  系统属性
+                  环境变量
+                  conf/config.json文件 或者vertx-config-path系统属性 或者 VERTX_CONFIG_PATH 环境变量
+
+        ConfigStoreOptions httpStore = new ConfigStoreOptions()
+            .setType("http")
+            .setConfig(new JsonObject()
+              .put("host", "localhost").put("port", 8080).put("path", "/conf"));
+
+          ConfigStoreOptions fileStore = new ConfigStoreOptions()
+            .setType("file")
+            .setOptional(true)  //说明可选与否
+            .setConfig(new JsonObject().put("path", "my-config.json"));
+
+          ConfigStoreOptions sysPropsStore = new ConfigStoreOptions().setType("sys");
+
+          ConfigRetrieverOptions options = new ConfigRetrieverOptions()
+            .addStore(httpStore)
+            .addStore(fileStore)
+            .addStore(sysPropsStore);
+
+          ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
+
+    5.检索对象的使用：🌿🌿🌿🌿🌿
+        可以配置verticle的实例
+        retriever.getConfig(ar -> {
+          if (ar.failed()) {
+            // Failed to retrieve the configuration
+          } else {
+            JsonObject config = ar.result();
+          }
+        });
+
+    6.重载规则：json的合并方法，后者覆盖前者的同名key
+        比如：A={a:value,b:1}
+             B={a:value1,c:2}
+        声明顺序(A,B)，结果等于{a:value, b:1, c:2}.声明顺序(B,A),结果等于{a:value, b:1, c:2}
+
+    7.监听配置的更改:
+        ConfigRetrieverOptions options = new ConfigRetrieverOptions()
+          .setScanPeriod(2000)  //配置的扫描间隔时间
+          .addStore(store1)
+          .addStore(store2);
+
+        retriever.listen(change -> {
+            JsonObject previous = change.getPreviousConfiguration();
+            JsonObject json = change.getNewConfiguration();
+        });
+
+    8.合适的配置存储：
+        File:
+            ConfigStoreOptions file = new ConfigStoreOptions()
+              .setType("file")
+              .setFormat("properties")
+              .setConfig(new JsonObject().put("path", "path-to-file.properties")
+                                         .put("raw-data", true)
+                                         .put("hierarchical", true));
+        JSON:
+            ConfigStoreOptions json = new ConfigStoreOptions()
+              .setType("json")
+              .setConfig(new JsonObject().put("key", "value"));
+        Environment Variables:
+            ConfigStoreOptions json = new ConfigStoreOptions()
+              .setType("env")
+              .setConfig(new JsonObject().put("keys", new JsonArray()
+                                                            .add("SERVICE1_HOST")
+                                                            .add("SERVICE2_HOST")
+                                            )
+                        );
+        System Properties:
+            ConfigStoreOptions json = new ConfigStoreOptions()
+              .setType("sys")
+              .setConfig(new JsonObject().put("cache", "false"));
+        HTTP:
+            ConfigStoreOptions http = new ConfigStoreOptions()
+              .setType("http")
+              .setConfig(new JsonObject()
+                .put("host", "localhost")
+                .put("port", 8080)
+                .put("ssl", true)
+                .put("path", "/A"));
+        Event Bus:
+            ConfigStoreOptions eb = new ConfigStoreOptions()
+              .setType("event-bus")
+              .setConfig(new JsonObject()
+                .put("address", "address-getting-the-conf")
+              );
+        Directory：读取多个配置文件
+            ConfigStoreOptions dirWithRawData = new ConfigStoreOptions()
+              .setType("directory")
+              .setConfig(new JsonObject().put("path", "config")
+                .put("filesets", new JsonArray()
+                  .add(new JsonObject().put("pattern", "dir/*json"))
+                  .add(new JsonObject().put("pattern", "dir/*.properties")
+                    .put("format", "properties").put("raw-data", true))
+                ));
+
+    9.读取最新配置：JsonObject last = retriever.getCachedConfig();
+    10.流形式读取配置：
+        ConfigRetrieverOptions options = new ConfigRetrieverOptions()
+          .setScanPeriod(2000)
+          .addStore(store1)
+          .addStore(store2);
+
+        ConfigRetriever retriever = ConfigRetriever.create(Vertx.vertx(), options);
+        retriever.configStream()
+          .endHandler(v -> {
+            // retriever closed
+          })
+          .exceptionHandler(t -> {
+            // an error has been caught while retrieving the configuration
+          })
+          .handler(conf -> {
+            // the configuration
+          });
+    11.检索配置的结果作为Future
+        Future<JsonObject> future = ConfigRetriever.getConfigAsFuture(retriever);
+        future.setHandler(ar -> {
+          if (ar.failed()) {
+            // Failed to retrieve the configuration
+          } else {
+            JsonObject config = ar.result();
+          }
+        });
+    12.使用yaml配置：
+        需要添加jar包依赖：compile 'io.vertx:vertx-config:3.8.3'
+                         compile 'io.vertx:vertx-config-yaml:3.8.3'
+
+        ConfigStoreOptions store = new ConfigStoreOptions()
+          .setType("file")
+          .setFormat("yaml")
+          .setConfig(new JsonObject()
+            .put("path", "my-config.yaml")
+          );
+    13.使用git配置：获取远端的json文件
+        ConfigStoreOptions git = new ConfigStoreOptions()
+            .setType("git")
+            .setConfig(new JsonObject()
+                .put("url", "https://github.com/cescoffier/vertx-config-test.git")
+                .put("path", "local")
+                .put("filesets",
+                    new JsonArray().add(new JsonObject().put("pattern", "*.json"))));
+    14.使用redis配置：
+        ConfigStoreOptions store = new ConfigStoreOptions()
+            .setType("redis")
+            .setConfig(new JsonObject()
+                .put("host", "localhost")
+                .put("port", 6379)
+                .put("key", "my-configuration")
+            );
+
+
+
+
+
+
+
+
+
+
+
+
+

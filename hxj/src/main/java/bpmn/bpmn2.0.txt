@@ -1,0 +1,483 @@
+讨论交流：BPMN是规范，JBPM是执行BPMN规范编写的流程文件的引擎，可以进行各种流程相关的操作。
+        他们负责提供BPMN流程图，我负责编写代码，，将流程图的各个节点的数据进行绑定，这些数据来源多种多样，可能数据库，也可能直接赋值，又或者是接口获取。
+        流程图中的各种分支条件，有可能是代码编写，也有可能是人工进行流程的判断分流。
+0.BPMN2.0规范的学习--Business process model notation
+    流程基础元素：
+         1.Event:  事件，细线圆形----实线：可中断/默认;虚线：不可中断
+            1.start event：开始事件
+                1.【👌】None：空开始事件，空圈符号
+                2.【👌】消息开始：信封⭕️
+                    Interrupting - Message ：
+                    Non-interrupting - Message :
+                3.【👌】时间开始：时钟⭕️
+                    Interrupting - Timer :
+                    Non-interrupting - Timer ::
+                4.【👌】条件开始：📒⭕️
+                    Interrupting - Conditional：
+                    Non-interrupting - Conditional:
+                    注意：会使用到Drools规则引擎中的FactHandle句柄来操作Fact对象
+                5.【👌】信号开始：三角形⭕️
+                    Interrupting Signal:
+                    Non-interrupting - Signal:
+                6.【👌】多重开始：五边形⭕️.需要有网关来整合多个开始.它没有自己的专属标签，经常和排他网关一起使用
+                                   并且在bpmn文件中的<outgoing/incoming>标签写不写无所谓，但是必须要写<sequenceFlow>
+                    Interrupting Multiple:
+                    Non-interrupting Multiple:
+                7.【👌】并行开始：✝️⭕️。它是节点的属性，并不是专门的节点.暂时没看出和不并行有什么区别
+                    Interrupting - Parallel Multiple:
+                    Non-interrupting - Parallel Multiple:
+                8.【👌】增量开始：上三角⭕️。主要是在结束节点和开始节点定义相关的标签
+                    Interrupting - Escalation:
+                    Non-interrupting - Escalation:
+                9.【👌】错误开始：⚡️⭕️。主要是在结束节点和开始节点定义相关的标签
+                    Interrupting - Error：
+                10.【👌】补偿开始：🐠⭕️。主要是在结束节点和开始节点定义相关的标签
+                    Interrupting - Compensation：
+            2.Intermediate Event：中间事件,双圈圆形----主要有3种类型，抛，捕获，边界
+                1.【👌】Interrupting - None ：可中断，空中间事件。----只找到一个抛的中间事件
+                2.【👌】消息中间：信封⭕️
+                    Catch - Message ：捕获消息----有专门的捕获组件
+                    interrupting - Boundary - Catch - Message - :边界，捕获消息
+                    Non-interrupting - Boundary - Catch - Message：边界，捕获消息
+                    Throw - Message: 抛消息，全黑信封
+                3.【👌】时间中间：时钟⭕️--只能捕获。----有专门的捕获组件
+                    Timer: 时间
+                    Interrupting - Boundary  - Timer :边界
+                    Non-interrupting Boundary - Timer :边界
+                4.【👌】条件中间：📒⭕️--只能捕获。----有专门的捕获组件
+                    Conditional：条件
+                    Interrupting – Boundary - Conditional：边界
+                    Non-interrupting - Boundary - Conditional:边界
+                5.【👌】信号中间：三角形⭕️
+                    catch - signal：捕获
+                    Interrupting - Boundary - Catch - Signal:边界，捕获
+                    Non-interrupting - Boundary - Catch - Signal:边界，捕获
+                    Interrupting - Boundary - Throw - Signal：边界，抛信号，全黑
+                6.【👌】多重中间：五边形⭕️----没有找到对应的代码
+                    Catch - Multiple：捕获
+                    Interrupting - Boundary - Catch - Multiple:边界，捕获
+                    Non-interrupting Boundary - Catch - Multiple:边界，捕获
+                    Throw - Multiple：抛多种条件，全黑
+                7.【👌】并行中间：✝️⭕️️----没有找到对应的代码
+                    Catch - Parallel Multiple：捕获，并行多重
+                    Interrupting - Boundary - Catch - Parallel Multiple:边界，捕获，并行多重
+                    Non-interrupting Boundary - Catch - Parallel Multiple:边界，捕获，并行多重
+                8.【👌】增量中间：上三角⭕️
+                    Catch - Escalation:捕获---可以抛出，没有专门的捕获标签
+                    Interrupting - Boundary - Catch - Escalation:边界，捕获
+                    Non-interrupting - Boundary - Catch - Escalation：边界，捕获
+                    Throw - Escalation：抛增量，全黑
+                9.【👌】错误中间：⚡️⭕️----没有专门标签，由<boundaryevent>进行捕获
+                    Boundary - Catch - Error：边界，捕获
+                10.【👌】补偿中间：🐠⭕️
+                    Boundary - Catch - Compensation：边界，捕获
+                    Throw - Compensation：抛补偿，全黑
+                11.【👌】连接中间：➡⭕----有专门的抛出和捕获标签
+                    Catch - Link：捕获
+                    Throw - Link：抛连接，全黑
+                12.【👌】取消中间：叉⭕----可以在边界事件中进行捕获，必须和子流程的事务进行组合使用
+                                         目前jbpm源代码中只有文件，没有Java代码。
+                    Boundary - Catch - Cancel：边界，捕获
+
+                备注：【👌】在中间事件中找到的有边界事件进行处理的类型有：
+                    消息：时间：条件：信号：
+                    增量：错误：补偿：取消：
+            3.End Event：结束事件，粗线圆形。抛出型事件--都会抛出一个结果
+                1.【👌】None：空结束事件，空圈符号。结束当前分支的流程
+                2.【👌】消息结束：信封⭕️---Message
+                3.【👌】信号结束：三角形⭕️----Signal。引擎向系统内部发送信号，然后结束所在分支流程
+                4.【👌】多重结束：五边形⭕️----Multiple。没有找到相关的代码，估计jbpmn并没有实现
+                5.【👌】增量结束：上三角⭕️----Escalation。主流程进行触发子子流程的操作之一
+                6.【👌】错误结束：⚡️⭕️----Error。主流程进行触发子子流程的操作之一。会被错误边界中间事件捕获进行处理
+                                                error的errorCode用于查找匹配的错误捕获边界事件。如果errorRef不匹配任何已定义的error，则该errorRef会用做errorCode的快捷方式
+                                                errorRef和errorcode可以等价
+                                                errorcode如果是具体的异常类，不能随便更改
+                7.【👌】补偿结束：🐠⭕️----Compensation。主流程进行触发子子流程的操作之一。补偿的时候需要找到子流程的边界
+                8.【👌】取消结束：叉⭕️----cancel。全部是command操作，<bpmn2:cancelEventDefinition id=""/>。
+                                                只能和事务子流程一起使用。抛出取消事件，被边界事件捕获，然后取消事务，触发补偿
+                9.【👌】终止结束：▪️⭕️----terminate。结束整个流程实例，不管有几个分支
+        2.Activity：活动，矩形
+            1.Tasks:任务:【👌】
+                1.【👌】abstract task:抽象任务，空白。没有对应的代码实现
+                2.【👌】service task:服务任务,两个齿轮
+                3.【👌】send task:发送任务，黑色信封----在结束开始事件中找到sendtask任务
+                4.【👌】receive task:接收任务，白色信封
+                5.【👌】user task:用户任务，小人
+                6.【👌】manual task:手册任务，小手。自定义工作项的图标和参数标签
+                7.【👌】business rule task:商业规则任务，表格
+                8.【👌】script task:脚本任务，列出清单
+            2.Sub Process Basics:子基本过程
+                1.【👌】Sub process:子过程.----有专属的标签<adHocSubProcess>
+                    Collapsed Sub Process:收缩,小田字。----膨胀和收缩都是在图形中的展示效果，和数据流动没有关系。
+                    Expanded Sub Process：膨胀,躺着的中字
+                2.【👌】Adhoc Sub Process：特定的/临时安排的子过程----有专属的标签<adHocSubProcess>。没有专门的开始和结束
+                    概念：a group of tasks that can be carried out in any order as decided by their performers
+                         翻译的意思是：一组任务，可由其执行者决定以任何顺序执行。
+                    Adhoc Collapsed Sub Process：收缩,小田字波浪
+                    Adhoc Expanded Sub Process：膨胀,躺着的中字波浪
+                3.【👌】Transaction：事务活动----目前没有在源码中找到实现类
+                    Collapsed Transaction：收缩,双圈小田字
+                    Expanded Transaction：膨胀,双圈躺着的中字
+                4.【👌】Event Sub Process：事件子活动--全部都是收缩。
+                                           就是主流程在结束节点抛出各种信息，然后由子流程的开始节点接收，从而触发的流程。
+                    1.Non-interrupting Message：信封
+                      Interrupting -Message：信封
+                    2.Non-interrupting - Timer：时钟
+                      Interrupting - Timer：时钟
+                    3.Non-interrupting - Conditional：笔记本
+                      Interrupting - Conditional：笔记本
+                    4.Non-interrupting- Signal：三角形
+                      Interrupting - Signal：三角形
+                    5.Non-interrupting- Multiple：五边形
+                      Interrupting - Multiple：五边形
+                    6.Non-interrupting  - Parallel Multiple：十字架
+                      Interrupting - Parallel Multiple：十字架
+                    7.Non-interrupting – Escalation：上三角
+                      Interrupting  - Escalation：上三角
+                    8.Interrupting - Error：闪电
+                    9.Interrupting – Compensation：🐟
+            3.Call Activity【👌】:调用活动。是一种流程复用技术。主要是调用其他流程文件的流程，等待完成后再往下执行。中间有数据传递。有点像子流程。
+                            它可以调用一个流程文件，其中数据相互共用。可以通过事件监听器，给自流程添加东西，比如handler。
+                            而且可以调用多个流程文件，做到并行。可能存在脏数据的情况。可通过名字同时调用两个流程
+                            关于handler的说明，它注册在流程中，如果执行到对应的任务节点，由人为的给节点选择一个handler进行执行。一个handler可以多次执行
+                1.【👌】abstract Call Activity:抽象调用活动，空白
+                2.【👌】user Call Activity:用户调用活动，小人
+                3.【👌】manual Call Activity:手册调用活动，小手
+                4.【👌】business rule Call Activity:商业规则调用活动，表格
+                5.script Call Activity:脚本调用活动，列出清单
+        3.Gateway：网关或者条件，菱形
+            1.【👌】Exclusive Gateway - without Marker：没有标记的排他网关，空白
+              【👌】Exclusive Gateway - with Marker：有标记的排他网关，大写X
+            2.【👌】Inclusive Gateway：包容性网关,⭕
+            3.【👌】Parallel Gateway：并行网关，十字架
+            4.【👌】Complex Gateway：复杂网关，米字。用来定义符号，暂未使用到
+            5.Event-Based Gateway：基于事件的网关，双圈五边形
+              Event-Based Gateway to Start a Process：基于事件的网关启动进程，单圈五边形
+              Parallel  Event-Based Gateway to Start a Process：并行基于事件的网关启动进程，单圈十字架
+        4.Flow【👌】: 流，箭头
+            1.【👌】sequence flow:顺序流，实线箭头。无Java代码
+                【👌】Conditional Sequence Flow：条件顺序流，带菱形尾巴的箭头。----和网关组合选择流向
+                Default Sequence Flow：默认顺序流，带斜线尾巴的箭头
+            2.【👌】message flow:消息流，虚线箭头。用来在xsd文件中定义符号了。
+                Initiating Message Flow with Decorator：使用Decorator初始化消息流，白色信封箭头
+                Non-Initiating Message Flow with Decorator：没有使用Decorator初始化消息流，黑色信封箭头
+            3.【👌】association:关联，点点点。无Java代码
+                Directional Association：直接关联,点点右箭头
+                Bi-Directional Association：双向关联,点点双箭头
+            4.【👌】data association:数据关联，点点点箭头。无Java代码
+    重要业务要素：
+        Data：数据，折角文件
+            Data Object：数据对象，空白
+            Data Object Collection：数据对象集合，3竖线
+            Data Input：数据输入，白色右箭头
+            Data Input Collection：数据输入集合，白色右箭头三竖线
+            Data Output：数据输出，黑色右箭头
+            Data Output Collection：数据输出，黑色右箭头三竖线
+            Data Store：数据存储，杯子
+        Artifact: 组件
+            Group：组，虚线框住
+            Text Annotation：文本注释,【
+        Swimlane【👌】: 泳道。----用于分配任务，给指定泳道的人分配任务，类似于全局用户组。
+                        使用场景：流程定义中的多个任务需要被分配或候选给同一个群用户。那么我们可以统一将这个“同一群用户”定义为“一个泳道”
+            lane:泳道，实线框+lane
+                Horizontal Lane:水平
+                Vertical Lane：垂直
+            pool:泳池,实线框+pool
+                Horizontal  Pool：水平泳池
+                Horizontal Pool - with Multi Instance Participant：多实例参与者水平池
+                Vertical Pool：垂直泳池
+                Vertical Pool - with Multi Instance Participant：多实例参与者垂直池
+        basic rules：基本规则
+            顺序流：
+                ⭕️ℹ️：活动将会在子流程中执行
+                ⭕️斜线：不能跨越池边界和子流程边界
+            消息流：
+                 ⭕️ℹ️：展示参与者之间的交流
+                 ⭕️斜线：不能连接同一池中的对象
+            绑定事件：
+                 ⭕⭐️️：必须最多有一个输出序列流
+                 ⭕️斜线：必须没有任何传入的序列流
+            子流程：
+                ⭕⭐️️：子流程中的Start事件必须为None类型
+        Clarifications：澄清阐明，解释误会
+            流程，模型，图，文件：
+                1.上述组件并不等价：原因如下
+                    model可能包含1个或者多个业务流程
+                    BPMN模型的不同部分可以保存在不同的文件中
+                    BPMN图描述了BPMN流程模型的子集(可能是完整的)
+                    BPMN模型可以使用多个图来描述
+            数据流：
+                1.BPMN图不是数据流图:原因如下
+                    尽管数据对象现在是BPMN中的第一类实体。不建议尝试使用BPMN建模数据流
+            网关：
+                1.网关不是决策：原因如下
+                    网关不做决定，它们只是引导流程
+                    决策结果应该在网关之前的活动中确定
+            手动、自动和半自动任务：Manual, Automated and Semi-automated Tasks
+                使用手工任务来描述预期，它是在没有任何软件应用程序帮助下执行的工作
+                使用用户任务来描述半自动化的工作，其中人工执行者使用软件应用程序来完成任务
+                使用服务任务来描述自动化工作
+            发送和接收消息：
+                如果认为消息的发送或接收是即时的，则使用消息事件
+                如果消息的发送或接收可以中断，则执行消息任务
+                从时间的角度来看;事件映射到时间线上的时间点，任务映射到时间间隔
+        CSDN用户名：xj20131346040
+              密码：346040
+        naming convertions best practices：命名约定最佳实践
+        modeling best practices:建模最佳实战
+        example：例子
+        glossary：术语
+
+2.bpmn2.0文件的语法规范：
+    1.配置：jbpm.cfg.xml文件中添加<import resource="jbpm.bpmn.cfg.xml" />
+           流程引擎是根据定义文件的后缀来区分流程定义的。 对于BPMN 2.0，使用*.bpmn.xml后缀 （jPDL使用*.jpdl.xml后缀）。
+    2.语法规范：
+        2.1流程根元素：definitions元素。process子元素可以拥有一个id（必填）和 name（可选）。注意把BPMN2.xsd放在classpath下，来启用XML自动补全
+            例子：<definitions id="myProcesses"
+                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                     xsi:schemaLocation="http://schema.omg.org/spec/BPMN/2.0 BPMN20.xsd"
+                     xmlns="http://schema.omg.org/spec/BPMN/2.0"
+                     typeLanguage="http://www.w3.org/2001/XMLSchema"
+                     expressionLanguage="http://www.w3.org/1999/XPath"
+                     targetNamespace="http://jbpm.org/example/bpmn2">
+                    <process id="My business processs" name="myBusinessProcess">
+                     ...
+                    </process>
+                 <definitions>
+            注意：name和key在使用上是等价的。key的规则与jPDL一样：空格和非字母数字的字符会被下划线代替。
+        2.2基本结构
+            2.2.1事件：
+                空启动事件：id是必填的，name是可选的。<startEvent id="start"  name="myStart" />
+                空结束事件：id是必填的，name是可选的。<endEvent id="end" name="myEnd" />
+                终止结束事件：id是必填的，name是可选的。<endEvent id="terminateEnd" name="myTerminateEnd">
+                                                      <terminateEventDefinition/>
+                                                   </endEvent>
+                    区别：终止结束事件会结束整个流程图。而空结束事件只结束自己所在分支的流程
+                空开始到空结束事件：<process id="noneStartEndEvent" name="BPMN2 Example none start and end event">
+                                    <startEvent id="start" />
+                                    <sequenceFlow id="flow1" name="fromStartToEnd" sourceRef="start" targetRef="end" />
+                                    <endEvent id="end" name="End" />
+                                </process>
+                注意：创建流程实例：ProcessInstance processInstance = executionService.startProcessInstanceByKey("noneStartEndEvent");                                    
+            2.2.2顺序流：
+                <sequenceFlow id="myFlow" name="My Flow" sourceRef="sourceId" targetRef="targetId" />
+                多外向顺序流：有一个condition条件，当结果为true时，顺序流被执行
+                    <sequenceFlow id=....>
+                        <conditionExpression xsi:type="tFormalExpression">${amount >= 500}</conditionExpression>
+                    </sequenceFlow>
+            2.2.3网关：流向取值--unspecified,mixed,converging,diverging
+                <parallelGateway id="myJoin" name="My synchronizing join" gatewayDirection="converging" />
+                XOR网关：唯一网关，最少一个流程是通的。多个条件执行为true，遇到第一个路径就会朝该路径执行。对所有分支路径都需要定义过滤条件
+                     <process id="exclusiveGateway" name="BPMN2 Example exclusive gateway">
+                        <startEvent id="start" />
+
+                        <sequenceFlow id="flow1" name="fromStartToExclusiveGateway" sourceRef="start" targetRef="decideBasedOnAmountGateway" />
+
+                        <exclusiveGateway id="decideBasedOnAmountGateway" name="decideBasedOnAmount" />
+
+                        <sequenceFlow id="flow2" name="fromGatewayToEndNotEnough" sourceRef="decideBasedOnAmountGateway" targetRef="endNotEnough">
+                          <conditionExpression xsi:type="tFormalExpression">
+                            ${amount < 100}
+                          </conditionExpression>
+                        </sequenceFlow>
+
+                        <sequenceFlow id="flow3" name="fromGatewayToEnEnough" sourceRef="decideBasedOnAmountGateway" targetRef="endEnough">
+                          <conditionExpression xsi:type="tFormalExpression">
+                            ${amount <= 500 && amount >= 100}
+                          </conditionExpression>
+                        </sequenceFlow>
+
+                        <sequenceFlow id="flow4" name="fromGatewayToMoreThanEnough" sourceRef="decideBasedOnAmountGateway" targetRef="endMoreThanEnough">
+                          <conditionExpression xsi:type="tFormalExpression">
+                            ${amount > 500}
+                          </conditionExpression>
+                        </sequenceFlow>
+
+                        <endEvent id="endNotEnough" name="not enough" />
+                        <endEvent id="endEnough" name="enough" />
+                        <endEvent id="endMoreThanEnough" name="more than enough" />
+                    </process>
+                    对应的Java代码传入参数：Map<String, Object> vars = new HashMap<String, Object>();
+                                         vars.put("amount", amount);
+                                         ProcessInstance processInstance = executionService.startProcessInstanceByKey("exclusiveGateway", vars);
+                    可以使用default属性完成else操作：引用存在的顺序流
+                        <exclusiveGateway id="decision" name="decideBasedOnAmountAndBankType" default="myFlow"/>
+                        <sequenceFlow id="myFlow" name="fromGatewayToStandard"
+                            sourceRef="decision" targetRef="standard">
+                        </sequenceFlow>     
+
+                AND网关：并行网关。同时激活多个分支。没有过滤条件。如果进行汇聚操作，需要等到所有分支都执行完成，才会进行下一个节点的操作。<parallelGateway id="myParallelGateway" name="My Parallel Gateway" />
+                     <process id="parallelGateway" name="BPMN2 example parallel gatewar">
+                        <startEvent id="Start" />
+                            <parallelGateway id="parallelGatewaySplit" name="Split" gatewayDirection="diverging"/>
+                                <userTask id="prepareShipment" name="Prepare shipment" implementation="other" />
+                                <userTask id="billCustomer" name="Bill customer" implementation="other" />
+                            <parallelGateway id="parallelGatewayJoin" name="Join" gatewayDirection="converging"/>
+                        <endEvent id="End" name="End" />
+
+                        <sequenceFlow id="flow1" name="fromStartToSplit" sourceRef="Start" targetRef="parallelGatewaySplit"  />
+                        <sequenceFlow id="flow2a" name="Leg 1" sourceRef="parallelGatewaySplit" targetRef="prepareShipment" />
+                        <sequenceFlow id="flow2b" name="fromPrepareShipmentToJoin" sourceRef="prepareShipment" targetRef="parallelGatewayJoin"  />
+                        <sequenceFlow id="flow3a" name="Leg 2" sourceRef="parallelGatewaySplit" targetRef="billCustomer" />
+                        <sequenceFlow id="flow3b" name="fromLeg2ToJoin" sourceRef="billCustomer" targetRef="parallelGatewayJoin"  />
+                        <sequenceFlow id="flow4" sourceRef="parallelGatewayJoin" targetRef="End"> </sequenceFlow>
+                     </process>
+                OR网关：包含网关，相当于or操作。每个过滤条件都会被执行，结果为true，则会走这条分支。如果没条件设置，则肯定执行。当进行分支汇聚时，所有分支都到达网关处，才进行下一个节点
+                    <process id="inclusiveGateway" name="BPMN2 Example inclusive gateway">
+                      <startEvent id="start" />
+                      <inclusiveGateway id="inclusiveGatewaySplit" default="flow3"/>
+                      <userTask id="largeDeposit" name="Large deposit" />
+                      <userTask id="standardDeposit" name="Standard deposit" />
+                      <userTask id="foreignDeposit" name="Foreign deposit" />
+                      <inclusiveGateway id="inclusiveGatewayMerge" />
+                      <endEvent id="theEnd" />
+
+                      <sequenceFlow id="flow1" sourceRef="start" targetRef="inclusiveGatewaySplit" />
+                      <sequenceFlow id="flow2" sourceRef="inclusiveGatewaySplit" targetRef="largeDeposit">
+                            <conditionExpression xsi:type="tFormalExpression">${cash > 10000}</conditionExpression>
+                      </sequenceFlow>
+                      <sequenceFlow id="flow4" sourceRef="inclusiveGatewaySplit" targetRef="foreignDeposit">
+                         <conditionExpression xsi:type="tFormalExpression">${bank == 'foreign'}</conditionExpression>
+                      </sequenceFlow>
+                      <sequenceFlow id="flow3" sourceRef="inclusiveGatewaySplit" targetRef="standardDeposit" />
+                      <sequenceFlow id="flow5" sourceRef="largeDeposit" targetRef="inclusiveGatewayMerge" />
+                      <sequenceFlow id="flow6" sourceRef="standardDeposit" targetRef="inclusiveGatewayMerge" />
+                      <sequenceFlow id="flow7" sourceRef="foreignDeposit" targetRef="inclusiveGatewayMerge" />
+                      <sequenceFlow id="flow8" sourceRef="inclusiveGatewayMerge" targetRef="theEnd" />
+                    </process>
+            2.2.4任务：
+                用户任务：userTask。流程引擎了解任务，引擎可以跟踪竞争，分配，时间，其他。可以使用resource引用资源。<userTask id="myTask" name="My task" />
+                         可以动态分配执行人，可以分配执行者的类型，组，角色，用户。
+                    <resource id="manager" name="manager" />
+                    <resource id="employee" name="employee" />
+
+                    <process ...>
+                        <userTask id="myTask" name="My task">
+                          <potentialOwner resourceRef="manager" jbpm:type="group">
+                            <resourceAssignmentExpression>
+                              <formalExpression>management</formalExpression>
+                            </resourceAssignmentExpression>
+                          </potentialOwner>
+                        </userTask>
+
+                        <userTask id="myTask" name="My User task">
+                          <potentialOwner resourceRef="employee" jbpm:type="user">
+                            <resourceAssignmentExpression>
+                              <formalExpression>peter</formalExpression>
+                            </resourceAssignmentExpression>
+                          </potentialOwner>
+                        </userTask>
+
+                        <userTask id="myTask" name="My User task">
+                          <humanPerformer resourceRef="employee">
+                            <resourceAssignmentExpression>
+                              <formalExpression>${user}</formalExpression>
+                            </resourceAssignmentExpression>
+                          </humanPerformer>
+                        </userTask>
+                    </process ...>
+
+                    对应的Java代码：
+                        identityService.createGroup("management");
+                        identityService.createUser("peter", "Peter", "Pan");
+                        identityService.createMembership("peter", "management");
+                        identityService.createUser("mary", "Mary", "Littlelamb");
+                        identityService.createMembership("mary", "management");
+
+                        List<Task> tasks = taskService.findGroupTasks("peter");
+                        List<Task> tasks = taskService.findPersonalTasks("mary");
+                        tasks = taskService.findGroupTasks("mary");
+                        // Mary claims the task
+                        Task task = tasks.get(0);
+                        taskService.takeTask(task.getId(), "mary");
+                        taskService.completeTask(task.getId());
+
+                服务任务：serviceTask。Java服务任务，是一个自动任务，可调用webservice,javaservice等。最少一个输入，最多一个输出
+                         implementation元素是用来表示调用服务的类型。可选值是WebService,Other或者Unspecified。因为我们只实现了Java调用， 现在只能选择Other。
+                         接口名称指定Java类全名，操作名称指定调用方法名，输入输出代表入参和返回值。ItemDefinition定义数据结构
+                         ItemDefinition不应该包含多余一个数据结构定义。前缀jbpm是临时之计，后期可能会变化
+
+                     <itemDefinition id="myItemDefinition1" >
+                       <jbpm:arg>
+                         <jbpm:object expr="#{var1}" />
+                       </jbpm:arg>
+                     </itemDefinition>
+
+                     <itemDefinition id="myItemDefinition2">
+                       <jbpm:var name="returnVar" />
+                     </itemDefinition>
+                     <message id="inputMessage" name="input message" structureRef="myItemDefinition1" />
+
+                     <interface id="myInterface" name="org.jbpm.MyJavaServicek">
+                        <operation id="myOperation" name="myMethod">
+                          <inMessageRef>inputMessage</inMessageRef>
+                          <outMessageRef>outputMessage</outMessageRef>
+                        </bpmn:operation>
+                     </interface>
+                     <serviceTask id="MyServiceTask" name="My service task" implementation="Other" operationRef="myOperation" />
+
+                脚本任务：自由活动。有属性scriptlanguage和script
+                    <scriptTask id="scriptTask" name="Script Task" scriptLanguage="bsh">
+                      <script><![CDATA[
+                        for(int i=0; i < input.length; i++){
+                          System.out.println(input[i] + " x 2 = " + (input[i]*2));
+                        }]]>
+                      </script>
+                    </scriptTask>
+                    对应的Java代码：
+                        Map<String, Object> variables = new HashMap<String, Object>();
+                        Integer[] values = { 11, 23, 56, 980, 67543, 8762524 };
+                        variables.put("input", values);
+                        executionService.startProcessInstanceBykey("scriptTaskExample", variables);
+
+                手工任务：manual task。给文档和建模提醒，流程引擎遇到会跳过。<manualTask id="myManualTask" name="Call customer" />
+
+                接收任务：receive task。等到外部消息的到来。<receiveTask id="receiveTask" name="wait" />
+                         流程执行到这里时，会进行等待，知道信号到来。
+                    Execution execution = processInstance.findActiveExecutionIn("receiveTask");
+                    executionService.signalExecutionById(execution.getId());
+        2.3高级结构
+            2.3.1 内嵌子流程：对流程的继承。顶级视图理解为做一件事情的最高级别方式，最低的级别 就关注具体细节。子流程作为事件的作用域。上级流程的数据可以在子流程中使用
+                           子流程只允许有一个空开始事件。但可以有多个开始事件。可以有完全并行的分支。子流程全部完成才执行下一个上级流程
+                <process id="embeddedSubprocess">
+                    <startEvent id="theStart" />
+                    <sequenceFlow id="flow1" sourceRef="theStart" targetRef="receiveOrder" />
+                    <receiveTask name="Receive order" id="receiveOrder" />
+                    <sequenceFlow id="flow2" sourceRef="receiveOrder" targetRef="checkCreditSubProcess" />
+                    <subProcess id="checkCreditSubProcess" name="Credit check">
+                      ...
+                    </subProcess>
+                    <sequenceFlow id="flow9" sourceRef="checkCreditSubProcess" targetRef="theEnd" />
+                    <endEvent id="theEnd" />
+                </process>
+            2.3.2 定时启动事件：流程需要在指定时间启动。必须配置job executor进行事务性操作。多个时间参数。默认的时间格式是 "dd/MM/yyyy hh:mm:ss"
+                时间段表达式：quantity [business] {second | seconds | minute | minutes |
+                                                 hour | hours | day | days | week |
+                                                 weeks | month | months | year | years}
+                <startEvent id="myStartEvent" >
+                  <timerEventDefinition>
+                    <timeDate>10/10/2099 00:00:00</timeDate>
+
+                    <timeCycle>5 hours</timeCycle>
+
+                    <timeCycle>0 0 23 ? * FRI</timeCycle>
+
+                  </timerEventDefinition>
+                </startEvent>
+            2.3.3 中间事件：
+                类型有比如定时器事件，触发事件，传播事件，等等。 中间事件既可以抛出也可以捕获
+                抛出：当一个流程到达事件中， 它会立刻触发一个对应的触发器（一个激活，一个错误，等等）
+                捕获：当一个流程到达事件中， 它会等待一个对应的触发器发生（一个错误，一个定时器，等等）
+            2.3.4 内部捕获事件：定时器
+                表示流程的延迟。用来收集数据，在无人之夜执行大量逻辑
+                <intermediateCatchEvent id="myTimer" name="Wait for an hour">
+                  <timerEventDefinition>
+                    <timeCycle>1 hour</timeCycle>
+                  </timerEventDefinition>
+                </intermediateCatchEvent>
+
+
+
+
+
+

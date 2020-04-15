@@ -1,0 +1,960 @@
+1.springcloud的学习：参考纯洁的微笑：http://www.ityouknow.com/spring-cloud.html
+    1用于开发分布式系统,其中的很多细节需要处理：
+        1.服务发现注册:(Spring Cloud Netflix)
+            Netflix Eureka: (服务中心。实现云端中间层服务发现)
+            Netflix Hystrix: (熔断器,容错管理工具。当某个服务故障时,下线服务保证整体服务不阻塞)
+            Netflix Zuul: (云端路由器。url请求的拦截与处理,对请求的服务直接引导到对应服务区)
+            Netflix Archaius:(配置管理的API。配置很多东西，能够动态获取配置，无需重启)
+        2.配置中心：(Spring Cloud Config)
+            集中化管理集群配置。可以把配置放到远程服务器,目前支持本地存储,Git以及Subversion。
+        3.消息总线：(Spring Cloud Bus)
+            确保各个服务间的消息畅通。用于在集群中传播状态变化，可与Spring Cloud Config联合实现热部署
+        4.负载均衡：(Spring Cloud Cluster)
+            取代Spring Integration。提供在分布式系统中的集群所需要的基础功能支持，
+            如：选举、集群的状态一致性、全局锁、tokens等常见状态模式的抽象和实现。
+        5.断路器:
+        6.数据监控：(Spring Cloud Sleuth)
+            日志收集。分布式追踪解决方案
+        其他：
+            Spring Cloud for Cloud Foundry： (开源Paas云平台的一套解决方案,能够快速部署和扩展应用程序)
+            Spring Cloud Consul: (支持多数据中心分布式高可用的服务发现与配置工具，与Docker容器可以无缝集成)
+            Spring Cloud Security: (安全控制,不同权限访问不同服务)
+            Spring Cloud Data Flow：
+                (分布式流处理和批处理数据通道的实现。数据抽取,实时分析,和数据导入/导出。创建和编配数据通道 （data pipelines）。)
+            Spring Cloud Stream：(是一个创建消息驱动微服务应用的框架。实现任务之间的事件触发机制)
+            Spring Cloud Task：(短命微服务的任务管理，任务调度的工作。类似于定时任务)
+            Spring Cloud Zookeeper：(分布式的服务发现和配置管理,封装复杂业务提供简单接口。配置维护、域名服务、分布式同步、组服务)
+            Spring Cloud Connectors：(提供分布式服务之间的连接)
+            Spring Cloud Starters: (提供开箱即用的依赖管理,类似于maven)
+            Spring Cloud CLI：(命令行方式快速建立云组件)
+
+    2.和springboot关系：(依赖关系。spring -> spring boot > Spring Cloud 这样的关系)
+        spring:IoC,Bean组件管理
+        springboot: (快速开发单个微服务)
+        springcloud: (全局的服务治理框架)
+
+    3.springcloud的优势：(微服务框架有dubbo,Kubernetes,Spring Cloud)
+        1.属于spring家族,spring企业占比大，后续的维护升级空间大。
+        2.作为组件springboot的功能强大
+        3.微服务方面的治理考虑全面,
+        4.教程很多,代码简单。
+        5.成本低,和docker兼容,在云处理方面有一席之地
+
+    4.常用的组件：(springcloud是基于netflix的开源框架)
+        1.Eureka：(服务注册和发现,c/s架构,它应该是能够知道哪些服务是正常的，哪些服务是异常的,微页面查看服务运行情况，暂时无通知)
+            在AWS云中使用, 定位服务来进行中间层服务器的负载均衡和故障转移。
+            Server: 作为服务注册功能的服务器，它是服务注册中心。类似于大管家
+            Client: 接到Eureka Server,并维持心跳连接。使Eureka Server来监控系统中各个微服务是否正常运行
+            1.基本架构：
+                Eureka Server: 提供服务注册和发现
+                    1.在pom.xml中添加spring-cloud-starter和spring-cloud-starter-eureka-server.一定要写版本号.springboot的版本是1.5.3发行版
+                    2.在启动类增加@EnableEurekaServer
+                    3.在Application.properties中配置模块名字，端口，不注册自己，默认的服务器地址
+                Service Provider: 将自身服务注册到Eureka，从而使服务消费方能够找到
+                Service Consumer: 从Eureka Server获取注册服务列表，从而能够消费服务
+            2.集群操作: (多个注册中心,最好是多台机器测试)
+                Eureka通过互相注册的方式来实现高可用的部署，配置多个serviceUrl
+                两个server结点的配置：(不推荐)
+                    每个结点创建1个application-???.properties文件。内容中将需要注册的服务指向别处名字
+                    因为是同一台机器，所以需要 修改hosts文件修改127.0.0.1 peer1和127.0.0.1 peer2
+                    打包项目并启动项目：
+                        java -jar xx.jar --spring.profiles.active=peer1
+                        java -jar xx.jar --spring.profiles.active=peer2
+                多个server结点的配置：(yml文件配置)
+                    在yml文件中多次配置相同参数，取值不同
+                    ---在yml中表示文档分割线
+                    同一台电脑配置时，需要修改hosts文件的映射,(本机测试没有成功，不知原因......)
+                    特殊启动：   java -jar xx.jar --spring.profiles.active=peer3
+                                java -jar xx.jar --spring.profiles.active=peer4
+                                java -jar xx.jar --spring.profiles.active=peer5
+        2.Feign服务的提供和消费：
+            服务提供者实现：
+                1.在pom中增加spring-cloud-starter-eureka和spring-cloud-dependencies
+                2.在启动类增加@EnableEurekaServer
+                3.在application.properties配置服务中心地址,默认注册服务
+                4.controller实现接口
+            服务的消费者实现：feign调用实现
+                1.在pom中增加spring-cloud-starter-eureka和spring-cloud-dependencies和spring-cloud-starter-feign
+                2.在启动类增加@EnableEurekaServer和@EnableFeignClients(远程调用)
+                3.使用Feign定义一个接口，并声明服务方是谁，再在接口中定义url路径方法，以便调用对应名字服务
+                4.创建controller，注入Feign接口，并在方法中调用远端方法
+                5.在feign接口和服务接口，一定要声明参数名字@RequestParam("")
+            服务的负载均衡,换一下服务提供方的端口继续注册就可以了。
+
+        3.熔断器(CircuitBreaker):(防止服务提供方的中断导致的雪崩。所有相同接口服务崩溃了，才会调用对应的回调方法)
+            开关转换逻辑：(阈值一般为50%,时间窗口默认为5秒)
+                1.关闭状态时：
+                    尝试callservice,成功,设置关闭状态
+                    尝试callservice,失败但低于开关的阈值，还是设置关闭状态
+                    尝试callservice,失败且到达开关的阈值,设置为打开状态
+                2.打开状态时：
+                    等待熔断器时间窗口结束,设置为半打开状态
+                3.半打开状态：
+                    尝试callservice,失败，设置为打开状态
+                    尝试callservice,成功，设置为关闭状态
+            Hystrix特性：(作用在消费者端,确保消费者端正常)
+                断路器机制：(实现开关转换机制,并且能够自我检测并恢复)
+                Fallback：(请求异常时返回默认值来实现开关状态)
+                资源隔离：
+                    线程池：(新开线程尝试访问,不影响正常业务，但有维护线程池的开销)
+                    信号模式：
+            代码使用方式：
+                1.在消费者端application.properties设置熔断开启feign.hystrix.enabled=true
+                2.创建回调类,重写接口的请求失败方法,名字相同
+                3.在远端调用接口设置回调类名字。
+            熔断监控Hystrix Dashboard和Turbine：【熔断监控】
+                它是针对Hystrix进行实时监控的工具，Turbine将多个服务的数据汇总并显示到Hystrix Dashboard
+                jar包依赖：<dependency>
+                            <groupId>org.springframework.cloud</groupId>
+                            <artifactId>spring-cloud-starter-hystrix</artifactId>
+                          </dependency>
+                          <dependency>
+                            <groupId>org.springframework.cloud</groupId>
+                            <artifactId>spring-cloud-starter-hystrix-dashboard</artifactId>
+                          </dependency>
+                          <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-starter-actuator</artifactId>
+                          </dependency>
+                启动类添加注解：@EnableHystrixDashboard
+                检查：http：//localhost:9001/hystrix
+
+                Netflix提供开源项目Turbine把多个hystrix.stream的内容聚合为一个数据源供Dashboard展示：
+                    jar包依赖：<dependencies>
+                                <dependency>
+                                    <groupId>org.springframework.cloud</groupId>
+                                    <artifactId>spring-cloud-starter-turbine</artifactId>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.cloud</groupId>
+                                    <artifactId>spring-cloud-netflix-turbine</artifactId>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-starter-actuator</artifactId>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.cloud</groupId>
+                                    <artifactId>spring-cloud-starter-hystrix-dashboard</artifactId>
+                                </dependency>
+                              </dependencies>
+                    配置文件：
+                        spring.application.name=hystrix-dashboard-turbine
+                        server.port=8001
+                        turbine.appConfig=node01,node02
+                        turbine.aggregator.clusterConfig= default    //指定聚合哪些集群,多个使用”,”分割，默认为default
+                        turbine.clusterNameExpression= new String("default")
+                        eureka.client.serviceUrl.defaultZone=http://localhost:8000/eureka/
+                    启动类添加注解：@EnableTurbine
+        4.配置中心git：spring cloud config
+            国内外的同类产品：360的QConf、淘宝的diamond、百度的disconf、Apache Commons Configuration、owner、cfg4j
+            功能点：提供服务端和客户端支持
+                   集中管理各环境的配置文件 🌿🌿🌿
+                   配置文件修改之后，可以快速的生效 🌿🌿🌿
+                   可以进行版本管理
+                   支持大的并发查询 🌿🌿🌿
+                   支持各种语言
+            概念：Spring Cloud Config项目是一个解决分布式系统的配置管理方案
+            原理：包含了Client和Server两个部分。server提供配置文件的存储、以接口的形式将配置文件的内容提供出去。client通过接口获取数据、并依据此数据初始化自己的应用。
+                 使用git或者svn存放配置文件
+            操作举例：
+                1.在git上创文件夹config-repo： 仓库中的配置文件会被转换成web接口
+                2.server端：
+                    jar包依赖：<dependencies>
+                                <dependency>
+                                    <groupId>org.springframework.cloud</groupId>
+                                    <artifactId>spring-cloud-config-server</artifactId>
+                                </dependency>
+                              </dependencies>
+                    配置文件：
+                        server:
+                          port: 8001
+                        spring:
+                          application:
+                            name: spring-cloud-config-server
+                          cloud:
+                            config:
+                              server:
+                                git:
+                                  uri: https://github.com/ityouknow/spring-cloud-starter/     # 配置git仓库的地址
+                                  search-paths: config-repo                                   # git仓库地址下的相对地址，可以配置多个地址，用,分割。
+                                  username:                                                   # git仓库的账号
+                                  password:                                                   # git仓库的密码
+                    本地存储：
+                        spring.profiles.active=native
+                        spring.cloud.config.server.native.searchLocations=file:E:/properties/
+                    启动类添加注解：@EnableConfigServer
+                    检查：http://localhost:8001/配置文件名/profile名
+                    配置文件的转化规则：
+                        /{application}/{profile}[/{label}]
+                        /{application}-{profile}.yml
+                        /{label}/{application}-{profile}.yml
+                        /{application}-{profile}.properties
+                        /{label}/{application}-{profile}.properties
+                        比如：neo-config-dev.properties为例子。它的application是neo-config，profile是dev
+                3.client端：
+                    jar包依赖：<dependencies>
+                                <dependency>
+                                    <groupId>org.springframework.cloud</groupId>
+                                    <artifactId>spring-cloud-starter-config</artifactId>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-starter-web</artifactId>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-starter-test</artifactId>
+                                    <scope>test</scope>
+                                </dependency>
+                              </dependencies>
+                    配置文件：
+                        application.properties：
+                            spring.application.name=spring-cloud-config-client
+                            server.port=8002
+                        bootstrap.properties：
+                            spring.cloud.config.name=neo-config
+                            spring.cloud.config.profile=dev
+                            spring.cloud.config.uri=http://localhost:8001/
+                            spring.cloud.config.label=master
+                    启动类添加注解：@EnableConfigServer
+                    检查：直接使用@value就可以获取配置中的数据
+                    ⚠️：springboot项目只有在启动的时候才会获取配置文件的值，修改github信息后，client端并没有再次去获取
+        5.配置中心svn和refresh：
+            jar包依赖：<dependencies>
+                        <dependency>
+                            <groupId>org.springframework.cloud</groupId>
+                            <artifactId>spring-cloud-config-server</artifactId>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.tmatesoft.svnkit</groupId>
+                            <artifactId>svnkit</artifactId>
+                        </dependency>
+                      </dependencies>
+            配置文件：
+                server:
+                  port: 8001
+                spring:
+                  cloud:
+                    config:
+                      server:
+                        svn:
+                          uri: http://192.168.0.6/svn/repo/config-repo
+                          username: username
+                          password: password
+                        default-label: trunk
+                  profiles:
+                    active: subversion
+                  application:
+                    name: spring-cloud-config-server
+            启动类添加注解：@EnableConfigServer
+            refresh客户端刷新机制： 客户端并不能主动感知到配置的变化，从而主动去获取新的配置。每个客户端通过POST方法触发各自的/refresh。
+                jar包依赖：<dependency>
+                             <groupId>org.springframework.boot</groupId>
+                             <artifactId>spring-boot-starter-actuator</artifactId>
+                          </dependency>
+                          它是一个监控功能，其中有refresh功能
+                开启更新机制：需要给加载变量的类上面加载@RefreshScope，在客户端执行/refresh的时候就会更新此类下面的变量值。🌿🌿🌿🌿🌿
+                安全认证：application.properties下暂时解除安全认证 management.security.enabled=false
+
+                使用github的webhook自动刷新客户端的配置：
+                    概念：WebHook是当某个事件发生时,通过发送http post请求的方式来通知信息接收方。🌿🌿🌿🌿🌿
+                        Payload URL：触发后回调的URL
+                        Content type：数据格式,两种一般使用json
+                        Secret：用作给POST的body加密的字符串。采用HMAC算法
+                        events：触发的事件列表。push/create/delete
+        6.配置中心服务化和高可用：换个端口再配置一个Eureka服务器完成高可用功能
+            将server端当做一个服务注册到eureka中，client端去eureka中去获取配置中心server端的服务既可
+            server端改造：
+                <dependencies>
+                	<dependency>
+                		<groupId>org.springframework.cloud</groupId>
+                		<artifactId>spring-cloud-config-server</artifactId>
+                	</dependency>
+                	<dependency>
+                		<groupId>org.springframework.cloud</groupId>
+                		<artifactId>spring-cloud-starter-eureka</artifactId>
+                	</dependency>
+                </dependencies>
+                配置文件：
+                    server:
+                    server:
+                      port: 8001
+                    spring:
+                      application:
+                        name: spring-cloud-config-server
+                      cloud:
+                        config:
+                          server:
+                            git:
+                              uri: https://github.com/ityouknow/spring-cloud-starter/     # 配置git仓库的地址
+                              search-paths: config-repo                             # git仓库地址下的相对地址，可以配置多个，用,分割。
+                              username: username                                        # git仓库的账号
+                              password: password                                    # git仓库的密码
+                    eureka:
+                      client:
+                        serviceUrl:
+                          defaultZone: http://localhost:8000/eureka/   ## 注册中心eurka地址
+                启动类添加注解：@EnableDiscoveryClient
+            客户端改造：
+                <dependencies>
+                	<dependency>
+                		<groupId>org.springframework.cloud</groupId>
+                		<artifactId>spring-cloud-starter-config</artifactId>
+                	</dependency>
+                	<dependency>
+                		<groupId>org.springframework.boot</groupId>
+                		<artifactId>spring-boot-starter-web</artifactId>
+                	</dependency>
+                	<dependency>
+                		<groupId>org.springframework.cloud</groupId>
+                		<artifactId>spring-cloud-starter-eureka</artifactId>
+                	</dependency>
+                	<dependency>
+                		<groupId>org.springframework.boot</groupId>
+                		<artifactId>spring-boot-starter-test</artifactId>
+                		<scope>test</scope>
+                	</dependency>
+                </dependencies>
+                配置文件：
+                    spring.application.name=spring-cloud-config-client
+                    server.port=8002
+                    spring.cloud.config.name=neo-config
+                    spring.cloud.config.profile=dev
+                    spring.cloud.config.label=master
+                    spring.cloud.config.discovery.enabled=true
+                    spring.cloud.config.discovery.serviceId=spring-cloud-config-server
+                    eureka.client.serviceUrl.defaultZone=http://localhost:8000/eureka/
+                启动类添加注解：@EnableDiscoveryClient
+        7.配置中心和消息总线：配置中心终结版 使用Spring cloud bus 解决自动刷新大量配置
+            Spring cloud bus通过轻量消息代理连接各个分布的节点。目前唯一实现的方式是用AMQP消息代理作为通道。
+            Spring Cloud Bus做配置更新的步骤: 【本质是消息的广播】🌿🌿🌿🌿🌿
+                1、提交代码触发post给客户端A发送bus/refresh
+                2、客户端A接收到请求从Server端更新配置并且发送给Spring Cloud Bus
+                3、Spring Cloud bus接到消息并通知给其它客户端
+                4、其它客户端接收到通知，请求Server端获取最新配置
+                5、全部客户端均获取到最新的配置
+            jar包依赖：<dependency>
+                       <groupId>org.springframework.cloud</groupId>
+                       <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+                      </dependency>
+            配置文件：
+                ## 刷新时，关闭安全验证
+                management.security.enabled=false
+                ## 开启消息跟踪
+                spring.cloud.bus.trace.enabled=true
+                spring.rabbitmq.host=192.168.9.89
+                spring.rabbitmq.port=5672
+                spring.rabbitmq.username=admin
+                spring.rabbitmq.password=123456
+            利用消息总线触发一个客户端bus/refresh,而刷新所有客户端的配置的目的
+            改进版本：🌿🌿🌿🌿🌿
+                1、提交代码触发post请求给bus/refresh
+                2、server端接收到请求并发送给Spring Cloud Bus
+                3、Spring Cloud bus接到消息并通知给其它客户端
+                4、其它客户端接收到通知，请求Server端获取最新配置
+                5、全部客户端均获取到最新的配置
+
+                jar包依赖：<dependencies>
+                            <dependency>
+                                <groupId>org.springframework.cloud</groupId>
+                                <artifactId>spring-cloud-config-server</artifactId>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.cloud</groupId>
+                                <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.cloud</groupId>
+                                <artifactId>spring-cloud-starter-eureka</artifactId>
+                            </dependency>
+                          </dependencies>
+                配置文件：
+                    server:
+                      port: 8001
+                    spring:
+                      application:
+                        name: spring-cloud-config-server
+                      cloud:
+                        config:
+                          server:
+                            git:
+                              uri: https://github.com/ityouknow/spring-cloud-starter/   # 配置git仓库的地址
+                              search-paths: config-repo                                 # git仓库地址下的相对地址，可以配置多个，用,分割。
+                              username: username                                        # git仓库的账号
+                              password: password                                        # git仓库的密码
+                      rabbitmq:
+                        host: 192.168.0.6
+                        port: 5672
+                        username: admin
+                        password: 123456
+                    eureka:
+                      client:
+                        serviceUrl:
+                          defaultZone: http://localhost:8000/eureka/   ## 注册中心eurka地址
+                    management:
+                      security:
+                         enabled: false
+            局部刷新配置：/bus/refresh?destination=customers:8000
+            跟踪总线事件：spring.cloud.bus.trace.enabled=true
+            注意⚠️️️⚠️️️⚠️️️：旧版本的bus/refresh执行后，发送请求的服务会从eureka的注册中心撤销。解决办法：使用最新版本的spring cloud
+                <properties>
+                	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                	<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                	<java.version>1.8</java.version>
+                	<spring-cloud.version>Dalston.SR1</spring-cloud.version>
+                </properties>
+        8.服务网关zuul: {路由转发}
+            Spring Cloud Zuul就是提供负载均衡、反向代理、权限认证的一个API gateway。
+            Zuul是Netflix出品的一个基于JVM路由和服务端的负载均衡器。
+            🌿🌿🌿🌿🌿：nginx=反向代理服务器，zuul=反向代理网关。二者有相似之处。
+            jar包依赖：<dependency>
+                        <groupId>org.springframework.cloud</groupId>
+                        <artifactId>spring-cloud-starter-zuul</artifactId>
+                      </dependency>
+            配置文件：
+                spring.application.name=gateway-service-zuul
+                server.port=8888
+                #这里的配置表示，访问/it/** 直接重定向到http://www.ityouknow.com/**
+                zuul.routes.baidu.path=/it/**
+                zuul.routes.baidu.url=http://www.ityouknow.com/
+            启动类添加注解：@EnableZuulProxy
+            服务化：
+                逐个条目配置路由转发有局限。
+                解决办法：将Zuul注册到eureka server上去发现其他服务，就可以实现对serviceId的映射
+                jar包依赖：<dependency>
+                           <groupId>org.springframework.cloud</groupId>
+                           <artifactId>spring-cloud-starter-eureka</artifactId>
+                          </dependency>
+                配置文件：
+                    spring.application.name=gateway-service-zuul
+                    server.port=8888
+                    zuul.routes.api-a.path=/producer/**
+                    zuul.routes.api-a.serviceId=spring-cloud-producer
+                    eureka.client.serviceUrl.defaultZone=http://localhost:8000/eureka/
+                网关的默认路由规则：服务名映射路由
+                    Zuul会代理所有注册到Eureka Server的微服务，
+                    并且Zuul的路由规则如下：http://ZUUL_HOST:ZUUL_PORT/微服务在Eureka上的serviceId/**
+                    会被转发到serviceId对应的微服务。
+            Zuul的核心：
+                Filter是Zuul的核心，用来实现对外服务的控制。Filter的生命周期有4个，分别是“PRE”、“ROUTING”、“POST”、“ERROR”
+                    PRE: 在请求被路由之前调用。实现身份验证
+                    ROUTING: 将请求路由到微服务。
+                    POST: 路由到微服务以后执行。 为响应添加HTTP header等操作
+                    ERROR: 在其他阶段发生错误时执行。
+                默认Filter:
+                    pre：3个。比如ServletDetectionFilter
+                    route: 5个。比如SimpleHostRoutingFilter
+                    post: 2个。比如SendResponseFilter
+                配置文件中禁用过滤器：application.yml
+                    zuul:
+                    	FormBodyWrapperFilter:
+                    		pre:
+                    			disable: true
+                自动移Filter: 继承ZuulFilter类。代码举例如下
+                    public class TokenFilter extends ZuulFilter {
+                        @Override
+                        public String filterType() {
+                            return "pre"; // 可以在请求被路由之前调用
+                        }
+                        @Override
+                        public int filterOrder() {
+                            return 0; // filter执行顺序，通过数字指定 ,优先级为0，数字越大，优先级越低
+                        }
+                        @Override
+                        public boolean shouldFilter() {
+                            return true;// 是否执行该过滤器，此处为true，说明需要过滤
+                        }
+                        @Override
+                        public Object run() {
+                            RequestContext ctx = RequestContext.getCurrentContext();
+                            HttpServletRequest request = ctx.getRequest();
+                            String token = request.getParameter("token");// 获取请求的参数
+
+                            if (StringUtils.isNotBlank(token)) {
+                                ctx.setSendZuulResponse(true); //对请求进行路由
+                                ctx.setResponseStatusCode(200);
+                                ctx.set("isSuccess", true);
+                                return null;
+                            } else {
+                                ctx.setSendZuulResponse(false); //不对其进行路由
+                                ctx.setResponseStatusCode(400);
+                                ctx.setResponseBody("token is empty");
+                                ctx.set("isSuccess", false);
+                                return null;
+                            }
+                        }
+
+                    }
+                    添加自定义filter到项目：
+                       @Bean
+                       public TokenFilter tokenFilter() {
+                        return new TokenFilter();
+                       }
+            zuul路由熔断：
+                服务降级：服务出现异常时，直接返回我们预设的信息。
+                继承ZuulFallbackProvider接口，实现其中熔断的路由和响应。或者直接继承最新版本的FallbackProvider。代码如下：
+                    @Component
+                    public class ProducerFallback implements FallbackProvider {
+                        //指定要处理的 service。
+                        @Override
+                        public String getRoute() {
+                            return "spring-cloud-producer";
+                        }
+                        public ClientHttpResponse fallbackResponse() {
+                            return new ClientHttpResponse() {
+                                @Override
+                                public HttpStatus getStatusCode() throws IOException {
+                                    return HttpStatus.OK;
+                                }
+                                @Override
+                                public int getRawStatusCode() throws IOException {
+                                    return 200;
+                                }
+                                @Override
+                                public String getStatusText() throws IOException {
+                                    return "OK";
+                                }
+                                @Override
+                                public void close() {
+                                }
+                                @Override
+                                public InputStream getBody() throws IOException {
+                                    return new ByteArrayInputStream("The service is unavailable.".getBytes());
+                                }
+                                @Override
+                                public HttpHeaders getHeaders() {
+                                    HttpHeaders headers = new HttpHeaders();
+                                    headers.setContentType(MediaType.APPLICATION_JSON);
+                                    return headers;
+                                }
+                            };
+                        }
+                        @Override
+                        public ClientHttpResponse fallbackResponse(Throwable cause) {
+                            if (cause != null && cause.getCause() != null) {
+                                String reason = cause.getCause().getMessage();
+                                logger.info("Excption {}",reason);
+                            }
+                            return fallbackResponse();
+                        }
+                    }
+                    ⚠️：Zuul目前只支持服务级别的熔断，不支持具体到某个URL进行熔断。
+            zuul的路由重试：与Spring Retry组合使用
+                jar包依赖：<dependency>
+                            <groupId>org.springframework.retry</groupId>
+                            <artifactId>spring-retry</artifactId>
+                          </dependency>
+                开启Zuul retry:
+                    zuul.retryable=true #是否开启重试功能
+                    ribbon.MaxAutoRetries=2 #对当前服务的重试次数
+                    ribbon.MaxAutoRetriesNextServer=0   #切换相同Server的次数
+            zuul高可用：
+                在Zuul的前端使用Nginx或者F5进行负载转发以达到高可用性。
+        9.springcloud的使用选型思考？能够使用？🌿🌿🌿🌿🌿
+            答：spring cloud 必须基于 spring boot
+                市场：阿里，美团
+                学习：纯洁的微笑
+                前后指责划分：
+                    Spring Cloud只是后端服务治理的一套框架；spring推荐使用thymelead作为前端模版引擎
+                    一般情况下，前端app或者网页通过zuul来调用后端的服务，如果包含静态资源也可以使用nginx做一下代理转发。
+                测试：Spring-boot-starter-test支持项目中各层方法的测试，也支持controller层的各种属性。
+                配置：推荐使用redis缓存来做session共享
+                部署：java -jar app.jar --spring.profiles.active=dev就是启动测试环境的配置文件
+                     推荐使用jenkins来部署Spring Boot项目
+                开发：Spring Cloud和老项目可以混合使用，通过zuul来支持。也就是网关路由转移
+                运维：Turbine、zipkin可以用来做熔断和性能监控；
+                     动态上下线某个节点可以通过jenkins来实现
+                     Eureka会间隔一段时间来检测服务的可用性
+            spring cloud架构：
+                1、外部或者内部的非Spring Cloud项目都统一通过API网关（Zuul）来访问内部服务.
+                2、网关接收到请求后，从注册中心（Eureka）获取可用服务
+                3、由Ribbon进行均衡负载后，分发到后端的具体实例
+                4、微服务之间通过Feign进行通信处理业务
+                5、Hystrix负责处理服务超时熔断
+                6、Turbine监控服务间的调用和熔断相关指标
+        10.springcloud的架构演进
+            传统架构发展史：
+                单体架构：典型代表就是一个应用、一个数据库、一个web容器就可以跑起来。优先满足快速上线的要求，也便于快速跟进市场
+                垂直架构：SSH层级。应对更大的流量,就会对原有的业务进行拆分。
+                服务化架构：SOA代表面向服务的架构，将应用程序根据不同的职责划分为不同的模块，不同的模块直接通过特定的协议和接口进行交互
+                          在这个阶段可以使用WebService或者dubbo来服务治理。
+            SOA和微服务架构：
+                微服务架构是SOA架构思想的一种扩展，更加强调服务个体的独立性、拆分粒度更小。
+            微服务架构：
+                服务与服务之间的解耦
+                Eureka: 提供服务注册和发现。Eureka内部已经提供均衡负载的功能，只需要增加相应的服务端实例既可。
+                Hystrix: 在某个服务连续调用N次不响应的情况下,通知调用端调用失败。
+                Hystrix Dashboard和Turbine: 针对Hystrix进行实时监控的工具。汇总系统内多个服务的数据并显示到Hystrix Dashboard上,这个工具就是Turbine。
+                配置中心：spring cloud config-->git-->refresh-->spring cloud bus
+                服务网关：Spring Cloud Zuul路由是微服务架构中不可或缺的一部分，提供动态路由，监控，弹性，安全等的边缘服务。
+                链路跟踪：Spring Cloud Sleuth和Zipkin。
+                        通过Sleuth可以很清楚的了解到一个服务请求经过了哪些服务，每个服务处理花费了多长时间。从而让我们可以很方便的理清各微服务间的调用关系
+        11.Dubbo和Spring cloud区别？
+            Dubbo的服务注册中心：Zookeeper
+                   服务调用方式：RPC   //Dubbo定位服务治理、Spring Cloud是一个生态
+                   服务监控：Dubbo-monitor
+        12.使用Spring Cloud Sleuth和Zipkin进行分布式链路跟踪
+            目的：解决嵌套的服务调用失败，找到具体失败的服务信息地址。
+            应用：淘宝的“鹰眼”、京东的“Hydra”、大众点评的“CAT”、新浪的“Watchman”、唯品会的“Microscope”、窝窝网的“Tracing”
+            Spring Cloud Sleuth:
+                一个分布式服务跟踪系统，主要有三部分：数据收集、数据存储和数据展示。
+                服务追踪的追踪单元是从客户发起请求（request）抵达被追踪系统的边界开始，到被追踪系统向客户返回响应（response）为止的过程，称为一个“trace”。
+                一个trace=n个span
+            ZipKin: 存储追踪信息数据,zpkin ui展示数据。每个服务向zipkin报告计时数据，zipkin会根据调用关系通过Zipkin UI生成依赖关系图
+                可插拔数据存储方式：In-Memory、MySql、Cassandra以及Elasticsearch
+            快速上手： 【创建zipkin-server和添加zipkin支持】
+                jar包依赖：<dependencies>
+                           <dependency>
+                               <groupId>org.springframework.cloud</groupId>
+                               <artifactId>spring-cloud-starter-eureka</artifactId>
+                           </dependency>
+                           <dependency>
+                               <groupId>io.zipkin.java</groupId>
+                               <artifactId>zipkin-server</artifactId>
+                           </dependency>
+                           <dependency>
+                               <groupId>io.zipkin.java</groupId>
+                               <artifactId>zipkin-autoconfigure-ui</artifactId>
+                           </dependency>
+                           <dependency>
+                               <groupId>org.springframework.cloud</groupId>
+                               <artifactId>spring-cloud-starter-zipkin</artifactId>
+                           </dependency>
+                         </dependencies>
+                启动类添加注解：@EnableZipkinServer
+                配置文件：
+                    eureka:
+                      client:
+                        serviceUrl:
+                          defaultZone: http://localhost:8761/eureka/
+                    server:
+                      port: 9000
+                    spring:
+                      application:
+                        name: zipkin-server
+                      zipkin:
+                          base-url: http://localhost:9000
+                      sleuth:
+                        sampler:
+                          percentage: 1.0
+                默认采样算法：Reservoir sampling，具体实现类PercentageBasedSampler。默认比例是0.1=10%
+                            可以设置spring.sleuth.sampler.percentage
+        13.注册中心Consul使用详解：
+            背景：eureka2.x开发遇到困难，国内大多使用eureka1.x
+            同类产品：eureka,Consul,zookeeper,etcd   🌿🌿🌿🌿🌿
+            概念：Consul的方案更“一站式”，内置了服务注册与发现框架、分布一致性协议实现、健康检查、Key/Value 存储、多数据中心方案，不再需要依赖其它工具（比如 ZooKeeper 等）
+            工作原理：
+                1、当Producer启动的时候，会向Consul发送一个post请求，告诉Consul自己的IP和Port      //类似于注册操作
+                2、Consul接收到Producer的注册后，每隔10s（默认）会向Producer发送一个健康检查的请求，检验Producer是否健康
+                3、当Consumer发送GET方式请求/api/address到Producer时，会先从Consul中拿到一个存储服务IP和Port的临时表，从表中拿到Producer的IP和Port后再发送GET方式请求/api/address
+                4、该临时表每隔10s会更新，只包含有通过了健康检查的Producer
+            区别：eureka就是个servlet程序，跑在servlet容器中; Consul则是go编写而成
+            安装和启动操作：
+                启动：consul agent -dev
+                检查：http://localhost:8500
+            Consul服务端：
+                jar包依赖：
+                    <dependencies>
+                    	<dependency>
+                    		<groupId>org.springframework.boot</groupId>
+                    		<artifactId>spring-boot-starter-actuator</artifactId>       //健康检查依赖于此包。
+                    	</dependency>
+                    	<dependency>
+                    		<groupId>org.springframework.cloud</groupId>
+                    		<artifactId>spring-cloud-starter-consul-discovery</artifactId>
+                    	</dependency>
+                    	<dependency>
+                    		<groupId>org.springframework.boot</groupId>
+                    		<artifactId>spring-boot-starter-web</artifactId>
+                    	</dependency>
+                    	<dependency>
+                    		<groupId>org.springframework.boot</groupId>
+                    		<artifactId>spring-boot-starter-test</artifactId>
+                    		<scope>test</scope>
+                    	</dependency>
+                    </dependencies>
+                    Spring Boot版本使用的是2.0.3.RELEASE，Spring Cloud 最新版本是Finchley.RELEASE依赖于Spring Boot 2.x.
+                配置文件：
+                    spring.application.name=spring-cloud-consul-producer
+                    server.port=8501
+                    spring.cloud.consul.host=localhost
+                    spring.cloud.consul.port=8500
+                    #注册到consul的服务名称
+                    spring.cloud.consul.discovery.serviceName=service-producer
+                启动类添加注解：@EnableDiscoveryClient
+            Consul消费端：
+                配置文件：
+                    spring.application.name=spring-cloud-consul-consumer
+                    server.port=8503
+                    spring.cloud.consul.host=127.0.0.1
+                    spring.cloud.consul.port=8500
+                    #设置不需要注册到 consul 中
+                    spring.cloud.consul.discovery.register=false
+                使用类：
+                    @Autowired
+                    private LoadBalancerClient loadBalancer;
+                    @Autowired
+                    private DiscoveryClient discoveryClient;
+                模拟负载均衡：
+                    @RestController
+                    public class CallHelloController {
+                        @Autowired
+                        private LoadBalancerClient loadBalancer;
+                        @RequestMapping("/call")
+                        public String call() {
+                            ServiceInstance serviceInstance = loadBalancer.choose("service-producer");
+                            System.out.println("服务地址：" + serviceInstance.getUri());
+                            System.out.println("服务名称：" + serviceInstance.getServiceId());
+                            String callServiceResult = new RestTemplate().getForObject(serviceInstance.getUri().toString() + "/hello", String.class);
+                            System.out.println(callServiceResult);
+                            return callServiceResult;
+                        }
+                    }
+        14.Spring Cloud开源软件：
+            awesome-spring-cloud：知识库
+            PiggyMetrics：个人财务系统
+            spaascloud-master：模拟商城
+            Cloud-Admin：微服务化开发平台
+            spring-cloud-rest-tcc：事务驱动
+            pig:脚手架
+            xxpay-master:聚合支付
+            spring-boot-cloud：
+            FCat:企业级基础功能框架。
+            spring-cloud-examples:教程
+        15.服务网关Spring Cloud GateWay: 官方自己的网关组件🌿🌿🌿🌿🌿
+            概念：Spring Cloud Gateway使用非阻塞API，支持WebSockets，支持限流等新特性。基于Spring5.0
+                Route: 路由
+                Predicate: 断言
+                Filter: 过滤器
+            快速上手：
+                网关路由配置：
+                    yml文件配置
+                    通过@Bean自定义RouteLocator，在启动主类Application中配置
+                版本使用：spring-boot-starter-parent：2.0.6.RELEASE
+                        spring-cloud-dependencies:Finchley.SR2
+                jar包依赖：<dependency>
+                            <groupId>org.springframework.cloud</groupId>
+                            <artifactId>spring-cloud-starter-gateway</artifactId>
+                          </dependency>
+                          Spring Cloud Gateway是使用netty+webflux实现因此不需要再引入web模块。
+                配置路由规则：
+                    server:
+                      port: 8080
+                    spring:
+                      cloud:
+                        gateway:
+                          routes:
+                          - id: neo_route
+                            uri: http://www.ityouknow.com
+                            predicates:
+                            - Path=/spring-cloud
+                在启动类自定义转发：
+                    @Bean
+                    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+                        return builder.routes()
+                                .route("path_route", r -> r.path("/about")
+                                        .uri("http://ityouknow.com"))
+                                .build();
+                    }
+            路由规则：
+                Spring Cloud Gateway是通过Spring WebFlux的HandlerMapping做为底层支持来匹配到转发路由，
+                Spring Cloud Gateway内置了很多Predicates工厂，这些Predicates工厂通过不同的HTTP请求参数来匹配，多个Predicates工厂可以组合使用。
+                断言匹配：可以单独和组合使用
+                    时间匹配：After/Before/Between
+                        spring:
+                          cloud:
+                            gateway:
+                              routes:
+                               - id: time_route
+                                uri: http://ityouknow.com
+                                predicates:
+                                 - After=2018-01-20T06:06:06+08:00[Asia/Shanghai]
+                    Cookie匹配：
+                        spring:
+                          cloud:
+                            gateway:
+                              routes:
+                               - id: cookie_route
+                                 uri: http://ityouknow.com
+                                 predicates:
+                                 - Cookie=ityouknow, kee.e
+                    其他：- Header=X-Request-Id, \d+
+                         - Host=**.ityouknow.com
+                         - Method=GET
+                         - Path=/foo/{segment}
+                         - Query=smile
+                         - RemoteAddr=192.168.1.1/24
+                    各种Predicates同时存在于同一个路由时，请求必须同时满足所有的条件才被这个路由匹配。
+                    一个请求满足多个路由的谓词条件时，请求只会被首个成功匹配的路由转发
+            服务化和过滤器：
+                 Spring Cloud Gateway 注册到服务中心,Spring Cloud Gateway默认就会代理服务中心的所有服务
+                 jar包依赖：<dependency>
+                            <groupId>org.springframework.cloud</groupId>
+                            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+                           </dependency>
+                           <dependency>
+                               <groupId>org.springframework.cloud</groupId>
+                               <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+                           </dependency>
+                 服务网关注册到注册中心：
+                    <dependency>
+                        <groupId>org.springframework.cloud</groupId>
+                        <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+                    </dependency>
+                    配置文件：🌿🌿🌿🌿🌿
+                        server:
+                          port: 8888
+                        spring:
+                          application:
+                            name: cloud-gateway-eureka
+                          cloud:
+                            gateway:
+                             discovery:
+                                locator:
+                                 enabled: true      //是否与服务注册和发现组件进行结合
+                        eureka:
+                          client:
+                            service-url:
+                              defaultZone: http://localhost:8000/eureka/    //注册中心的地址
+                        logging:
+                          level:
+                            org.springframework.cloud.gateway: debug
+                    访问测试：http://网关地址：端口/服务中心注册 serviceId/具体的url 🌿🌿🌿🌿🌿
+                        比如服务SPRING-CLOUD-PRODUCER：http://localhost:9000/hello
+                        网关代理访问：http://localhost:8888/SPRING-CLOUD-PRODUCER/hello
+                 基于Filter(过滤器)实现的高级功能：
+                    生命周期只有pre和post
+                    分类：GatewayFilter 和 GlobalFilter。
+                         GlobalFilter会应用到所有的路由上，而GatewayFilter将应用到单个路由或者一个分组的路由上。
+                    作用：GatewayFilter可以修改请求的Http的请求或者响应，或者根据请求或者响应做一些特殊的限制。做路由配置
+                    文件配置：
+                        server:
+                          port: 8888
+                        spring:
+                          application:
+                            name: cloud-gateway-eureka
+                          cloud:
+                            gateway:
+                             discovery:
+                                locator:
+                                 enabled: true
+                             routes:
+                             - id: add_request_parameter_route
+                               uri: http://localhost:9000
+                               filters:
+                               - AddRequestParameter=foo,bar
+                               predicates:
+                                 - Method=GET
+                        eureka:
+                          client:
+                            service-url:
+                              defaultZone: http://localhost:8000/eureka/
+                        logging:
+                          level:
+                            org.springframework.cloud.gateway: debug
+                    服务路由转发：【将Filter作用到每个应用的实例上】
+                        #格式为：lb://应用注册服务名    //这里的lb是一种协议，负载均衡协议。
+                        uri: lb://spring-cloud-producer
+            Filter的常用功能：
+                修改请求路径的过滤器：
+                    StripPrefix Filter是一个请求路径截取的功能，我们可以利用这个功能来做特殊业务的转发。
+                        文件配置：
+                            spring:
+                              cloud:
+                                gateway:
+                                  routes:
+                                  - id: nameRoot
+                                    uri: http://nameservice
+                                    predicates:
+                                    - Path=/name/**
+                                    filters:
+                                    - StripPrefix=2
+                            比如：http://name/bar/foo会被转发成http://nameservice/foo
+                    PrefixPath Filter是在URL路径前面添加一部分的前缀
+                        spring:
+                          cloud:
+                            gateway:
+                              routes:
+                              - id: prefixpath_route
+                                uri: http://example.org
+                                filters:
+                                - PrefixPath=/mypath
+                限速路由器：基于redis的限流，稳定高并发服务
+                    jar包依赖：<dependency>
+                                 <groupId>org.springframework.cloud</groupId>
+                                 <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+                              </dependency>
+                    文件配置：
+                        spring:
+                          application:
+                            name: cloud-gateway-eureka
+                          redis:
+                            host: localhost
+                            password:
+                            port: 6379
+                          cloud:
+                            gateway:
+                             discovery:
+                                locator:
+                                 enabled: true
+                             routes:
+                             - id: requestratelimiter_route
+                               uri: http://example.org
+                               filters:
+                               - name: RequestRateLimiter   //固定值
+                                 args:
+                                   redis-rate-limiter.replenishRate: 10
+                                   redis-rate-limiter.burstCapacity: 20  //令牌桶容量
+                                   key-resolver: "#{@userKeyResolver}"  //使用SpEL按名称引用bean
+                               predicates:
+                                 - Method=GET
+                    项目中设置限流的策略，创建Config类：
+                        //根据请求参数中的 user 字段来限流
+                        public class Config {
+                            @Bean
+                            KeyResolver userKeyResolver() {
+                                return exchange -> Mono.just(exchange.getRequest().getQueryParams().getFirst("user"));
+                            }
+                        }
+                        //根据ip地址限流
+                        @Bean
+                        public KeyResolver ipKeyResolver() {
+                            return exchange -> Mono.just(exchange.getRequest().getRemoteAddress().getHostName());
+                        }
+                熔断路由器：
+                    Spring Cloud Gateway也可以利用Hystrix的熔断特性，在流量过大时进行服务降级。【就是返回预设异常结果】
+                    jar包依赖：<dependency>
+                                 <groupId>org.springframework.cloud</groupId>
+                                 <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+                              </dependency>
+                    文件配置：以服务名的方式对注册中心的服务进行熔断回调操作
+                        spring:
+                          cloud:
+                            gateway:
+                              routes:
+                              - id: hystrix_route
+                                uri: lb://spring-cloud-producer
+                                predicates:
+                                - Path=/consumingserviceendpoint
+                                filters:
+                                - name: Hystrix
+                                  args:
+                                    name: fallbackcmd
+                                    fallbackUri: forward:/incaseoffailureusethis
+                重试路由器：
+                    RetryGatewayFilter是Spring Cloud Gateway对请求重试提供的一个GatewayFilter Factory
+                    文件配置：
+                        spring:
+                          cloud:
+                            gateway:
+                              routes:
+                              - id: retry_test
+                                uri: lb://spring-cloud-producer
+                                predicates:
+                                - Path=/retry
+                                filters:
+                                - name: Retry
+                                  args:
+                                    retries: 3
+                                    statuses: BAD_GATEWAY

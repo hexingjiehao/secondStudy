@@ -1,0 +1,660 @@
+1.学习腾讯云存储的使用：主要流式查找全部数据和批量删除数据
+    概念：腾讯云对象存储 COS 是在云上提供无层次结构的分布式存储产品，为用户提供单价较低且快速可靠的数据存储方案。
+         是一个使用HTTP/HTTPS协议访问的Web存储服务。使用REST API或COS SDK来访问COS
+
+         腾讯云访问管理（Cloud Access Management，CAM），可以管理存储资源。
+
+    0.SDK和API的区别？
+        答：SDK相当于开发集成工具环境，API就是数据接口。在SDK环境下调用API数据。
+            实际上SDK包含了API的定义，API定义一种能力，一种接口的规范，而SDK可以包含这种能力、包含这种规范。但是SDK又不完完全全只包含API以及API的实现，它是一个软件工具包，它还有很多其他辅助性的功能。
+
+    快速入门的操作：
+        在腾讯云 对象存储控制台 开通腾讯云对象存储（COS）服务
+        在腾讯云 对象存储控制台 创建一个 Bucket
+        在访问管理控制台中的 云 API 密钥 页面里获取 APPID、SecretId、SecretKey 内容
+        🌿🌿🌿🌿🌿编写一个请求签名算法程序（或使用任何一种服务端 SDK）
+        计算签名，调用 API 执行操作
+
+    1.地址：https://cloud.tencent.com/document/product/436/7751
+    2.对象存储类型：按照访问的频度。
+        标准存储：公司的头像,附件。
+        低频存储：
+        归档存储：
+    3.腾讯云的访问需要APPID，注册后拥有。
+        需要选择一个域名：上海ap-shanghai，默认域名<BucketName-APPID>.cos.ap-shanghai.myqcloud.com
+        创建一个存储桶：桶的域名就是上面的。
+    4.存储桶不可重命名，每个账户最多200个存储桶。我需要申请一个桶⚠️⚠️⚠️
+      每次最多批量删除1000个对象
+      拥有过期删除功能，但不符合我们要求，我们需要删除不使用的。
+
+      🌿🌿🌿奇思妙想：如果云存储的对象有状态，则可以直接通过设置生命周期的过期删除功能，进行操作而不需要写代码。
+    5.费用包括：
+        存储容量费用 / 请求费用 / 数据取回费用 / 流量费用
+        内网访问判断方法：可以减少费用！！！
+
+    6.词汇表：
+        存储桶：Bucket。1个存储桶存放多个对象
+        对象：Object
+        地域：Region。数据中心所在地，比如上海。存储桶存放的位置，和计费传输有关。
+        APPID：腾讯云标识，需要在使用资源时证明身份。
+        API秘钥：安全凭证，由 SecretId 和 SecretKey 一起组成。一个用户可以创建多个秘钥⚠️⚠️⚠️
+            SecretId: 标识调用者身份。36个字符
+            SecretKey: 用于加密签名字符串和服务器端验证签名字符串的密钥。32个字符。
+        默认访问域名：由存储桶名 + COS 所属地标识 + 对象名组成。用于唯一标别对象。
+        CDN加速访问域名：存储桶名 + CDN 加速标识 + 对象名组成。用于唯一标别对象。
+        ACL:访问控制列表。指特定 Bucket 或 Object 的访问控制信息列表。
+        CORS：跨域资源共享（Cross-Origin Resource Sharing），
+              指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求，即可能进行了重定向之类的。
+        Multipart Uploads：分块上传，腾讯云COS服务为上传文件提供的一种分块上传模式。
+
+
+    7.常见问题：
+        1.对象存储和文件存储，以及云硬盘的区别？
+            答: 对象存储可以无限存储，无格式限制，保持最终一致性，无文件锁。使用http/https协议访问API,通过URL下载。
+                文件存储使用文件传输协议。需要挂在在云服务器。
+                云硬盘搭配云服务器，使用文件系统分区和格式化后，被挂载使用。
+        2.如何理解cos上的文件夹和目录？
+            答：对象存储不存在文件夹和目录，只是模拟文件夹。
+        3.重要的对象类有哪些？
+            答：ListMultipartUploads，Abort Multipart upload
+        4.xml api和json api的关联？
+            答：二者的数据互通，秘钥通用，但是接口不兼容，域名不一致，签名不通用，设置的规则ACL不通用。
+            JSON API的上传域名为<Region>.file.myqcloud.com。目前不发展新特性
+        5.如何判断内网使用cos，从而节省金钱？
+            答：使用nslookup命令。举例：nslookup examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com
+        6.同名文件上传，是覆盖还是增加不同版本？
+            答：直接覆盖源文件
+        🌿🌿🌿奇思妙想：如果代码上传的文件都是同名的，则原来的文件会自动被覆盖掉。
+
+    8.Java SDK文档：最最🌿🌿🌿🌿🌿🌿。java代码进行cos操作
+        java sdk的操作：需要安装sdk，通过gradle或者maven
+            快速入门：
+                <dependency>
+                    <groupId>com.qcloud</groupId>
+                    <artifactId>cos_api</artifactId>
+                    <version>5.5.1</version>
+                </dependency>
+
+                核心类：COSClient
+            接口文档：
+                参见具体的java代码。
+            升级到xml java sdk5:
+
+        错误码：客户端错误和服务器端错误。
+            10000	InvalidArgument	参数校验失败，如必填参数为空。
+            10001	InvalidCredentials	密钥信息校验失败，如密钥为空。
+            10002	BadRequest	SDK配置错误，如 APPID，region 配置出错。
+            10003	SinkSourceNotFound	输入源或者输出源错误，如上传的文件不存在。
+            10004	UnsupportOperation	无法支持的操作。
+
+            20000	InternalError	内部错误，如 xml 格式数据解析失败。
+            20001	ServerError	服务错误，如返回了非 xml 格式数据。
+            20002	IOError	流读写 IO 异常，如文件读写 IO 异常。
+            20003	NetworkError	网络出现异常，如网络不可用，DNS 解析失败等。
+            20004	DataIntegrityError	数据完整性校验失败。
+
+            30000	UserCancelled	用户已取消了请求。
+            30001	AlreadyFinished	已执行过请求。
+
+
+    9.API 文档：使用http等请求协议，发送一个指定的请求获取数据
+        使用XML API，这是一种轻量级的、无连接状态的接口，调用此接口您可以直接通过HTTP/HTTPS 发出请求和接受响应，实现与腾讯云对象存储后台的交互操作。
+        公共请求头部：必选Host。形式为 <BucketName>-<APPID>.cos.<Region>.myqcloud.com
+        公共响应头部：Etag的值可以用于检查 Object 的内容是否发生变化
+        错误码：语法格式：<?xml version="1.0" encoding="UTF-8"?>
+                         <Error>
+                           <Code>[错误码]</Code>
+                           <Message>[错误信息]</Message>
+                           <Resource>[资源地址]</Resource>
+                           <RequestId>[请求ID]</RequestId>
+                           <TraceId>[错误ID]</TraceId>
+                         </Error>
+        🌿🌿🌿请求签名：仅支持xml版本，不适用POST object的HTTP请求。使用场景为对外发布数据，公有读,私有写。
+            signature的计算步骤：对签名的有效起止时间加密计算值SignKey。
+                               根据固定格式组合生成HttpString。
+                               加密HttpString，并根据固定格式组合生成StringToSign。
+                               加密StringToSign，生成Signature。
+                伪代码：SignKey = HMAC-SHA1(SecretKey,"[q-key-time]")
+                       HttpString = [HttpMethod]\n[HttpURI]\n[HttpParameters]\n[HttpHeaders]\n
+                       StringToSign = [q-sign-algorithm]\n[q-sign-time]\nSHA1-HASH(HttpString)\n
+                       Signature = HMAC-SHA1(SignKey,StringToSign)
+        操作列表：有service操作，存储桶操作，对象操作。😢😢😢没有找到修改对象的名字操作
+            ⚠️⚠️⚠️GET Bucket(List Object)：获取Bucket下的部分或者全部Object
+            关键是解析xml文件。文档格式是前端程序员看的。
+
+    10.开发者指南：
+        1.创建请求：匿名请求和签名请求。http头部是否有Authorization字段。一般使用子账户发起请求和管理资源。
+            需要有安全凭证：tmpSecretId/tmpSecretKey，还有sessionToken，令牌有41个字符。
+            http请求时，头部带入存储桶，比如<BucketName-APPID>.cos.<Region>.myqcloud.com。
+            测试连通性( 80端口 )：telnet mybucket-1250000000.cos.ap-guangzhou.myqcloud.com 80
+        2.存储桶概述：可以设置权限和防盗链。
+            名字举例：用户自定义字符串 和 系统生成数字串（APPID）。比如examplebucket-1250000000
+            权限类别：私有读写：一般是创建者拥有
+                     公有读私有写
+                     公有读写
+            创建存储桶：java sdk方式创建：步骤如下
+                ：初始化客户端 cosclient。
+                ：执行 createBucket 创建 Bucket，创建 Bucket 时可指定 Bucket 的权限（公有读写或私有读）。
+                       COSCredentials cred = new BasicCOSCredentials("COS_SECRETID", "COS_SECRETKEY");
+                       ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing"));
+                       COSClient cosclient = new COSClient(cred, clientConfig);
+
+                       String bucketName = "examplebucket-1250000000";
+                       CreateBucketRequest createBucketRequest = new CreateBucketRequest(bucketName);
+
+                       createBucketRequest.setCannedAcl(CannedAccessControlList.PublicRead);
+                       Bucket bucket = cosclient.createBucket(createBucketRequest);
+            删除存储桶：java sdk方式删除：必须由内往外的删除。步骤如下。最好使用代码遍历的方式进行删除整个文件夹
+                ：初始化客户端 cosclient。
+                ：执行 deleteBucket 删除 Bucket，Bucket 必须不包含任何数据，否则需要先清空数据。
+                    COSCredentials cred = new BasicCOSCredentials("COS_SECRETID", "COS_SECRETKEY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "examplebucket-1250000000";
+                    cosclient.deleteBucket(bucketName);
+        3.对象操作：
+            简单上传：单个请求小于5GB。java sdk方式上传：步骤如下
+                ：初始化客户端 cosclient。
+                ：执行 putObject 方法上传对象，支持将本地文件或者输入流上传到 COS。
+                    COSCredentials cred = new BasicCOSCredentials("COS_SECRETID", "COS_SECRETKEY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "examplebucket-1250000000";
+                    String key = "doc/text.txt";
+                    File localFile = new File("src/test/resources/len10M.txt");
+                    PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, localFile);
+
+                    putObjectRequest.setStorageClass(StorageClass.Standard_IA);
+                    try {
+                        PutObjectResult putObjectResult = cosclient.putObject(putObjectRequest);
+                        String etag = putObjectResult.getETag();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+                    cosclient.shutdown();
+
+                    //以输入流的形式上传文件，感觉有问题？？？
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "examplebucket-1250000000";
+                    String key = "doc/text.txt";
+                    File localFile = new File("src/test/resources/len10M.txt");
+
+                    InputStream input = new ByteArrayInputStream(new byte[10]);
+                    ObjectMetadata objectMetadata = new ObjectMetadata();
+                    objectMetadata.setContentLength(10);
+                    objectMetadata.setContentType("image/jpeg");
+
+                    PutObjectRequest putObjectRequest =new PutObjectRequest(bucketName, key, input, objectMetadata);
+                    putObjectRequest.setStorageClass(StorageClass.Standard_IA);
+                    try {
+                        PutObjectResult putObjectResult = cosclient.putObject(putObjectRequest);
+                        String etag = putObjectResult.getETag();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+                    cosclient.shutdown();
+            分块上传：可用于续传，每块有编号。一般情况是大于20M,进行分块上传。java sdk方式上传：步骤如下
+                ：初始化客户端 cosclient。
+                ：使用 initiateMultipartUpload 初始化分块上传获取一个新的 uploadid，或者调用 listMultipartUploads 获取之前还未完成的分块上传，得到 uploadid。
+                ：已上传的分块可使用 listParts 进行获取，未上传的分块使用 uploadPart 上传分块数据, 或者 copyPart 选择从另外一个文件 copy 分块到目前文件。以此达到断点续传的功能，如果对已上传的分块再次调用 uploadPart 或者 copyPart 则会覆盖已上传的分块数据。
+                ：使用 completeMultipartUpload 完成分块上传或者调用 abortMultipartUpload 终止分块上传。
+                    一共6个操作。这里只举出一个例子，最后进行代码尝试。https://cloud.tencent.com/document/product/436/14112。主要是获取分块的ID
+                        COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                        ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                        COSClient cosclient = new COSClient(cred, clientConfig);
+
+                        String bucketName = "mybucket-1251668577";
+                        String key = "aaa/bbb.txt";
+                        InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucketName, key);
+                        request.setStorageClass(StorageClass.Standard_IA);
+                        try {
+                            InitiateMultipartUploadResult initResult = cosclient.initiateMultipartUpload(request);
+                            String uploadId =  initResult.getUploadId();
+                        } catch (CosServiceException e) {
+                            e.printStackTrace();
+                        } catch (CosClientException e) {
+                            e.printStackTrace();
+                        }
+                        cosclient.shutdown();
+            预签名授权上传：限制型允许第三方上传。java sdk方式预签名授权上传：步骤如下
+                ：初始化客户端 cosclient。
+                ：执行 generatePresignedUrl 方法获取上传签名，并传入 http 方法参数为 PUT。
+                        COSCredentials cred = new BasicCOSCredentials("COS_SECRETID", "COS_SECRETKEY");
+                        ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing"));
+                        COSClient cosclient = new COSClient(cred, clientConfig);
+
+                        String bucketName = "examplebucket-1250000000";
+                        String key = "text.txt";
+                        Date expirationTime = new Date(System.currentTimeMillis() + 30 * 60 * 1000);
+
+                        URL url = cosclient.generatePresignedUrl(bucketName, key, expirationTime, HttpMethodName.PUT);
+                        try {
+                            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                            connection.setDoOutput(true);
+                            connection.setRequestMethod("PUT");
+                            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
+
+                            out.write("This text uploaded as object.");
+                            out.close();
+                            int responseCode = connection.getResponseCode();
+                            System.out.println("Service returned response code " + responseCode);
+                        } catch (ProtocolException e) {
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        cosclient.shutdown();
+            简单获取对象：获取并下载单个对象或者其中的一部分。java sdk方式简单获取对象：有3种方法。步骤如下
+                ：初始化客户端 cosclient。
+                ：执行 getObject 方法获取输入流或者将内容保存到本地。
+                    COSCredentials cred = new BasicCOSCredentials("1250000", "AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket";
+                    String key = "aaa.txt";
+                    try {
+                        COSObject cosObject = cosclient.getObject(bucketName, key);
+                        COSObjectInputStream cosObjectInput = cosObject.getObjectContent();
+                        cosObjectInput.close();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+
+                    //指定字节的下载数据方法
+                    COSCredentials cred = new BasicCOSCredentials("1250000", "AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket";
+                    String key = "aaa.txt";
+                    try {
+                        GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, key);
+                        getObjectRequest.setRange(0, 10);
+
+                        COSObject cosObject = cosclient.getObject(bucketName, key);
+                        COSObjectInputStream cosObjectInput = cosObject.getObjectContent();
+                        cosObjectInput.close();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+
+                    //重写响应头，设置请求属性替换响应头
+                    COSCredentials cred = new BasicCOSCredentials("1250000", "AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket";
+                    String key = "aaa.txt";
+                    try {
+                        GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, key);
+
+                        ResponseHeaderOverrides responseHeaders = new ResponseHeaderOverrides();
+                        String responseContentType="image/x-icon";
+                        String responseContentEncoding = "gzip,deflate,compress";
+                        String responseContentLanguage = "zh-CN";
+                        String responseContentDispositon = "filename=\"abc.txt\"";
+                        String responseCacheControl = "no-cache";
+                        String expireStr = DateUtils.formatRFC822Date(new Date(System.currentTimeMillis() + 24 * 3600 * 1000));
+                        responseHeaders.setContentType(responseContentType);
+                        responseHeaders.setContentEncoding(responseContentEncoding);
+                        responseHeaders.setContentLanguage(responseContentLanguage);
+                        responseHeaders.setContentDisposition(responseContentDispositon);
+                        responseHeaders.setCacheControl(responseCacheControl);
+                        responseHeaders.setExpires(expireStr);
+                        getObjectRequest.setResponseHeaders(responseHeaders);
+
+                        COSObject cosObject = cosclient.getObject(bucketName, key);
+                        COSObjectInputStream cosObjectInput = cosObject.getObjectContent();
+                        cosObjectInput.close();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+            预签名授权下载：限制型第三方下载，生成下载链接。java sdk方式预签名授权下载：步骤如下
+                ：初始化客户端 cosclient。
+                ：执行 generatePresignedUrl 方法获取下载签名，下载传入 http 方法为 GET。
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-125110000";
+                    String key = "aaa.txt";
+
+                    GeneratePresignedUrlRequest req =new GeneratePresignedUrlRequest(bucketName, key, HttpMethodName.GET);
+                    Date expirationDate = new Date(System.currentTimeMillis() + 30 * 60 * 1000);
+                    req.setExpiration(expirationDate);
+
+                    URL url = cosclient.generatePresignedUrl(req);
+                    System.out.println(url.toString());
+
+                    //设置https头
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-125110000";
+                    String key = "aaa.txt";
+                    GeneratePresignedUrlRequest req =new GeneratePresignedUrlRequest(bucketName, key, HttpMethodName.GET);
+
+                    ResponseHeaderOverrides responseHeaders = new ResponseHeaderOverrides();
+                    String responseContentType = "image/x-icon";
+                    String responseContentLanguage = "zh-CN";
+                    String responseContentDispositon = "filename=\"abc.txt\"";
+                    String responseCacheControl = "no-cache";
+                    String expireStr =DateUtils.formatRFC822Date(new Date(System.currentTimeMillis() + 24 * 3600 * 1000));
+                    responseHeaders.setContentType(responseContentType);
+                    responseHeaders.setContentLanguage(responseContentLanguage);
+                    responseHeaders.setContentDisposition(responseContentDispositon);
+                    responseHeaders.setCacheControl(responseCacheControl);
+                    responseHeaders.setExpires(expireStr);
+                    req.setResponseHeaders(responseHeaders);
+
+                    URL url = cosclient.generatePresignedUrl(req);
+                    System.out.println(url.toString());
+
+                    //匿名下载
+                    COSCredentials cred = new AnonymousCOSCredentials();
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-125110000";
+                    String key = "aaa.txt";
+                    GeneratePresignedUrlRequest req =new GeneratePresignedUrlRequest(bucketName, key, HttpMethodName.GET);
+
+                    URL url = cosclient.generatePresignedUrl(req);
+                    System.out.println(url.toString());
+
+            列出对象键：最最🌿🌿🌿🌿。大数据量时，每次返回1000个对象。java sdk方式：步骤如下
+                :初始化客户端 cosclient。
+                :使用 listObjects 列出 object，每次最多列出 1000 个 object，如果需要列出所有的或者超过 1000 个, 则需要循环调用 listObjects。
+                ⚠️⚠️⚠️如果要获取超过maxkey数量的Object或者获取所有的Object,则需要循环调用 listobject,用上一次返回的next marker作为下一次调用的marker,直到返回的truncated为false
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-1251668577";
+                    ListObjectsRequest listObjectsRequest = new ListObjectsRequest();
+                    listObjectsRequest.setBucketName(bucketName);
+                    listObjectsRequest.setPrefix("aaa/bbb");
+                    listObjectsRequest.setDelimiter("");
+                    listObjectsRequest.setEncodingType("url");
+
+                    listObjectsRequest.setMaxKeys(1000);
+                    ObjectListing objectListing = null;
+                    try {
+                        objectListing = cosclient.listObjects(listObjectsRequest);
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+                    List<String> commonPrefixs = objectListing.getCommonPrefixes();
+
+                    List<COSObjectSummary> cosObjectSummaries = objectListing.getObjectSummaries();
+                    for (COSObjectSummary cosObjectSummary : cosObjectSummaries) {
+                        String key = cosObjectSummary.getKey();
+                        try {
+                            key = URLDecoder.decode(key, "utf-8");🌿🌿🌿🌿🌿🌿🌿🌿
+                        } catch (UnsupportedEncodingException e) {
+                            continue;
+                        }
+                        String etag = cosObjectSummary.getETag();
+                        long fileSize = cosObjectSummary.getSize();
+                        String storageClasses = cosObjectSummary.getStorageClass();
+                    }
+                    cosclient.shutdown();
+
+                    //循环获取大数据的对象名字
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-1251668577";
+
+                    ListObjectsRequest listObjectsRequest = new ListObjectsRequest();
+                    listObjectsRequest.setBucketName(bucketName);
+                    listObjectsRequest.setPrefix("aaa/bbb");
+                    listObjectsRequest.setDelimiter("");
+                    listObjectsRequest.setEncodingType("url");
+                    listObjectsRequest.setMaxKeys(1000);
+                    ObjectListing objectListing = null;
+                    do {
+                        try {
+                            objectListing = cosclient.listObjects(listObjectsRequest);
+                        } catch (CosServiceException e) {
+                            e.printStackTrace();
+                            return;
+                        } catch (CosClientException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                        List<String> commonPrefixs = objectListing.getCommonPrefixes();
+                        List<COSObjectSummary> cosObjectSummaries = objectListing.getObjectSummaries();
+                        for (COSObjectSummary cosObjectSummary : cosObjectSummaries) {
+                            String key = cosObjectSummary.getKey();
+                            try {
+                                key = URLDecoder.decode(key, "utf-8");
+                            } catch (UnsupportedEncodingException e) {
+                                continue;
+                            }
+                            String etag = cosObjectSummary.getETag();
+                            long fileSize = cosObjectSummary.getSize();
+                            String storageClasses = cosObjectSummary.getStorageClass();
+                        }
+                        String nextMarker = "";
+                        try {
+                            nextMarker = URLDecoder.decode(objectListing.getNextMarker(), "utf-8");
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                        listObjectsRequest.setMarker(nextMarker);
+                    } while (objectListing.isTruncated());
+                    cosclient.shutdown();
+
+            简单复制：单个操作，最大的5GB对象。从一个存储桶复制到另一个存储桶。java sdk方式：步骤如下
+                ：初始化客户端 cosclient。
+                ：使用copyObject接口来完成copy。
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    Region srcBucketRegion = new Region("ap-shanghai");
+                    String srcBucketName = "srcBucket-1251668577";
+                    String srcKey = "aaa/bbb.txt";
+
+                    String destBucketName = "destBucket-1251668577";
+                    String destKey = "ccc/ddd.txt";
+
+                    CopyObjectRequest copyObjectRequest = new CopyObjectRequest(srcBucketRegion, srcBucketName,srcKey, destBucketName, destKey);
+                    try {
+                        CopyObjectResult copyObjectResult = cosclient.copyObject(copyObjectRequest);
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+                    cosclient.shutdown();
+            分块复制：大于5GB的文件，可能会调用分块上传API。java sdk方式：步骤如下
+                ：初始化客户端 cosclient。
+                ：使用 TransferManager 中提供的高级 API copy 接口来完成拷贝。这个接口很灵活，自动根据文件大小选择复制接口
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    ExecutorService threadPool = Executors.newFixedThreadPool(32);
+                    TransferManager transferManager = new TransferManager(cosclient, threadPool);
+
+                    Region srcBucketRegion = new Region("ap-shanghai");
+                    String srcBucketName = "srcBucket-1251668577";
+                    String srcKey = "aaa/bbb.txt";
+
+                    String destBucketName = "destBucket-1251668577";
+                    String destKey = "ccc/ddd.txt";
+
+                    CopyObjectRequest copyObjectRequest = new CopyObjectRequest(srcBucketRegion, srcBucketName,srcKey, destBucketName, destKey);
+                    try {
+                        Copy copy = transferManager.copy(copyObjectRequest);
+                        CopyResult copyResult = copy.waitForCopyResult();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    transferManager.shutdownNow();
+                    cosclient.shutdown();
+            删除单个对象：🌿🌿🌿🌿，根据对象键删除。java sdk方式：步骤如下
+                ：初始化客户端 cosclient。
+                ：执行deleteObject方法删除对象，传入bucketName和要删除的key。
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-1251668577";
+                    String key = "aaa/bbb.txt";
+                    try {
+                        cosclient.deleteObject(bucketName, key);
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+                    cosclient.shutdown();
+            删除多个对象：🌿🌿🌿🌿，当删除任务都成功完成时，返回的内容通常为空。若有发生错误，则会返回错误信息。单次请求最多可删除1000个对象。java sdk方式：步骤如下
+                ：初始化客户端 cosclient。
+                ：执行 deleteObjects 方法删除对象，需提供要删除的对象键名称。
+                ：执行成功会返回 DeleteObjectsResult 对象，包含所有已删除的对象键。如果部分成功部分失败（如对该对象没有删除权限），则返回MultiObjectDeleteException类。
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-1251668577";
+                    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(bucketName);
+                    ArrayList<KeyVersion> keyList = new ArrayList<>();
+                    keyList.add(new KeyVersion("aaa.txt"));
+                    keyList.add(new KeyVersion("bbb.mp4"));
+                    keyList.add(new KeyVersion("ccc/ddd.jpg"));
+                    deleteObjectsRequest.setKeys(keyList);
+
+                    try {
+                        DeleteObjectsResult deleteObjectsResult = cosclient.deleteObjects(deleteObjectsRequest);
+                        List<DeletedObject> deleteObjectResultArray = deleteObjectsResult.getDeletedObjects();
+                    } catch (MultiObjectDeleteException mde) { // 如果部分产出成功部分失败, 返回MultiObjectDeleteException
+                        List<DeletedObject> deleteObjects = mde.getDeletedObjects();
+                        List<DeleteError> deleteErrors = mde.getErrors();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+
+                    //含有多个版本的情况删除
+                    COSCredentials cred = new BasicCOSCredentials("AKIDXXXXXXXX", "1A2Z3YYYYYYYYYY");
+                    ClientConfig clientConfig = new ClientConfig(new Region("ap-beijing-1"));
+                    COSClient cosclient = new COSClient(cred, clientConfig);
+
+                    String bucketName = "mybucket-1251668577";
+                    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(bucketName);
+                    ArrayList<KeyVersion> keyList = new ArrayList<>();
+                    keyList.add(new KeyVersion("aaa.txt", "axbefagagaxxfafa"));   //指定文件的版本，存储在对象的元数据区域
+                    keyList.add(new KeyVersion("bbb.mp4", "awcafa1faxg0lx"));
+                    keyList.add(new KeyVersion("ccc/ddd.jpg", "kafa1kxxaa2ymh"));
+                    deleteObjectsRequest.setKeys(keyList);
+
+                    try {
+                        DeleteObjectsResult deleteObjectsResult = cosclient.deleteObjects(deleteObjectsRequest);
+                        List<DeletedObject> deleteObjectResultArray = deleteObjectsResult.getDeletedObjects();
+                    } catch (MultiObjectDeleteException mde) { // 如果部分产出成功部分失败, 返回MultiObjectDeleteException
+                        List<DeletedObject> deleteObjects = mde.getDeletedObjects();
+                        List<DeleteError> deleteErrors = mde.getErrors();
+                    } catch (CosServiceException e) {
+                        e.printStackTrace();
+                    } catch (CosClientException e) {
+                        e.printStackTrace();
+                    }
+            生命周期概述：⚠️⚠️⚠️日志数据在30天后自动归档，或者2年后自动删除。
+                过期删除：设置对象的过期时间，使对象到期后被自动删除。
+                    按前缀区分：匹配前缀规则的对象都会按照规则执行处理。
+                    按版本管理：非当前版本的对象将会按照规则执行处理。
+                    按删除标记：对象历史版本都清除时，可以指定移除删除标记。
+                    按未完成分块上传：对未完成的分块上传任务执行处理。
+                🌿🌿🌿🌿通过规则文件进行定时删除。比如针对指定的对象键前缀，在覆盖上传的时候，将原来的对象增加一个前缀之类的。⚠️⚠️⚠️⚠️关键是已经上传的对象是否能够修改名字？？？控制台可以，但是代码是否可以不知道
+                通过sdk方式配置生命周期：目前没有Java版本。步骤如下
+                    ：初始化客户端 cosClient。
+                    ：执行 putBucketLifecycle 和 GetBucketLifecycle 分别设置存储桶生命周期和检索生命周期。
+
+            访问控制基本概念：授予访问权限，指的是用户可以决定什么人、在何种条件下、对哪些资源、执行具体操作的控制能力组合。因此描述一个访问权限行为，通常包括四个元素：身份、资源、操作、条件（可选）
+                可以通过json文件的配置，授予指定用户某些权限。
+                访问策略语言：委托人
+                            效力
+                            操作
+                            资源
+                            条件
+                    举例：{
+                          "version": "2.0",
+                          "principal": {
+                             "qcs": [
+                                "qcs::cam::anonymous:anonymous"
+                             ]
+                          },
+                           "statement": [
+                               {
+                                   "action": [
+                                       "name/cos:GetObject",
+                                       "name/cos:HeadObject"
+                                   ],
+                                   "condition": {
+                                       "ip_equal": {
+                                           "qcs:ip": [
+                                               "101.226.***.185",
+                                               "101.226.***.186"
+                                           ]
+                                       }
+                                   },
+                                   "effect": "allow",
+                                   "resource": [
+                                       "qcs::cos:ap-guangzhou:uid/1250000000:examplebucket-1250000000.ap-guangzhou.myqcloud.com/*"
+                                   ]
+                               }
+                           ]
+                       }
+
+                访问控制列表ACL: 使用xml语言描述。主要是针对某个资源，有什么人可以有什么操作。举例：存储桶的访问控制列表如下
+                    <AccessControlPolicy>
+                      <Owner>
+                        <ID>Owner-Cononical-CAM-User-Id</ID>
+                      </Owner>
+                      <AccessControlList>
+                        <Grant>
+                          <Grantee>
+                            <ID>Owner-Cononical-CAM-User-Id</ID>
+                          </Grantee>
+                          <Permission>FULL_CONTROL</Permission>
+                        </Grant>
+                      </AccessControlList>
+                    </AccessControlPolicy>
+
+
+
+
+
+
+
+

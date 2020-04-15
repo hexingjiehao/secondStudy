@@ -1,0 +1,120 @@
+学习Vert.x-service-proxy的服务代理：
+    1.概要：官网地址https://vertx.io/docs/vertx-service-proxy/java/
+          主要目的是为了在event bus上暴露一个服务。
+          服务代理机制依赖于代码生成，修改接口则需要重新编译生成代码。
+    2.资源依赖：compile 'io.vertx:vertx-service-proxy:3.6.2'
+          或者 compileOnly 'io.vertx:vertx-codegen:3.6.2'
+          或者增加与语言相关的依赖：vertx-lang-groovy
+    3.样例代码：
+          代理接口：JsonObject message = new JsonObject();
+                   message.put("collection", "mycollection").put("document", new JsonObject().put("name", "tim"));
+                   DeliveryOptions options = new DeliveryOptions().addHeader("action", "save");
+                   vertx.eventBus().send("database-service-address", message, options, res2 -> {
+                     if (res2.succeeded()) {
+                     } else {
+                     }
+                   });
+          编写接口：注解@ProxyGen
+                @ProxyGen
+                public interface SomeDatabaseService {
+                  static SomeDatabaseService create(Vertx vertx) {
+                    return new SomeDatabaseServiceImpl(vertx);
+                  }
+                  static SomeDatabaseService createProxy(Vertx vertx,String address) {
+                    return new SomeDatabaseServiceVertxEBProxy(vertx, address);
+                  }
+                  void save(String collection, JsonObject document,Handler<AsyncResult<Void>> resultHandler);
+                }
+          代理类的使用：SomeDatabaseService service = SomeDatabaseService.createProxy(vertx,"database-service-address");
+                      service.save("mycollection", new JsonObject().put("name", "tim"), res2 -> {
+                          if (res2.succeeded()) {
+
+                          }
+                      });
+          组合使用@ProxyGen和@VertxGen: @ProxyGen //生成代理
+                                       @VertxGen //生成客户端
+                                       public interface SomeDatabaseService {
+
+                                       }
+    4.异步接口：为了使用服务代理自动生成，接口必须要有异步模式。首先方法参数是Handler<AsyncResult<ResultType>>。
+        @ProxyGen
+        public interface SomeDatabaseService {
+             static SomeDatabaseService create(Vertx vertx) {
+               return new SomeDatabaseServiceImpl(vertx);
+             }
+             static SomeDatabaseService createProxy(Vertx vertx, String address) {
+               return new SomeDatabaseServiceVertxEBProxy(vertx, address);
+             }
+             void save(String collection, JsonObject document,Handler<AsyncResult<Void>> result);
+             void findOne(String collection, JsonObject query,Handler<AsyncResult<JsonObject>> result);
+             void createConnection(String shoeSize,Handler<AsyncResult<MyDatabaseConnection>> resultHandler);
+        }
+
+        @ProxyGen
+        @VertxGen
+        public interface MyDatabaseConnection {
+             void insert(JsonObject someData);
+             void commit(Handler<AsyncResult<Void>> resultHandler);
+             @ProxyClose
+             void close();
+        }
+    5.代码生成：@ProxyGen会触发服务助手类，一个是服务代理，一个是服务句柄。都是在编译时生成的。都和event bus有关。
+        配套的类和接口：MyService--> MyServiceProxyHandler--> MyServiceEBProxy
+        资源依赖：compile "io.vertx:vertx-codegen:3.6.2:processor"
+                 compile "io.vertx:vertx-service-proxy:3.6.2"
+        将代码生成器放入jar包中：<plugin>
+                                <artifactId>maven-compiler-plugin</artifactId>
+                                <configuration>
+                                  <annotationProcessors>
+                                    <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+                                  </annotationProcessors>
+                                </configuration>
+                              </plugin>
+    6.暴露接口：拥有服务接口时，需要注册服务到event bus上。
+        代码举例：SomeDatabaseService service = new SomeDatabaseServiceImpl();
+                 new ServiceBinder(vertx).setAddress("database-service-address")
+                                         .register(SomeDatabaseService.class, service);
+        可以使用unregister取消注册：
+            ServiceBinder binder = new ServiceBinder(vertx);
+            SomeDatabaseService service = new SomeDatabaseServiceImpl();
+            MessageConsumer<JsonObject> consumer = binder.setAddress("database-service-address")
+                                                         .register(SomeDatabaseService.class, service);
+            binder.unregister(consumer);
+    7.代理创建：使用ProxyHelper创建。接口中都有静态方法createProxy
+        ServiceProxyBuilder builder = new ServiceProxyBuilder(vertx).setAddress("database-service-address");
+        SomeDatabaseService service = builder.build(SomeDatabaseService.class);
+        SomeDatabaseService service2 = builder.setOptions(options).build(SomeDatabaseService.class);
+    8.错误处理：可以根据错误码和异常类型处理错误信息。可以在注册服务失败时返回自定义异常类。
+        resultHandler.handle(ServiceException.fail(CONNECTION_FAILED, result.cause().getMessage()));
+
+        if (result.cause() instanceof ServiceException) {
+                ServiceException exc = (ServiceException) result.cause();
+                if (exc.failureCode() == SomeDatabaseServiceImpl.BAD_SHOE_SIZE) {
+                  handler.handle(Future.failedFuture(
+                    new InvalidInputError("You provided a bad shoe size: " +
+                      exc.getDebugInfo().getString("shoeSize"))
+                  ));
+                } else if (exc.failureCode() == SomeDatabaseServiceImpl.CONNECTION) {
+                  handler.handle(Future.failedFuture(new ConnectionError("Failed to connect to the DB")));
+                }
+        } else {
+            handler.handle(Future.failedFuture(
+                new SystemError("An unexpected error occurred: + " result.cause().getMessage())
+            ));
+        }
+    9.服务接口限制：
+        返回类型：必须是void 和 @Fluent风格this
+        参数类型：JSON = JsonObject|JsonArray, PRIMITIVE=任何私有封装类型
+            JSON / PRIMITIVE /List<JSON> / List<PRIMITIVE>
+            Set<JSON> / Set<PRIMITIVE>
+            Map<String, JSON> / Map<String, PRIMITIVE>
+            Any Enum type / @DataObject注解的类
+        重载方法：不能有重载方法
+    10.通过事件总线调用服务的约定(没有代理):使用vertx.
+        其中有action，collection，document，message.reply(...), message.fail(...)
+
+        vertx-service-proxy的本质:🌿🌿🌿🌿🌿
+            1.有一个接口，我们做了一个伪装实现类Proxy，具体实现是发送消息到eb上
+            2.我们在eb上做了一个真正的实现类。
+            3.我们又做了一个代理实现类，包含了真正实现类。它消费eb上的消息，根据名字的不同，调用不同方法。
+              本质还是真正实现类的父类引用调用子类对象，进行真正的方法调用

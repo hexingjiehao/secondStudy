@@ -1,0 +1,45 @@
+逻辑图：
+Throwable
+    Error：(程序代码不能处理：jvm内存溢出等)
+    Exception:
+              IOException(检查型异常：用户错误或问题引起的异常，编译不通过。文件没找到异常等)
+              RunTimeException(非检查型异常：可以避免的，编译时可以忽略。数组越界异常等)
+
+
+0.运行时异常和受检查异常的区别
+运行时异常：编译器能通过，一般时数组越界，空指针等，程序员的逻辑错误。
+检查型异常：编译器不能通过,与外部环境有关，比如文件，数据库的操作
+
+1.catch捕获的runtimeException,处理之后，后面的代码继续执行
+
+2.当try-catch-finally中都有return语句时，最终返回的是finally中的return值
+    try-catch是并列关系.当finally中没有return时代码依旧会执行，
+    但是如果try-catch中已经return一个变量
+    那么finally中对这个变量的处理都是无用的。因为返回的值已经确定了
+
+3.throw抛出任意异常，在代码中任意位置
+     throws抛出制定异常，只能在方法头上，多个异常时用逗号分割
+     调用这个方法时，必须处理这些异常或者继续向上抛出
+
+4.自定义异常
+    创建检查性异常类，继承 Exception 类。
+    创建运行时异常类，继承 RuntimeException 类。
+    在一些逻辑错误的时候，就可以抛出自定义异常。比如我写一个接口，对于参数的格式错误的异常，
+    就可以写一个自定义异常,继承Exception类，提醒调用者按照指定格式输入参数。这时候程序不会往下执行。
+
+5.在Java中定义了两种类型的异常和错误。
+JVM(Java虚拟机) 异常：
+    由 JVM 抛出的异常或错误。
+    例如：NullPointerException 类，ArrayIndexOutOfBoundsException 类，ClassCastException 类。
+程序级异常：
+    由程序或者API程序抛出的异常。例如 IllegalArgumentException 类，IllegalStateException 类。
+
+
+6.常见的异常类：
+    NullPointerException - 空指针引用异常
+    ClassCastException - 类型强制转换异常
+    ArithmeticException - 算术运算异常
+    IndexOutOfBoundsException - 下标越界异常
+    NumberFormatException - 数字格式异常
+    FileNotFoundException - 文件未找到异常
+    NoSuchMethodException - 方法未找到异常

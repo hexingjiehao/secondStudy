@@ -1,0 +1,371 @@
+1.java和jdk版本之间的关系
+    Java X=Java SE X=JDK1.X,都是一回事。
+
+    JDK Alpha and Beta
+    JDK 1.0   ==Java 0
+    JDK 1.1   ==Java 1
+    J2SE 1.2  ==Java 2 ==JDK 1.2
+    J2SE 1.3  ==Java 3 ==JDK 1.3
+    J2SE 1.4  ==Java 4 ==JDK 1.4
+    J2SE 5.0  ==Java 5 ==JDK 1.5
+    Java SE 6 ==Java 6 ==JDK 1.6
+    Java SE 7 ==Java 7 ==JDK 1.7
+    Java SE 8 ==Java 8 ==JDK 1.8
+    Java SE 9 ==Java 9 ==JDK 1.9
+    Java SE 10==Java 10==JDK 1.10
+    Java SE 11==Java 11==JDK 1.11
+
+
+2.java版本的新特性
+    jdk1.5:(不支持@Override)
+        1.自动装箱与拆箱：(8个基本数据类型的包装类)
+        2.枚举：(简单，安全。代表相同类型常量)
+        3.静态导入:(import static...,可以使用其他类的静态成员)
+        4.可变参数： [public int getMax(int... items)--类似与数组]
+        5.内省（Introspector):
+            (是Java语言对JavaBean类属性、事件的处理方法，类Introspector来获取某个对象的BeanInfo信息)
+            反射可以操作各种类的属性，而内省只是通过反射来操作JavaBean的属性
+            内省设置属性值肯定会调用seter方法，反射可以不用
+        6.泛型(Generic)
+        7.For-Each循环:(简化集合遍历)
+        8.线程池：(工作原理)
+            1.提交任务,线程数 < coreSize,new新线程并绑定该任务。第coreSize次提交任务，线程总数必达到coreSize，不重用之前的空闲线程。
+            2.线程数==coreSize后，新增任务放工作队列里，而线程池里的线程使用take()从工作队列里拉活来干。
+            3.如果是有界队列，同时线程池里的线程不及时取任务，工作队列满掉，插入任务就会失败，此时线程池就会紧急的再创建新的临时线程来补救。
+            4.临时线程使用poll(keepAliveTime，timeUnit)来从工作队列拉活，如果时候到了线程仍然空闲，则删除临时线程。
+            5.如果core线程数＋临时线程数 >maxSize，则不创建新的临时线程了，转头执行RejectExecutionHanlder。
+                默认的AbortPolicy抛RejectedExecutionException异常，即注入失败。
+                    注入失败后操作：
+                        静默放弃当前任务(Discard)
+                        放弃工作队列里最老的任务(DisacardOldest)
+                        或由主线程来直接执行(CallerRuns)任务
+                        或你自己发挥想象力写的一个。
+            参数：(7个)
+                corePollSize：核心线程数。经常活跃的
+                maximumPoolSize：最大线程数。活跃的核心线程+暂时未激活的空闲线程
+                keepAliveTime：空闲的线程保留的时间。
+                TimeUnit：空闲线程的保留时间单位。
+                BlockingQueue<Runnable>：阻塞队列，存储等待执行的任务。
+                ThreadFactory：线程工厂，用来创建线程
+                RejectedExecutionHandler：队列已满，而且任务量大于最大线程的异常处理策略
+                    ThreadPoolExecutor.AbortPolicy:丢弃任务并抛出RejectedExecutionException异常。
+                    ThreadPoolExecutor.DiscardPolicy：也是丢弃任务，但是不抛出异常。
+                    ThreadPoolExecutor.DiscardOldestPolicy：丢弃队列最前面的任务，然后重新尝试执行任务（重复此过程）
+                    ThreadPoolExecutor.CallerRunsPolicy：由调用线程处理该任务
+
+        9.注解：
+            @Documented (文档)
+            @Inherited (继承)
+            @Retention (注解保留周期)
+            @Target (注解目标：方法，包等)
+        10.StringBuilder：线程不安全，在单线程下替换stringbuffer提高性能
+
+
+    jdk1.6：
+        1.Desktop类和SystemTray类：(AWT包中,打开系统默认url,邮件,文本,打印机;后者创建托盘程序)
+        2.JAXB2实现对象与XML之间的映射：
+            对象-关系数据库：orm
+            对象-xml:oxm
+        3.StAX:(处理xml文档的API)
+            处理XML文档的方法:
+                DOM(Document Object Model)：
+                    xml映射到内存树,易于查看节点关系,文档大时效率低
+                SAX(Simple API for XML)：
+                    基于事件,推模式
+                    解析完xml,产生事件，推给程序
+                StAX(The Streaming API for XML)：
+                    基于事件迭代器,拉模式
+                    事件迭代器具，解析事件，处理事件，循环至文档结束
+        4.使用Compiler API:(动态编译java源文件，跨平台)
+        5.轻量级Http Server API:(支持Http和Https协议,自己实现HttpHandler接口)
+            HttpServer.f(HttpExchange)-->HttpHandler实现类的回调方法
+        6.插入式注解处理API(Pluggable Annotation Processing API)
+             Annotation Processor相当于编译器的一个插件,所以称为插入式注解处理.
+             如果Annotation Processor处理Annotation时(执行process方法)产生了新的Java代码,再次调用调用Annotation Processor,直到没有新代码产生为止.
+             每执行一次process()方法被称为一个"round",
+             这样整个Annotation processing过程可以看作是一个round的序列.
+        7.用Console开发控制台程序：(与cmd命令行交互执行命令,依赖底层平台和JVM的调用)
+        8.对脚本语言的支持如: ruby, groovy, javascript.
+        9.Common Annotations:(代替xml配置)
+            @Retention:
+                定义被它所注解的注解保留多久，一共有三种策略，定义在RetentionPolicy枚举中
+                public enum RetentionPolicy {
+                    SOURCE, //编译器忽略
+                    CLASS,  //默认，注解将会被保留在Class文件中，但在运行时并不会被VM保留
+                    RUNTIME  //保留至运行时。可以通过反射去获取注解信息。
+                }
+            @Generated: (表明代码是工具生成的)
+            @Resource：(按名称装配,可以指定name参数，找不到退回按类型装配@Autowired)--属于J2EE
+                一个叫spring的资源池，你要使用@Resource @Controller 等方法往池里做声明，就放进去了
+                使用@Autowired @Named 等方法从里面取出来
+            @Resources: (多个资源声明)
+            @PostConstruct：(依赖关系注入完成之后需要执行的方法上，以执行任何初始化。此方法必须在将类放入服务之前调用)
+            @PreDestroy:(作为回调通知用于各方法，以表示该实例正处于被容器移除的过程中。通常用于释放它已持有的资源)
+
+
+    jdk1.7：
+        1.switch中可以使用String
+        2.泛型实例化类型自动推断。"<>"这个玩意儿的运用List<String> tempList = new ArrayList<>()。
+        3.自定义自动关闭类：
+            AutoCloseable接口:实现接口的类对象销毁时,自动调用close方法，可以关闭资源.它和try-with-resources搭配使用
+        4.二进制字面量:
+            整数类型:byte,short,int,long,二进制可以表示。0b或者0B标示.(int a=3等价int a=0B11)
+            新增ByteBuffer类
+        5.在数字字面量使用下划线:(方便阅读)
+            int x2 = 5_2;              // OK
+            int x4 = 5_______2;        // OK
+            int x7 = 0x5_2;            // OK
+            int x9 = 0_52;             // OK--0前缀表示8进制
+            int x10 = 05_2;            // OK
+        6.使用Varargs(可变参数)方法使用不可维护的形式参数时改进了编译器警告和错误：
+               当程序员试图使用一个不可具体化的可变参数并调用一个*varargs* （可变）方法时，编辑器会生成一个“非安全操作”的警告。
+        7.try-with-resources 资源的自动管理：(多个资源之间用分号分割,注意关闭顺序是相反的)
+            简化代码：
+                不用每次都在finally中关闭资源,但它依旧可以处理必要代码
+                资源类需要实现AutoCloseable或Closeable接口
+            代码更完全：
+                资源关闭jvm,省去代码风险
+            异常抛出顺序：
+                rd.readLine()与rd.close()都抛出异常：
+                    jdk1.7前：只会抛出finally块中的rd.close()异常,与需要的不符
+                    jdK1.7后：只会抛出rd.readLine()的异常。
+        8.捕捉多个异常类型和对重新抛出异常的高级类型检查:
+            捕捉多个异常：(用管道符|分割,ex变量是final,不能被修改)
+                catch(IOException | SQLException | Exception ex){
+                    logger.error(ex);
+                    throw new MyException(ex.getMessage());
+                }
+            重新抛出异常的高级类型检查:(人为缩小范围)
+                static void rethrow(String s) throws FirstException, SecondException, ThirdException {
+                    try {
+                        if (s.equals("First"))
+                            throw new FirstException("First");
+                        else if (s.equals("Second"))
+                            throw new SecondException("Second");
+                        else
+                            throw new ThirdException("Third");
+                    } catch (Exception e) {
+                        //下面的赋值没有启用重新抛出异常的类型检查功能，这是Java 7的新特性
+                        // e=new ThirdException();
+                        throw e;
+                    }
+                }
+             记录异常：(suppress: 举例ex.addSuppressed(e) )
+        9.fork/join框架：(并行执行任务的框架--分治法)
+        10.jcmd工具出现：(查看jvm属性)
+
+
+    jdk1.8:
+        1.接口的默认方法:
+            给接口添加实现方法,default关键字，这个特征又叫做扩展方法
+            访问接口的默认方法: (lambda不能访问接口的默认方法,正常的匿名实现类写法才可以访问)
+                java8提供了很多基础的默认接口，我们只需要使用lambda实现即可.可以实现方法之间的加减运算:(这些接口更像一个适配器)
+                    Predicate接口：(一个参数，返回boolean类型)
+                    Function接口: (一个参数并且返回一个结果)
+                    Supplier接口: (返回一个任意范型的值)
+                    Consumer接口：(执行在单个参数上的操作,参数可以是对象)
+                    Comparator接口：(比较接口)
+                    Optional类：(不推荐范围null,而应该返回Optional)
+                    Stream接口： (数据调用方法，传入参数是一个具体的实现方法,像迭代器。数据源本身可以无效大)
+                        (表示能应用在一组元素上一次执行的操作序列,中间操作，最终操作。数据源List,Set,没有Map。原始数据排序后不会被修改)
+                        Filter 过滤: (中间操作)
+                        Sort 排序：(中间操作)
+                        Map 映射: (中间操作)
+                        Match 匹配: (最终操作)
+                        Count 计数: (最终操作)
+                        Reduce 规约: (最终操作,将多个元素合并成1个元素)
+                    parallelStreams：(速度变快，但排序结果不佳)
+                    Map: (HashMap增加新方法，冲突时链表结点>8,转化为红黑树，O(N)->O(lgN))
+        2.Lambda 表达式: (重要！！！ 是一个语法,对应一个接口类型,专门处理匿名实现类,可以直接调用其他类相似的方法实现接口::)
+            具体的字符串的匿名的比较器的优化：
+                优化前：
+                Collections.sort(names, new Comparator<String>() {
+                    @Override
+                    public int compare(String a, String b) {
+                        return b.compareTo(a);
+                    }
+                });
+                优化后：
+                Collections.sort(names, (String a, String b) -> {
+                    return b.compareTo(a);
+                });
+            Lambda 作用域：(访问final的外层局部变量,实例的字段以及静态变量)
+                访问局部变量: (变量最好是final修饰，或者不被修改)
+                访问对象字段与静态变量： ( 可以读和写，在类中的变量,静态方法不能调用非静态变量 )
+        3.函数式接口:(lambda表达式的一种,只包含一个抽象方法的接口)
+            @FunctionalInterface：验证是否是只有一个抽象方法接口
+        4.方法与构造函数引用：(使用关键字::调用函数。针对于接口,可以自动选择可是构造函数)
+        5.Date API：(日期API)
+            Clock 时钟: ( 等价System.currentTimeMillis()计算时间差,时区敏感 )
+            Timezones 时区: (Instant时间点对象与Date转化。)
+            LocalTime 本地时间: (简单信息,Hour,min,second)
+            LocalDate 本地日期: (年月日，该对象值是不可变的，+-后返回新实例)
+            LocalDateTime 本地日期时间: (该对象值是不可变的，+-后返回新实例,可自定义格式.加时区转化为instant对象)
+                                        本机jdk有问题,最好更新为jdk1.9,才能自定义日期格式
+                                        DateTimeFormatter是不可变的，所以它是线程安全的
+        6.Annotation 注解：
+            多重注解,嵌套注解(对应的方法没测通)
+                @interface Hints {
+                    Hint[] value();
+                }
+                @Repeatable(Hints.class)
+                @interface Hint {
+                    String value();
+                }
+            @Target({ElementType.TYPE_PARAMETER, ElementType.TYPE_USE})
+        7.并行加强：
+            StampedLock类，在代码前后调用lock()和unlock()
+            ConcurrentHashMap的stream支持
+
+    jdk1.9：
+        1.Java 平台级模块系统：(重要！！！ 独立模块，化繁为简)
+            模块描述器:
+                requires：依赖模块
+                exports： 被访问模块
+                示例：module-info.java
+                        modeule 模块1 {}
+        2.Linking：(只加载需要的jdk模块,构建最小运行时环境，jlink工具)
+        3.JShell: (交互式Java编程环境,控制台直接输入语句，回车就能看到结果。测试api)
+        4.改进的Javadoc：(符合html5规范，搜索结果包含模块和接口来源)
+        5.集合工厂方法：(of方法，添加元素优化。Set.of()等价set.add()。定义后添加,可能会导致UnsupportedOperationException)
+        6.改进的Stream API:
+            新方法：[dropWhile, takeWhile, ofNullable, iterate重载方法。举例如下：lambda表达式，类似于for循环语句]
+                IntStream.iterate(1, i -> i < 100, i -> i + 1).forEach(System.out::println);
+            Optional转化为(可能为null)Stream：[Stream<Integer> s = Optional.of(1).stream();]
+            Flow API：(响应流)[
+                Flow.Processor（处理器）
+                Flow.Publisher （发布者）
+                Flow.Subscriber（订阅者）
+                Flow.Subscription（订阅管理器）]
+            SubmissionPublisher：(订阅者)
+        7.私有接口方法：(在接口中创建private方法实现)
+        8.HTTP/2：(新方式调用http,支持websocket和http/2协议。在Incubator孵化器模块。支持异步模式)
+            旧的：HttpURLConnection
+            新的：HttpClient client = HttpClient.newHttpClient();
+        9.多版本兼容JAR：(创建jar包时，可以有特定的运行时环境区分,旧的用顶层的class，新的用meta-inf的class)
+        10.进程改善和锁机制的优化: (Process.getCurrentPid()方法可以代替很多原来JDK版本的代码)
+        11.try-with-resource可以管理final变量的资源释放
+        12.<>的引用扩展：(List<String> list = new ArrayList<>(){};//匿名实现类)
+        13.@Deprecated重新启用：(标记废弃API)
+        14.统一的JVM日志系统: (对所有的JVM组件引入一个单一的系统，这些JVM组件支持细粒度的和易配置的JVM组件。)
+        15.@SafeVarargs标记私有方法，动态参数
+        16.钱和货币API引用：
+            <dependency>
+                  <groupId>org.javamoney</groupId>
+                  <artifactId>moneta</artifactId>
+                  <version>0.9</version>
+             </dependency>
+             货币相关类：[MonetaryCurrencies类,CurrencyUnit类]
+        17.新的Java编译工具：(sjavac,未来可能取代javac)
+        18.G1成默认垃圾收集器：(此JEP的目标是使G1平行)
+
+
+    jdk1.10: (JEP=java express parser=java表达解析器)
+        1.局部变量类型推断: (重要！！！ 局部变量可用var声明)
+            推荐：(方法内部小打小闹)
+                局部变量初始化: new
+                for循环内部索引变量: for(){ var a}
+                传统的for循环声明变量: i
+            禁止：(方法名上,类属性，异常等禁止)
+                方法参数
+                构造函数参数
+                方法返回类型
+                字段
+                捕获表达式（或任何其他类型的变量声明）
+            举例：
+                var list = new ArrayList <String>();
+                var stream = getStream();
+        2.GC改进和内存管理:(2个JEP垃圾收集器=并行完全G1+纯净垃圾收集器接口(隔离不同GC的源码) )
+        3.线程本地握手：(线程上执行回调,方便能停止单个线程而不是停止全部线程或者一个都不停)
+        4.备用内存设备上的堆分配: (允许HotSpot VM在备用内存设备上分配Java对象堆内存，该内存设备将由用户指定)
+        5.支持Unicode8.0.0: (增强java.util.Locale的相关API)
+        6.基于Java的实验性JIT编译器:
+            (重要！！！ 叫Graal,用作Linux/x64平台上)
+        7.根证书：(Oracle的Java SE中开源根证书)
+        8.根证书颁发认证(CA): (减少OpenJDK和Oracle JDK构建之间的差异)
+        9.将JDK生态整合单个存储库: (内存管理,整合JDk存储库)
+        10.删除工具javah: (不再使用javah,它曾经实现生成本地方法.c和.h,与jni文件有关)
+
+
+    jdk1.11：(LTS=Long-Term Support=长期支持,不再发布JRE或者Server JRE,需要jlink去定制runtime)
+        1.基于嵌套的访问控制：(Class类新增了getNestHost，getNestMembers方法)
+        2.动态的类文件常量: (jvm对Constant pool新增一类CONSTANT_Dynamic)
+        3.改进Aqrch64位处理器：(string、array相关函数改进，并新实现java.lang.Math的sin、cos、log方法)
+        4.Epsilon垃圾回收器：(不做任何垃圾回收，可用于性能测试、短生命周期的任务等，使用-XX:+UseEpsilonGC开启)
+        5.移除Java EE和CORBA模块，JavaFX 也已被移除：(重要！！！)
+            移除：
+                xml相关：
+                    java.xml.ws,
+                    java.xml.bind,
+                    java.xml.ws,
+                    java.xml.ws.annotation,
+                    jdk.xml.bind，
+                    jdk.xml.ws被移除
+                java.corba,
+                java.se.ee,
+                java.activation,
+                java.transaction被移除
+            新增:
+                java.transaction.xa模块
+                Collection.toArray(IntFunction): (将集合数据复制到数组中)
+                    public void testCollectionToArray(){
+                        Set<String> names = Set.of("Fred", "Wilma", "Barney", "Betty");
+                        String[] copy = new String[names.size()];
+                        names.toArray(copy);
+                        System.out.println(Arrays.toString(copy));
+                        System.out.println(Arrays.toString(names.toArray(String[]::new)));
+                    }
+                String.strip：(加强    空格处理)
+                    public void testStrip(){
+                        String text = "  \u2000a  b  ";
+                        Assert.assertEquals("a  b",text.strip());
+                        Assert.assertEquals("\u2000a  b",text.trim());
+                        Assert.assertEquals("a  b  ",text.stripLeading());
+                        Assert.assertEquals("  \u2000a  b",text.stripTrailing());
+                    }
+        6.标准化HTTP客户端API：(重要！！！)
+            (jdk.incubator.http改名为java.net.http)
+        7.Lambda使用var局部变量：(注解突出var作用)
+            举例：
+                (var x, var y) -> x.process(y)
+                (@Nonnull var x, @Nullable var y) -> x.process(y)
+        8.采用Curve25519和Curve448算法实现的密钥协议
+        9.支持Unicode 10： (16018个新字符、18个新区块、10个新脚本)
+        10.飞行记录仪：(可以导出事件到文件中,之后用Java Mission Control来分析)
+            启动时配置：
+                java -XX:StartFlightRecording
+            启动后录制：(使用jcmd工具)
+                $ jcmd <pid> JFR.start
+                $ jcmd <pid> JFR.dump filename=recording.jfr
+                $ jcmd <pid> JFR.stop
+        11.实现ChaCha20和Poly1305加密算法
+        12.启动单个Java源代码文件的程序：(重要！！！)
+            【直接java HelloWorld.java,无需编译】
+        13.低开销的堆分配采样方法：(通过JVMTI的SampledObjectAlloc回调实现)
+        14.对TLS1.3规范的支持：(重要！！！)
+        15.ZGC：可伸缩的低延迟垃圾回收器,处于实验性阶段(高效)
+            目标：
+                支持TB级内存容量，
+                暂停时间低（<10ms），
+                对整个程序吞吐量的影响小于15%,
+                停顿时间不随heap大小或存活对象大小增大而增大
+            设置：
+                -server -XX:+UnlockExperimentalVMOptions -XX:+UseZGC
+                -Xlog:age*,gc*=info:file=gc-%t.log:time,tid,tags:filecount=3,filesize=20m
+                -Djava.io.tmpdir=/tmp'
+            并行的阶段：
+                Marking (标记)
+                Relocation/Compaction (重定位/压缩)
+                Relocation Set Selection (重定位集合选择)
+                Reference Processing (参考处理)
+                JNI WeakRefs Cleaning (JNI弱引用清理)
+        16.弃用Nashorn JavaScript引擎：(需要的GraalVM代替)
+        17.弃用Pack200 工具及其API：(原本压缩jar包，废弃原因是下载速度提升,java9引入模块化系统)
+
+
+3.Java的并行API演变历程基本如下：
+    1.0-1.4 中的 java.lang.Thread
+    5.0 中的 java.util.concurrent
+    6.0 中的 Phasers 等
+    7.0 中的 Fork/Join 框架
+    8.0 中的 Lambda

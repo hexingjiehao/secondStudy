@@ -1,0 +1,293 @@
+学习vert.x-kafka-client语法：
+    1.功能：从apacha kafka集群进行消息的发送和接收。
+    2.jar包依赖：<dependency>
+                  <groupId>io.vertx</groupId>
+                  <artifactId>vertx-kafka-client</artifactId>
+                  <version>3.7.1</version>
+                </dependency>
+
+    3.创建kafka客户端：【需要有大量配置，核心是序列化和反序列化,以及服务器】
+        创建消费者：
+            Map<String, String> config = new HashMap<>();
+            config.put("bootstrap.servers", "localhost:9092");
+            config.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+            config.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+            config.put("group.id", "my_group");
+            config.put("auto.offset.reset", "earliest");
+            config.put("enable.auto.commit", "false");
+
+            KafkaConsumer<String, String> consumer = KafkaConsumer.create(vertx, config);
+        创建生产者：
+            Map<String, String> config = new HashMap<>();
+            config.put("bootstrap.servers", "localhost:9092");
+            config.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            config.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            config.put("acks", "1");
+
+            KafkaProducer<String, String> producer = KafkaProducer.create(vertx, config);
+
+    4.接收topic消息：【使用subscribe方法，或者handler方法】
+        一个消费者要接收消息，从消费者组的主题订阅，或者从特定分区获取，或者接收带有显式轮询的消息
+        同步操作：
+            consumer.handler(record -> {
+              ......
+            });
+
+            //订阅topic消息
+            Set<String> topics = new HashSet<>();
+            topics.add("topic1");
+            topics.add("topic2");
+            topics.add("topic3");
+            consumer.subscribe(topics);
+
+            //使用正则表达式订阅消息
+            Pattern pattern = Pattern.compile("topic\\d");
+            consumer.subscribe(pattern);
+
+            //订阅单个消息
+            consumer.subscribe("a-single-topic");
+        异步操作：
+            consumer.subscribe("a-single-topic", ar -> {
+              if (ar.succeeded()) {
+                ......
+              } else {
+                ......
+              }
+            });
+
+            consumer.unsubscribe();  //取消订阅
+        消费者组的分区成员加入和撤销：
+            consumer.partitionsAssignedHandler(topicPartitions -> {
+              for (TopicPartition topicPartition : topicPartitions) {
+                ......
+              }
+            });
+
+            consumer.partitionsRevokedHandler(topicPartitions -> {
+              for (TopicPartition topicPartition : topicPartitions) {
+                ......
+              }
+            });
+
+        从特定分区的主题接收消息：【消费者被分配到特定分区，assign】
+            consumer.handler(record -> {
+              //接收到消息后的操作
+            });
+
+            Set<TopicPartition> topicPartitions = new HashSet<>();
+            topicPartitions.add(new TopicPartition()
+              .setTopic("test")
+              .setPartition(0));
+
+            consumer.assign(topicPartitions, done -> {
+              if (done.succeeded()) {
+                consumer.assignment(done1 -> {
+                  if (done1.succeeded()) {
+                    ......
+                  }
+                });
+              }
+            });
+
+        接收带有显式轮询的消息：【使用内部轮训机制，避免了注册过程】
+            consumer.subscribe("test", ar -> {
+              if (ar.succeeded()) {
+
+                vertx.setPeriodic(1000, timerId -> {
+                  consumer.poll(100, ar1 -> {
+                    if (ar1.succeeded()) {
+                      KafkaConsumerRecords<String, String> records = ar1.result();
+                      ......
+                    }
+                  });
+                });
+              }
+            });
+
+    5.更改订阅或分配:【 再次使用subscribe()或者assign()方法 】
+        注意：因为消息内部缓存，重新订阅后可能会有部分旧的消息残留。批处理程序没有这种问题
+
+    6.获取主题的分区信息/获取分区的主题：【partitionsFor/listTopics】
+        consumer.partitionsFor("test", ar -> {
+          if (ar.succeeded()) {
+            ......
+          }
+        });
+
+        producer.partitionsFor("test", ar -> {
+            ......
+        });
+
+        consumer.listTopics(ar -> {
+          if (ar.succeeded()) {
+            Map<String, List<PartitionInfo>> map = ar.result();
+            map.forEach((topic, partitions) -> {
+              ......
+            });
+          }
+        });
+
+    7.手动偏移量提交：[默认是自动提交的, enable.auto.commit=true]
+        consumer.commit(ar -> {
+          if (ar.succeeded()) {
+            System.out.println("Last read message offset committed");
+          }
+        });
+
+    8.在主题分区中查找消息：[指定偏移量的消息，从0开始，从最后开始。仍然可能存在缓存问题]
+        TopicPartition topicPartition = new TopicPartition()
+          .setTopic("test")
+          .setPartition(0);
+
+        consumer.seek(topicPartition, 10, done -> {
+          ......
+        });
+
+        consumer.seekToBeginning(Collections.singleton(topicPartition), done -> {
+            ......
+        });
+
+        consumer.seekToEnd(Collections.singleton(topicPartition), done -> {
+            ......
+        });
+
+    9.获取单个或者所有分区的第一个/最后一个偏移量/根据时间戳查询：【不会改变消费者的偏移量】
+        Set<TopicPartition> topicPartitions = new HashSet<>();
+        TopicPartition topicPartition = new TopicPartition().setTopic("test").setPartition(0);
+        topicPartitions.add(topicPartition);
+
+        //方便的单分区查找方法
+        consumer.beginningOffsets(topicPartition, done -> {
+          if(done.succeeded()) {
+            Long beginningOffset = done.result();
+            ......
+          }
+        });
+
+        consumer.endOffsets(topicPartition, done -> {
+          if(done.succeeded()) {
+            Long endOffset = done.result();
+            ......
+          }
+        });
+
+        long timestamp = (System.currentTimeMillis() - 60000);
+        consumer.offsetsForTimes(topicPartition, timestamp, done -> {
+          if(done.succeeded()) {
+            OffsetAndTimestamp offsetAndTimestamp = done.result();
+             ......
+          }
+        });
+
+    10.消息流控制：【比如暂停和重新开始操作。 pause和resume】
+        TopicPartition topicPartition = new TopicPartition()
+          .setTopic("test")
+          .setPartition(0);
+
+        consumer.handler(record -> {
+          //在指定情况下暂停消息读取
+          if ((record.partition() == 0) && (record.offset() == 5)) {
+            consumer.pause(topicPartition, ar -> {
+              if (ar.succeeded()) {
+
+                //  定时任务后的操作
+                vertx.setTimer(5000, timeId -> {
+
+                  // 重新开始分区读取消息
+                  consumer.resume(topicPartition);
+                });
+              }
+            });
+          }
+        });
+
+    11.关闭消费者：
+        consumer.close(res -> {
+          if (res.succeeded()) {
+           ......
+        });
+
+    12.发送消息到一个主题：【write】
+        for (int i = 0; i < 5; i++) {
+          // 轮训发送到所有分区
+          KafkaProducerRecord<String, String> record = KafkaProducerRecord.create("test", "message_" + i);
+          producer.write(record);
+        }
+
+        for (int i = 0; i < 5; i++) {
+          KafkaProducerRecord<String, String> record =KafkaProducerRecord.create("test", "message_" + i);
+          producer.send(record, done -> {
+            if (done.succeeded()) {
+              RecordMetadata recordMetadata = done.result();
+              ......
+            }
+          });
+        }
+
+        for (int i = 0; i < 10; i++) {
+          // 参数分别是topic,分区，消息
+          KafkaProducerRecord<String, String> record =KafkaProducerRecord.create("test", null, "message_" + i, 0);
+          producer.write(record);
+        }
+
+        //特定数据，发送到特定分区
+        for (int i = 0; i < 10; i++) {
+          int key = i % 2;
+          KafkaProducerRecord<String, String> record =KafkaProducerRecord.create("test", String.valueOf(key), "message_" + i);
+          producer.write(record);
+        }
+
+    13.共享生产者：【KafkaProducer.createShared】
+        KafkaProducer<String, String> producer1 = KafkaProducer.createShared(vertx, "the-producer", config);
+        producer1.close();
+
+    14.关闭生产者：【这是个异步操作】
+        producer.close(res -> {
+          ......
+        });
+
+    15.处理错误：【exceptionHandler 或者 exceptionHandler】
+        consumer.exceptionHandler(e -> {
+          ......
+        });
+
+    16.verticle卸载后自动关闭生产者和消费者
+
+    17.使用vert.x的序列化/反序列化：【buffers，json object，json array】
+        配置时指定：
+            Map<String, String> config = new HashMap<>();
+            config.put("key.deserializer", "io.vertx.kafka.client.serialization.BufferDeserializer");
+            config.put("value.deserializer", "io.vertx.kafka.client.serialization.BufferDeserializer");
+
+            config.put("key.deserializer", "io.vertx.kafka.client.serialization.JsonObjectDeserializer");
+            config.put("value.deserializer", "io.vertx.kafka.client.serialization.JsonObjectDeserializer");
+
+            config.put("key.deserializer", "io.vertx.kafka.client.serialization.JsonArrayDeserializer");
+            config.put("value.deserializer", "io.vertx.kafka.client.serialization.JsonArrayDeserializer");
+
+        创建时指定：
+            KafkaConsumer<Buffer, Buffer> bufferConsumer = KafkaConsumer.create(vertx, config, Buffer.class, Buffer.class);
+            KafkaConsumer<JsonObject, JsonObject> jsonObjectConsumer = KafkaConsumer.create(vertx, config, JsonObject.class, JsonObject.class);
+            KafkaConsumer<JsonArray, JsonArray> jsonArrayConsumer = KafkaConsumer.create(vertx, config, JsonArray.class, JsonArray.class);
+
+    18.使用vertx kafka AdminUtils：【操作topic，增加/删除/修改/是否存在】
+        AdminUtils adminUtils = AdminUtils.create(Vertx.vertx(), "localhost:2181", true);
+        // 创建主题是myNewTopic,分区是2,副本是1
+        adminUtils.createTopic("myNewTopic", 2, 1, result -> {
+          ......
+        });
+
+        dminUtils.deleteTopic("myNewTopic", result -> {
+          ......
+        });
+
+        Map<String, String> properties = new HashMap<>();
+        properties.put("delete.retention.ms", "1000");
+        properties.put("retention.bytes", "1024");
+        adminUtils.changeTopicConfig("myNewTopic", properties, result -> {
+          ......
+        });}
+
+        adminUtils.topicExists("myNewTopic", result -> {
+            ......
+        });

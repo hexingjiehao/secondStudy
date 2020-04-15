@@ -1,0 +1,216 @@
+1.学习Vert.x-Stomp:
+    1.概念：stomp是面向简单文本或者流文本的消息协议。vert.x-stomp是Stomp服务器和客户端的一个实现。
+    2.依赖：<dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-stomp</artifactId>
+                <version>3.8.2</version>
+           </dependency>
+    3.stomp服务器：
+        //默认家监听端口61613
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx))
+            .listen();
+
+        //可以设置端口和主机。端口设置为-1,则服务器不会启动。第二个参数为网络服务器
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx))
+            .listen(1234, "0.0.0.0");
+        StompServer server = StompServer.create(vertx, new StompServerOptions()
+                                                            .setPort(1234)
+                                                            .setHost("0.0.0.0"))
+            .handler(StompServerHandler.create(vertx))
+            .listen();
+
+        //判断服务器是否启动成功
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx))
+            .listen(ar -> {
+              if (ar.failed()) {
+              } else {
+              }
+            });
+
+        //关闭服务器：
+        server.close(ar -> {
+          if (ar.succeeded()) {
+          } else {
+          }});
+
+        //服务器配置：配置了secure则需要provider
+        StompServer server = StompServer.create(vertx, new StompServerOptions()
+                .setHeartbeat(new JsonObject()
+                                    .put("x", 1000)
+                                    .put("y", 1000))
+                             )
+                .setSecured(true)
+            .handler( StompServerHandler.create(vertx).authProvider(provider) )
+            .listen();
+
+        //消息订阅：（默认发给所有订阅者）
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx)
+                .destinationFactory((v, name) -> {
+                  if (name.startsWith("/queue")) {
+                    return Destination.queue(vertx, name);  //队列形式，循环策略分发消息
+                  } else if{
+                    return Destination.topic(vertx, name);  //主题形式
+                  } else {
+                    return null;  //拒绝创建目的地
+                  }
+                }))
+            .listen();
+
+        //消息确认
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx)
+                .onAckHandler(acknowledgement -> {
+
+                })
+                .onNackHandler(acknowledgement -> {
+
+                }))
+            .listen();
+
+    4.stomp客户端：
+        //创建客户端
+        StompClient client = StompClient.create(vertx)
+            .errorFrameHandler(frame -> {
+                //错误处理
+            })
+            .connect(61613,"0.0.0.0",ar -> {
+              if (ar.succeeded()) {
+                StompClientConnection connection = ar.result();
+              } else {
+              }
+            });
+
+        StompClient client = StompClient.create(vertx, new StompClientOptions()
+                                                            .setHost("localhost")
+                                                            .setPort(1234))
+            .connect(ar -> {
+              if (ar.succeeded()) {
+                StompClientConnection connection = ar.result();
+
+              } else {
+                System.out.println("Failed to connect to the STOMP server: " + ar.cause().toString());
+              }
+            });
+
+        //关闭客户端
+        client.close();  //断开连接没有通知到服务器。关闭不干脆。可能只是设置为null
+        StompClientConnection connection = ar.result();
+        connection.disconnect();
+
+        //处理错误
+        StompClient client = StompClient.create(vertx, new StompClientOptions()
+                                                        .setHost("localhost")
+                                                        .setPort(1234))
+            .connect(ar -> {
+              if (ar.succeeded()) {
+                StompClientConnection connection = ar.result();
+                connection.errorHandler(frame -> System.out.println("ERROR frame received : " + frame));
+              } else {
+
+              }
+            });
+
+        //发送消息被处理连接错误：🌿🌿🌿🌿🌿
+        StompClient client = StompClient.create(vertx)
+            .connect(ar -> {
+              if (ar.succeeded()) {
+                StompClientConnection connection = ar.result();
+                connection.connectionDroppedHandler(con -> {
+
+                });
+
+                connection.send("/queue", Buffer.buffer("Hello"),
+                    frame -> {
+                      System.out.println("Message processed by the server");
+                    }
+                );
+              } else {
+              }
+            });
+
+        //订阅目的地：客户端包括消费者和生产者
+        StompClientConnection connection = ar.result();
+        connection.subscribe("/queue",frame -> {}));
+        //取消订阅
+        connection.unsubscribe("/queue");
+
+        //发送消息
+        tompClientConnection connection = ar.result();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("header1", "value1");
+        connection.send("/queue", headers, Buffer.buffer("Hello"));
+        connection.send("/queue", Buffer.buffer("World"));
+
+        //消息订阅确认
+        StompClientConnection connection = ar.result();
+        connection.subscribe("/queue", frame -> {
+          connection.ack(frame.getAck());
+          connection.nack(frame.getAck());
+        });
+
+        //消息的事务
+        StompClientConnection connection = ar.result();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("transaction", "my-transaction");
+        connection.beginTX("my-transaction");
+        connection.send("/queue", headers, Buffer.buffer("Hello"));
+        connection.send("/queue", headers, Buffer.buffer("World"));
+        connection.send("/queue", headers, Buffer.buffer("!!!"));
+        connection.commit("my-transaction");
+
+        connection.abort("my-transaction");
+
+    5.使用stomp服务器作为桥梁连接vert.x事件总线
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx)
+                .bridge(new BridgeOptions()
+                    .addInboundPermitted(new PermittedOptions().setAddress("/toBus"))
+                    .addOutboundPermitted(new PermittedOptions().setAddress("/toStomp"))
+                )
+            )
+            .listen();
+
+    6.使用stomp服务器组合web sockets {比如stompjs}
+        StompServer server = StompServer.create(vertx, new StompServerOptions()
+            .setPort(-1)
+            .setWebsocketBridge(true)
+            .setWebsocketPath("/stomp"))
+            .handler(StompServerHandler.create(vertx));
+
+        HttpServer http = vertx.createHttpServer(
+            new HttpServerOptions().setWebsocketSubProtocols("v10.stomp, v11.stomp")
+        )
+            .websocketHandler(server.webSocketHandler())
+            .listen(8080);
+
+        //在javascript中连接stomp服务器
+        var url = "ws://localhost:8080/stomp";
+        var client = Stomp.client(url);
+        var callback = function(frame) {
+          console.log(frame);
+        };
+
+        client.connect({}, function() {
+        var subscription = client.subscribe("foo", callback);
+        });
+
+    7.注册接收和读写帧句柄: {在服务器端和客户端皆可操作}
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx)
+                .receivedFrameHandler(sf -> {})
+                )
+            .listen();
+        StompClient client = StompClient.create(vertx)
+                                    .receivedFrameHandler(frame -> {});
+
+        //写操作
+        StompServer server = StompServer.create(vertx)
+            .handler(StompServerHandler.create(vertx))
+                                .writingFrameHandler(sf -> {})
+            .listen();
+        StompClient client = StompClient.create(vertx)
+            .writingFrameHandler(frame -> {});

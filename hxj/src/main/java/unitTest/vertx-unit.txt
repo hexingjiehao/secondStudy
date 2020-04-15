@@ -1,0 +1,137 @@
+学习vertx-unit的测试语法
+    定义：它是vert.x的测试模块，主要是使用于vertx的异步模块。它可以和很多的测试框架集成。比如JUnit。
+    资源依赖：maven中导入vertx-unit。
+    启用异步测试：@RunWith(VertxUnitRunner.class)
+    主要的异步测试步骤：
+        1.测试类上添加注解：@RunWith(VertxUnitRunner.class)。
+        2.测试方法中参数有一个TestContext，它是运行器提供的一个参数。
+        3.创建Vert.x context的对象用于单元测试。
+        4.使用上下文TestContext来断言一个例子。
+        5.Async异步对象用来获取异步的成功或者失败。
+        6.Async使用countdown计数锁，当被调用三次后执行。
+        7.当时间超时后触发异步方法。
+        8.可以设定周期任务。
+
+开始正式学习教程：
+    概述：官方文档的URL是https://vertx.io/docs/vertx-unit/java/。官方的项目路径是https://github.com/vert-x3/vertx-unit
+         定义是异步多语言单元测试。目的是写异步多语言的单元测试，并且将这些测试运行在Java虚拟机上。最新版本是3.6.2
+         最低限度测试套件：TestSuite suite = TestSuite.create("the_test_suite");
+                         suite.test("my_test_case", context -> {
+                            String s = "value";
+                            context.assertEquals("value", s);
+                         });
+                         suite.run();
+    编写测试套件：它是测试案例的命名集合，类似于测试案例的封装重用了。测试案例是执行结果的直接回调。
+                测试案例是fluent的，可以使用链式结构进行多次回调。测试用例的调用顺序不能按照声明顺序保证。
+                可以通过设置全局先后顺序来保证初始化和资源回收before和after。
+                使用beforeEach()和afterEach()，每个测试案例是单独的，如果其中一个报错，另一个不影响。
+
+    断言：提供测试上下文TestContext。用于作为断言。作为测试案例中的lambada接口参数。assertEquals()方法可以传递比较参数和失败后的描述信息。
+         内置的断言是比较是否成功，成功则返回this,失败则抛出异常信息。
+         常用断言集合：assertEquals()
+                     assertNotEquals()
+                     assertNull()
+                     assertNotNull()
+                     assertInRange()
+                     assertTrue()
+                     assertFalse()
+                     Failing()
+         使用第三方框架：hamcrest和assertj。
+    异步测试：希望在测试用例回调之后终止测试。而且不再手动执行run(),可能是访问页面来触发总线事件。Async对象类似于Java的count-down
+            创建异步对象，可以设置数字，类似于countDown。举例：Async async = context.async(2);
+            suite.test("my_test_case", context -> {
+                Async async = context.async();
+                eventBus.consumer("the-address", msg -> {
+                  (2)
+                  async.complete();
+                });
+                  (1)
+            });
+    异步断言：核心是TestContext。方便方法取代复杂的lambada表达式
+
+            部署：Async async = context.async();
+            vertx.deployVerticle("my.verticle", ar -> {
+              if (ar.succeeded()) {
+                async.complete();
+              } else {
+                context.fail(ar.cause());
+              }
+            });
+            替换成：vertx.deployVerticle("my.verticle", context.asyncAssertSuccess());
+
+            断言：AtomicBoolean started = new AtomicBoolean();
+            Async async = context.async();
+            vertx.deployVerticle(new AbstractVerticle() {
+              public void start() throws Exception {
+                started.set(true);
+              }
+            }, ar -> {
+              if (ar.succeeded()) {
+                context.assertTrue(started.get());
+                async.complete();
+              } else {
+                context.fail(ar.cause());
+              }
+            });
+            替换成：vertx.deployVerticle("my.verticle", context.asyncAssertSuccess(id -> {
+                        context.assertTrue(started.get());
+                   }));
+
+            嵌套：Async async = context.async();
+               vertx.deployVerticle("my.verticle", ar1 -> {
+                 if (ar1.succeeded()) {
+                   vertx.deployVerticle("my.otherverticle", ar2 -> {
+                     if (ar2.succeeded()) {
+                       async.complete();
+                     } else {
+                       context.fail(ar2.cause());
+                     }
+                   });
+                 } else {
+                   context.fail(ar1.cause());
+                 }
+               });
+            替换成：vertx.deployVerticle("my.verticle", context.asyncAssertSuccess(id ->
+                        vertx.deployVerticle("my_otherverticle", context.asyncAssertSuccess())
+                   ));
+
+            反转：Async async = context.async();
+               vertx.deployVerticle("my.verticle", ar -> {
+                 if (ar.succeeded()) {
+                   context.fail();
+                 } else {
+                   async.complete();
+                 }
+               });
+            替换成：vertx.deployVerticle("my.verticle", context.asyncAssertFailure());
+    重复测试：检测随机失败，增加测试次数。
+    共享对象：TestContext通过方法(get/put/remove)操作来共享回调状态。该状态一般在before中，每个测试案例都拷贝一个副本。
+             只有Java语言支持对象类型的共享，其他语言只能支持基本数据类型的共享。一处异步没有完成，按顺序剩下的异步都不会完成。
+    运行时： suite.run()。测试套件完成对象TestCompletion，做些回调之后的操作。并且能够解析Future对象。
+            阻塞直到测试套件完成：Completion completion = suite.run();
+                               completion.await();
+            超时设置：TestOptions options = new TestOptions().setTimeout(10000);
+                    suite.run(options);
+                    默认超时时间是两分钟。
+            事件循环：事件之间的执行，是由上一个事件完成后来驱动的，就像工作流。useEventLoop的默认值是null。
+    报告时：控制台报告：报告到Java虚拟机的System.out and System.err的控制台里。取值：console。文件格式取值simple或者junit。
+           文件报告：报告到文件中。会在配置目录创建文件。取值：file：.
+           日志报告：报告到日志里。取值：log:mylogger
+           事件总线报告：报告事件到事件总线中。取值：bus:the-address(事件总线地址)
+    vertx集成：默认情况下，断言和失败必须在TestContext上执行。特性有抛出异常，全局的异常捕获
+    junit集成：  @RunWith(VertxUnitRunner.class)
+                public class JUnitTestSuite {
+                  @Test
+                  public void testSomething(TestContext context) {
+                    context.assertFalse(false);
+                  }
+                }
+                运行测试在vert.x上下文，而不是常见的Junit上下文：RunTestOnContext
+                在类层面使用超时配置：都是@Rule。@Test的超时设置会覆盖@Rule的超时规则。
+                参数测试：VertxUnitRunnerWithParametersFactory
+                         会在类上使用注解：@RunWith(Parameterized.class)
+                                        @Parameterized.UseParametersRunnerFactory(VertxUnitRunnerWithParametersFactory.class)
+                         会在方法上使用注解：@Parameterized.Parameters
+                使用注解规则进行重复测试：@Rule public RepeatRule rule = new RepeatRule();
+                                   并且在测试方法上使用 @Repeat(1000)。这是联合使用
+    Java语言集成：测试套件集成。参数中有TestContext context的公共非静态方法自动映射成Vertx单元测试套件。

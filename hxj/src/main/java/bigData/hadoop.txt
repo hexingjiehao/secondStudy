@@ -1,0 +1,262 @@
+1.学习hadoop知识点：
+    1.官网：http://hadoop.apache.org
+    2.概述：hadoop有两种版本：2.x和3.x。2019年11月6日最新的稳定版本是2.10和3.1.3。最新的版本是3.2.1。
+           Apache Hadoop软件库是一个框架，它允许使用简单的编程模型跨计算机集群对大型数据集进行分布式处理。🌿🌿🌿🌿🌿
+           它被设计成从单个服务器扩展到数千台机器，每台机器都提供本地计算和存储。
+           库本身的设计目的是在应用层检测和处理故障，而不是依赖硬件来提供高可用性，因此在计算机集群之上提供高可用性服务，而每个集群都可能容易出现故障。
+    3.说明文档的首页：https://hadoop.apache.org/docs/stable/index.html
+        这是一个简陋的说明页面，左边是导航栏
+
+    🌿🌿🌿🌿🌿：Hadoop=core + HDFS + MapReduce + YARN + Submarine + Tools
+
+2.系统的学习hadoop的知识点：【总而言之就是一系列的配置文件的内容修改！！！】
+    1.综述:
+        1.1 单节点设置:{ubuntu}
+            准备安装java, ssh 和pdsh
+              $ sudo apt-get install ssh
+              $ sudo apt-get install pdsh
+            启动hadoop
+                打开文件/etc/hadoop/hadoop-env.sh
+                  export JAVA_HOME=/usr/java/latest
+                $ bin/hadoop
+            独立启动：🌿🌿🌿🌿🌿
+                $ mkdir input
+                $ cp etc/hadoop/*.xml input
+                $ bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.1.jar grep input output 'dfs[a-z.]+'
+                $ cat output/*
+            伪分布启动：
+                配置文件：
+                    etc/hadoop/core-site.xml:
+                    <configuration>
+                        <property>
+                            <name>fs.defaultFS</name>
+                            <value>hdfs://localhost:9000</value>
+                        </property>
+                    </configuration>
+
+                    etc/hadoop/hdfs-site.xml:
+                    <configuration>
+                        <property>
+                            <name>dfs.replication</name>
+                            <value>1</value>
+                        </property>
+                    </configuration>
+                设置无需参数的ssh连接：
+                    $ ssh localhost   //最终检查效果
+
+                    $ ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+                    $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+                    $ chmod 0600 ~/.ssh/authorized_keys
+                在本地执行MapReduce job：🌿🌿🌿🌿🌿
+                    1.格式化文件系统：
+                        $ bin/hdfs namenode -format
+                    2.启动命名节点和数据节点进程
+                        $ sbin/start-dfs.sh
+                        hadoop的日志输出默认写入文件 $HADOOP_LOG_DIR 或者 $HADOOP_HOME/logs 🌿🌿🌿🌿🌿
+                    3.浏览命名节点的网页接口
+                        http://localhost:9870/
+                    4.使hdfs执行MapReduce job
+                        $ bin/hdfs dfs -mkdir /user
+                        $ bin/hdfs dfs -mkdir /user/<username>
+                    5.将输入文件复制到分布式文件系统
+                        $ bin/hdfs dfs -mkdir input
+                        $ bin/hdfs dfs -put etc/hadoop/*.xml input
+                    6.运行MapReduce job举例：
+                        $ bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.1.jar grep input output 'dfs[a-z.]+'
+                    7.将输出文件复制到本地并检查它们：
+                        $ bin/hdfs dfs -get output output
+                        $ cat output/*
+                        在分布式文件系统检查输出文件：$ bin/hdfs dfs -cat output/*
+                    8.结束hadoop
+                        $ sbin/stop-dfs.sh
+                在YARN上以伪分布式模式运行MapReduce作业:
+                    1.已经执行完以上4步
+                    2.配置参数：
+                        etc/hadoop/mapred-site.xml:
+                        <configuration>
+                            <property>
+                                <name>mapreduce.framework.name</name>
+                                <value>yarn</value>
+                            </property>
+                            <property>
+                                <name>mapreduce.application.classpath</name>
+                                <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*:$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+                            </property>
+                        </configuration>
+
+                        etc/hadoop/yarn-site.xml:
+                        <configuration>
+                            <property>
+                                <name>yarn.nodemanager.aux-services</name>
+                                <value>mapreduce_shuffle</value>
+                            </property>
+                            <property>
+                                <name>yarn.nodemanager.env-whitelist</name>
+                                <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME</value>
+                            </property>
+                        </configuration>
+                    3.启动资源管理器和节点管理器进程
+                        $ sbin/start-yarn.sh
+                    4.浏览资源管理器的网页接口
+                        http://localhost:8088/
+                    5.运行MapReduce job
+                        $ bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.1.jar grep input output 'dfs[a-z.]+'
+                    6.结束hadoop
+                        $ sbin/stop-dfs.sh
+        1.2 集群设置
+            在不安全模式下配置hadoop
+                只读默认配置：
+                   core-default.xml
+                   hdfs-default.xml
+                   yarn-default.xml
+                   mapred-default.xml
+                特定站点配置：
+                   etc/hadoop/core-site.xml
+                   etc/hadoop/hdfs-site.xml
+                   etc/hadoop/yarn-site.xml
+                   etc/hadoop/mapred-site.xml
+                其他：
+                   etc/hadoop/hadoop-env.sh
+                   etc/hadoop/yarn-env.sh
+                HDFS守护进程是命名节点，第二命名节点，数据节点
+                YARN守护进程资源管理器，节点管理器，web应用代理器
+                配置hadoop守护进程的环境变量：
+                    NameNode	                    HDFS_NAMENODE_OPTS
+                    DataNode	                    HDFS_DATANODE_OPTS
+                    Secondary NameNode	            HDFS_SECONDARYNAMENODE_OPTS
+                    ResourceManager	                YARN_RESOURCEMANAGER_OPTS
+                    NodeManager	                    YARN_NODEMANAGER_OPTS
+                    WebAppProxy	                    YARN_PROXYSERVER_OPTS
+                    Map Reduce Job History Server	MAPRED_HISTORYSERVER_OPTS
+
+                    举例：export HDFS_NAMENODE_OPTS="-XX:+UseParallelGC -Xmx4g"
+                    HADOOP_HOME=/path/to/hadoop
+                    export HADOOP_HOME
+                重要参数的配置：🌿🌿🌿🌿🌿
+                    fs.defaultFS  hdfs://host:port/
+                可以自动检查集群节点的健康。通过脚本执行
+                hadoop集群启动：需要先启动 HDFS 和 YARN集群
+                    启动hadoop：
+                        [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format <cluster_name>
+                        [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start namenode
+                        [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start datanode
+                        [hdfs]$ $HADOOP_HOME/sbin/start-dfs.sh
+                        [yarn]$ $HADOOP_HOME/bin/yarn --daemon start resourcemanager
+                        [yarn]$ $HADOOP_HOME/bin/yarn --daemon start nodemanager
+                        [yarn]$ $HADOOP_HOME/bin/yarn --daemon start proxyserver
+                        [yarn]$ $HADOOP_HOME/sbin/start-yarn.sh
+                        [mapred]$ $HADOOP_HOME/bin/mapred --daemon start historyserver
+                    关闭hadoop
+                        [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop namenode
+                        [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop datanode
+                        [hdfs]$ $HADOOP_HOME/sbin/stop-dfs.sh
+                        [yarn]$ $HADOOP_HOME/bin/yarn --daemon stop resourcemanager
+                        [yarn]$ $HADOOP_HOME/bin/yarn --daemon stop nodemanager
+                        [yarn]$ $HADOOP_HOME/sbin/stop-yarn.sh
+                        [yarn]$ $HADOOP_HOME/bin/yarn stop proxyserver
+                        [mapred]$ $HADOOP_HOME/bin/mapred --daemon stop historyserver
+                    网页接口：
+                        命名节点：http://localhost:9870
+                        资源管理器：http://localhost:8088
+                        MapReduce job历史服务器：http://localhost:19888
+    2.公共核心:
+        2.1 小型集群 🌿🌿🌿🌿🌿
+                Hadoop tarball: $ mvn clean install -DskipTests
+                                $ mvn package -Pdist -Dtar -DskipTests -Dmaven.javadoc.skip
+                运行最小集群：
+                    $ bin/mapred minicluster -rmport RM_PORT -jhsport JHS_PORT
+        2.2 本地库指南：
+                构建原生hadoop库：
+                    $ mvn package -Pdist,native -DskipTests -Dtar
+                    $ hadoop-dist/target/hadoop-3.2.1/lib/native
+        2.3 安全模型下的hadoop: 包括身份验证、服务级别授权、Web控制台身份验证和数据机密性
+        2.4 服务层级授权： 默认是禁用服务级授权
+                刷新授权级别配置：
+                    $ bin/hdfs dfsadmin -refreshServiceAcl
+                    $ bin/yarn rmadmin -refreshServiceAcl
+                配置举例：<property>
+                          <name>security.job.client.protocol.acl</name>
+                          <value>alice,bob mapreduce</value>
+                        </property>
+        2.5 hadoop KMS：秘钥管理服务器--文档集。通过rest 请求访问结果
+                启动：hadoop-3.2.1 $ hadoop --daemon start kms
+    3.HDFS：高可用分布式文件系统
+        3.1 编辑查看器：
+                输入文件由输出文件进行查看：-i输入，-o输出
+                    bash$ bin/hdfs oev -p xml -i edits -o edits.xml
+                    bash$ bin/hdfs oev -i edits -o edits.xml
+                    bash$ bin/hdfs oev -p binary -i edits.xml -o edits
+                    bash$ bin/hdfs oev -p stats -i edits -o edits.stats
+    4.MapReduce: 大数据拆分并行运算
+        4.1 教程:
+                输入输出以键值对形式<k,v>
+                代码举例：
+                    import java.io.IOException;
+                    import java.util.StringTokenizer;
+                    import org.apache.hadoop.conf.Configuration;
+                    import org.apache.hadoop.fs.Path;
+                    import org.apache.hadoop.io.IntWritable;
+                    import org.apache.hadoop.io.Text;
+                    import org.apache.hadoop.mapreduce.Job;
+                    import org.apache.hadoop.mapreduce.Mapper;
+                    import org.apache.hadoop.mapreduce.Reducer;
+                    import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+                    import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+                    public class WordCount {
+                      public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable>{
+                        private final static IntWritable one = new IntWritable(1);
+                        private Text word = new Text();
+                        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+                          StringTokenizer itr = new StringTokenizer(value.toString());
+                          while (itr.hasMoreTokens()) {
+                            word.set(itr.nextToken());
+                            context.write(word, one);
+                          }
+                        }
+                      }
+
+                      public static class IntSumReducer extends Reducer<Text,IntWritable,Text,IntWritable> {
+                        private IntWritable result = new IntWritable();
+                        public void reduce(Text key, Iterable<IntWritable> values,Context context) throws IOException, InterruptedException {
+                          int sum = 0;
+                          for (IntWritable val : values) {
+                            sum += val.get();
+                          }
+                          result.set(sum);
+                          context.write(key, result);
+                        }
+                      }
+
+                      public static void main(String[] args) throws Exception {
+                        Configuration conf = new Configuration();
+                        Job job = Job.getInstance(conf, "word count");
+                        job.setJarByClass(WordCount.class);
+                        job.setMapperClass(TokenizerMapper.class);
+                        job.setCombinerClass(IntSumReducer.class);
+                        job.setReducerClass(IntSumReducer.class);
+                        job.setOutputKeyClass(Text.class);
+                        job.setOutputValueClass(IntWritable.class);
+                        FileInputFormat.addInputPath(job, new Path(args[0]));
+                        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+                        System.exit(job.waitForCompletion(true) ? 0 : 1);
+                      }
+                    }
+    5.YARN:
+        5.1 结构体系：
+                将资源管理和作业调度/监视的功能划分为单独的守护进程。
+                其思想是拥有一个全局的ResourceManager (RM)和每个应用程序的ApplicationMaster (AM)。
+                应用程序可以是单个作业，也可以是一组作业
+        5.2 写YARN应用程序：
+                 YarnClient yarnClient = YarnClient.createYarnClient();
+                 yarnClient.init(conf);
+                 yarnClient.start();
+
+                 YarnClientApplication app = yarnClient.createApplication();
+                 GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
+    6. Hadoop Auth:
+        6.1 概述：是一个java库
+                URL url = new URL("http://localhost:8080/hadoop-auth/kerberos/who");
+                AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+                HttpURLConnection conn = new AuthenticatedURL().openConnection(url, token);
+                conn = new AuthenticatedURL().openConnection(url, token);

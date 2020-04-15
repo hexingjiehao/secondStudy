@@ -1,0 +1,7 @@
+1.哈希【OK】
+
+HASHMAP,HASHTABLE区别？
+答：
+1.Hashtable是Dictionary的子类，HashMap是Map接口的一个实现类；
+2.Hashtable中的方法是同步的，而HashMap中的方法在缺省情况下是非同步的。
+3.在HashMap中，null可以作为键，这样的键只有一个；HashTable可以有一个或多个键所对应的值为null。

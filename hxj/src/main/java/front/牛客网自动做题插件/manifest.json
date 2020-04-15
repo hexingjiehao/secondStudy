@@ -1,0 +1,20 @@
+{
+	"name":"牛客网自动做题扩展插件",
+	"version":"1.0",
+	"manifest_version":2,
+	"description":"牛客网自动做题扩展插件",
+	"browser_action":{
+	},
+	"web_accessible_resources":[
+		"autoclick.js"
+	],
+	"content_scripts": [
+		{
+			"js": ["autoclick.js"],
+			"matches": [
+				"https://www.nowcoder.com/*"
+			],
+			"run_at": "document_end"
+		}
+	]
+}

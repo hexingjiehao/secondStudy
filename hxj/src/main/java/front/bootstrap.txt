@@ -1,0 +1,91 @@
+1.学习bootstrap的知识点
+    1.官网网站：https://getbootstrap.com。最新版本v4.4.1
+    2.定义：Bootstrap是一个用于开发HTML、CSS和JS的开源工具包。
+           里面是编译好后的CSS和JS文件。🌿🌿🌿🌿🌿
+           BootStreap是需要jQuery的
+           参考工具：https://www.runoob.com/bootstrap/bootstrap-tutorial.html
+    3.快捷操作：
+        插入：npm install bootstrap
+             gem install bootstrap -v 4.4.1
+             yarn add bootstrap
+             composer require twbs/bootstrap:4.4.1
+             Install-Package bootstrap
+        简化插入：BootstrapCDN
+            只需要CSS:
+                <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+            只需要JS:
+                <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+                <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+                <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    4.文档学习：
+        1.快捷使用：在html页面引用CSS和JS的连接
+        2.开始创建模版：
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+                <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+                <title>Hello, world!</title>
+              </head>
+              <body>
+                <h1>Hello, world!</h1>
+                <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+                <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+                <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+              </body>
+            </html>
+        3.重要的全局样式和变量：
+            Bootstrap需要使用HTML5的文档类型
+                <!doctype html>
+                <html lang="en">
+                  ...
+                </html>
+            响应元标签：用于适配手机，再适配电脑
+                <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+            Box-sizing: 适配宽度
+                .selector-for-some-widget {
+                  box-sizing: content-box;
+                }
+            Reboot: 重启
+        4.javascript的使用：🌿🌿🌿🌿🌿
+             依赖：bootstrap.js或者Popper.js
+             数据属性：$(document).off('.data-api')
+                     $(document).off('.alert.data-api')
+             事件：
+                $('#myModal').on('show.bs.modal', function (e) {
+                  if (!data) {
+                    return e.preventDefault() // stops modal from being shown
+                  }
+                })
+             程序API：
+                $('.btn.danger').button('toggle').addClass('fat')
+                $('#myModal').modal()
+                $('#myModal').modal({ keyboard: false })
+                $('#myModal').modal('show')
+             异步函数和转换：
+                $('#myCollapse').on('shown.bs.collapse', function (e) {
+
+                })
+
+                $('#myCarousel').on('slid.bs.carousel', function (e) {
+                  $('#myCarousel').carousel('2')
+                })
+                $('#myCarousel').carousel('1')
+                $('#myCarousel').carousel('2')
+             解决插件使用的冲突：
+                var bootstrapButton = $.fn.button.noConflict()
+                $.fn.bootstrapBtn = bootstrapButton
+未完待续......
+
+
+
+
+
+
+
+
+
+
+
+
+

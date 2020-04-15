@@ -1,0 +1,340 @@
+1.学习Jenkins的知识点：
+    1.官网地址：https://jenkins.io/zh/node
+    2.概述：Jenkins是一个java编写的服务器软件，用于自动化各种任务，包括构建、测试和部署软件。
+           持续集成(CI) / 持续交付 (CD)
+    3.官方文档：http://jenkins.io/zh/doc/
+    4.安装包下载：
+        最新版本为2.206
+        默认用户名密码：admin
+            密码在文件：/Users/admin/.jenkins/secrets/initialAdminPassword文件中
+    4.Jenkins入门教程：【主要是用于前端页面的部署】
+        1.下载并运行：[加载时间较长]
+            brew install jenkins    //安装
+            brew uninstall jenkins  //卸载
+            java -jar jenkins.war --httpPort=8080
+            ⚠️：初次启动时要检查url,解决办法：翻墙或者修改文件内容
+                需要你进入jenkins的工作目录，打开
+                    hudson.model.UpdateCenter.xml
+                把
+                    http://updates.jenkins-ci.org/update-center.json
+                改成
+                    http://mirror.xmission.com/jenkins/updates/update-center.json
+            ⚠️：初始化时，要安装一系列的插件，非常耗时，推荐安装一次就不要关闭了
+        2.创建流水线Pipeline，也就是第一个项目：
+            2.1 创建文件Jenkinsfile:内容如下：
+                pipeline {
+                    agent { docker 'maven:3.3.3' }
+                    stages {
+                        stage('build') {
+                            steps {
+                                sh 'mvn --version'
+                            }
+                        }
+                    }
+                }
+            2.2 将文件Jenkins存放到我的github上的一个mvn仓库中
+            2.3 在Jenkins的浏览器中创建部署项，选择github上的文件
+        3.执行多个步骤(step): 🌿🌿🌿🌿🌿
+            按顺序逐步执行，全部step执行成功，pipeline才执行成功。举例如下：
+            pipeline {
+                agent any
+                stages {
+                    stage('Build') {
+                        steps {
+                            sh 'echo "Hello World"'
+                            sh '''
+                                echo "Multiline shell steps works too"
+                                ls -lah
+                            '''
+                        }
+                    }
+                }
+            }
+            设置超时、重试等操作：
+                pipeline {
+                    agent any
+                    stages {
+                        stage('Deploy') {
+                            steps {
+                                retry(3) {
+                                    sh './flakey-deploy.sh'
+                                }
+
+                                timeout(time: 3, unit: 'MINUTES') {
+                                    sh './health-check.sh'
+                                }
+                            }
+                        }
+                    }
+                }
+            完成时动作：等价于初始化后的操作
+                pipeline {
+                    agent any
+                    stages {
+                        stage('Test') {
+                            steps {
+                                sh 'echo "Fail!"; exit 1'
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            echo 'This will always run'
+                        }
+                        success {
+                            echo 'This will run only if successful'
+                        }
+                        failure {
+                            echo 'This will run only if failed'
+                        }
+                        unstable {
+                            echo 'This will run only if the run was marked as unstable'
+                        }
+                        changed {
+                            echo 'This will run only if the state of the Pipeline has changed'
+                            echo 'For example, if the Pipeline was previously failing but is now successful'
+                        }
+                    }
+                }
+        4.定义执行环境：
+            agent指令告诉Jenkins在哪里以及如何执行Pipeline或者Pipeline子集
+                pipeline {
+                    agent {
+                        docker { image 'node:7-alpine' }
+                    }
+                    stages {
+                        stage('Test') {
+                            steps {
+                                sh 'node --version'
+                            }
+                        }
+                    }
+                }
+        5.使用环境变量：全局的和阶段的
+            pipeline {
+                agent any
+                environment {
+                    DISABLE_AUTH = 'true'
+                    DB_ENGINE    = 'sqlite'
+                }
+                stages {
+                    stage('Build') {
+                        steps {
+                            sh 'printenv'
+                        }
+                    }
+                }
+            }
+        6.记录测试和构建结果: 收集日志信息到xml文件中
+            pipeline {
+                agent any
+                stages {
+                    stage('Test') {
+                        steps {
+                            sh './gradlew check'
+                        }
+                    }
+                }
+                post {
+                    always {
+                        junit 'build/reports/**/*.xml'
+                    }
+                }
+            }
+
+            或者如下：
+                post {
+                        always {
+                            archiveArtifacts artifacts: 'build/libs/**/*.jar', fingerprint: true
+                            junit 'build/reports/**/*.xml'
+                        }
+                    }
+        7.清理和通知：post部分在Pipeline结束后运行
+            pipeline {
+                agent any
+                stages {
+                    stage('No-op') {
+                        steps {
+                            sh 'ls'
+                        }
+                    }
+                }
+                post {
+                    always {
+                        echo 'One way or another, I have finished'
+                        deleteDir() /* 清理操作 */
+                    }
+                    success {
+                        echo 'I succeeeded!'
+                    }
+                    unstable {
+                        echo 'I am unstable :/'
+                    }
+                    failure {
+                         mail to: 'team@example.com',
+                                     subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
+                                     body: "Something is wrong with ${env.BUILD_URL}"
+                            }    /* 发送通知邮件 */
+
+                         //或者如下
+                         hipchatSend message: "Attention @here ${env.JOB_NAME} #${env.BUILD_NUMBER} has failed.",
+                                             color: 'RED'
+                         //或者如下
+                         slackSend channel: '#ops-room',
+                                           color: 'good',
+                                           message: "The pipeline ${currentBuild.fullDisplayName} completed successfully."
+                    }
+                    changed {
+                        echo 'Things were different before...'
+                    }
+                }
+            }
+        8.部署操作：
+            Pipeline至少3个阶段：构建，测试，部署
+            pipeline {
+                agent any
+                stages {
+                    stage('Build') {
+                        steps {
+                            echo 'Building'
+                        }
+                    }
+                    stage('Test') {
+                        steps {
+                            echo 'Testing'
+                        }
+                    }
+                    stage('Deploy') {
+                        steps {
+                            echo 'Deploying'
+                        }
+                    }
+                }
+            }
+            扩展的阶段：
+                stage('Deploy - Staging') {
+                    steps {
+                        sh './deploy staging'
+                        sh './run-smoke-tests'
+                    }
+                }
+                stage('Deploy - Production') {
+                    steps {
+                        sh './deploy production'
+                    }
+                }
+            人工确认：执行到一定阶段后，等待人工确认。类似与人工任务流程
+                pipeline {
+                    agent any
+                    stages {
+                        stage('Deploy - Staging') {
+                            steps {
+                                sh './deploy staging'
+                                sh './run-smoke-tests'
+                            }
+                        }
+                        stage('Sanity check') {
+                            steps {
+                                input "Does the staging environment look ok?"
+                            }
+                        }
+                        stage('Deploy - Production') {
+                            steps {
+                                sh './deploy production'
+                            }
+                        }
+                    }
+                }
+    5.使用Maven构建java应用：
+        1.在docker上运行jenkins：
+            docker run jenkinsci/blueocean
+        2.进入运行的jenkins容器：
+            docker exec -it jenkins-tutorials bash
+        3.解锁密码：从命令行中复制自动生成的密码，在浏览器上解锁
+        4.在github中准备一个项目，有文件jenkinsfile
+        5.将项目克隆到本地，然后创建流水线项目，选择该本地项目
+        6.为流水线添加多个阶段：test,deliver
+            pipeline {
+                agent {
+                    docker {
+                        image 'maven:3-alpine'
+                        args '-v /root/.m2:/root/.m2'
+                    }
+                }
+                stages {
+                    stage('Build') {
+                        steps {
+                            sh 'mvn -B -DskipTests clean package'
+                        }
+                    }
+                    stage('Test') {
+                        steps {
+                            sh 'mvn test'
+                        }
+                        post {
+                            always {
+                                junit 'target/surefire-reports/*.xml'
+                            }
+                        }
+                    }
+                    stage('Deliver') {
+                        steps {
+                            sh './jenkins/scripts/deliver.sh'
+                        }
+                    }
+                }
+            }
+        7.github中的项目中有几个分支，在jenkins上就有几个流水线。自动检测项目的分支，不用写入文件jenkinsfile。
+    6.流水线的概念和语法：
+        概念：
+            节点：是一个机器
+            阶段：是流程的一个块
+            步骤：是一个任务
+        声明式流水线：
+            pipeline {
+                agent any
+                stages {
+                    stage('Build') {
+                        steps { ... }
+                    }
+                    stage('Test') {
+                        steps { ... }
+                    }
+                    stage('Deploy') {
+                        steps { ... }
+                    }
+                }
+            }
+        脚本式流水线：
+            node {
+                stage('Build') { ... }
+                stage('Test') { ... }
+                stage('Deploy') { ... }
+            }
+        定义流水线的3中方式：
+            通过Blue Ocean界面：
+            通过经典UI
+            源代码中编写Jenkinsfile文件
+未完待续......
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

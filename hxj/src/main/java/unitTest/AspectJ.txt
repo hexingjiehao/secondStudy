@@ -1,0 +1,250 @@
+学习AspectJ嵌入式语法：
+    4.Aspect-J：这是面向切面的框架。参考文档API：https://www.eclipse.org/aspectj/doc/released/runtime-api/
+                概述：IDEA中关于Aspectj的说明文档：http://www.jetbrains.com/help/idea/aspectj.html
+                     最新稳定版：1.9.2。其中版本的的对应关系1.9.x=9, 1.8.x=8.所以最新版本也可以说是9
+                     然后最新的文档竟然是版本5的！！！
+                     真正的官方文档：https://www.eclipse.org/aspectj/doc/released/progguide/index.html
+                IDEA中使用条件：绑定插件Spring AOP/@AspectJ 和 AspectJ Support。将Aspectj添加到Java模块，微调它的编译器使用
+                              在.java和.aj中使用@Aspect。只有简单的能提示。集成Aspectj的编译器ajc。能够微调ajc编译器
+                              在使用项目中导入aspectjrt.jar。ajc编译器在aspectjtools.jar包中。
+                              需要事先将插件添加到idea中，名字是AspectJ Support和Spring AOP/@AspectJ
+                              Aspectj有自己的文件.aj,也可以通过在Java类上注解进行属性和方法的插入。
+
+                使用Push ITDs重构：有点类似在外部给某个类生命属性或者各种方法等。而不是完全封装，注入属性和方法。
+                    之前：
+                        aspect myAspect {
+                            boolean Account.closed = false;
+                            void Account.close() {
+                                closed = true;
+                            }
+                        }
+                        class Account {
+                        }
+                    之后：
+                        aspect MyAspect {
+                        }
+                        class Account {
+                            boolean closed = false;
+                            void close() {
+                                closed = true;
+                            }
+                        }
+                环境搭建：<groupId>org.aspectj</groupId>
+                         <artifactId>aspectjrt</artifactId>
+                         <version>1.8.9</version></dependency>
+
+                         <groupId>org.aspectj</groupId>
+                         <artifactId>aspectjweaver</artifactId>
+                         <version>1.8.9</version></dependency>
+                开始AspectJ:
+                    简单介绍概念：关注业务的横切面，很容易跨类。连接点模型很重要
+                        pointcuts：动态影响项目流程。可能是某些类的方法。call(void Point.setX(int))，
+                                   连接点之间的关系，call(void Point.setX(int)) ||call(void Point.setY(int))
+                                   捕获多个连接点：pointcut move():
+                                                   call(void FigureElement.setXY(int,int)) ||
+                                                   call(void Point.setX(int))              ||
+                                                   call(void Point.setY(int))              ||
+                                                   call(void Line.setP1(Point))            ||
+                                                   call(void Line.setP2(Point));
+                                   模糊切入：call(void Figure.make*(..))
+                                   重复调用：cflow(move())
+                        advice：动态影响项目流程。实现横切行为
+                            Before advice：before(): move() {
+                                         System.out.println("about to move");
+                                       }
+                            After advice:像Java的finally。
+                                after() returning: move() {
+                                    System.out.println("just successfully moved");
+                                }
+                            Around advice：显示声明
+                            选择切入点和公开一部分执行上下文：after(FigureElement fe, int x, int y) returning:
+                                                                 call(void FigureElement.setXY(int, int))
+                                                                 && target(fe)
+                                                                 && args(x, y) {
+                                                             System.out.println(fe + " moved to (" + x + ", " + y + ")");
+                                                         }
+                            3个基本切入点：this,target,args
+                                切点写法：pointcut setXY(FigureElement fe, int x, int y): call(void FigureElement.setXY(int, int)) && target(fe) && args(x, y);
+
+                                advise写法：after(FigureElement fe, int x, int y) returning: setXY(fe, x, y) {
+                                                System.out.println(fe + " moved to (" + x + ", " + y + ").");
+                                           }
+                        inter-type declarations：静态影响项目继承类，跨类和跨层次
+                            aspect PointObserving {
+                                private Vector Point.observers = new Vector();
+                                public static void addObserver(Point p, Screen s) {
+                                        p.observers.add(s);
+                                }
+                                public static void removeObserver(Point p, Screen s) {
+                                    p.observers.remove(s);
+                                }
+
+                                pointcut changes(Point p): target(p) && call(void Point.set*(int));
+                                after(Point p): changes(p) {
+                                    Iterator iter = p.observers.iterator();
+                                    while ( iter.hasNext() ) {
+                                        updateObserver(p, (Screen)iter.next());
+                                    }
+                                }
+                                static void updateObserver(Point p, Screen s) {
+                                    s.display(p);
+                                }
+                            }
+                        aspects：封装上述结构。控制实例化的方式。每个都是单例对象
+                            aspect Logging {
+                                OutputStream logStream = System.err;
+                                before(): move() {
+                                    logStream.println("about to move");
+                                }
+                            }
+                    开发者的使用：
+                        方法调用追踪：aspect SimpleTracing {
+                                       pointcut tracedCall(): call(void FigureElement.draw(GraphicsContext));  //这是切入点的定义
+                                       before(): tracedCall() {     //使用定义的切入点
+                                           System.out.println("Entering: " + thisJoinPoint);
+                                       }
+                                   }
+                        分析和日志记录：aspect SetsInRotateCounting {
+                                        int rotateCount = 0;
+                                        int setCount = 0;
+                                        before(): call(void Line.rotate(double)) {
+                                            rotateCount++;
+                                        }
+                                        before(): call(void Point.set*(int)) && cflow(call(void Line.rotate(double))) {
+                                            setCount++;
+                                        }
+                                     }
+                        前置和后置条件：aspect PointBoundsChecking {
+                                        pointcut setX(int x): (call(void FigureElement.setXY(int, int)) && args(x, *)) || (call(void Point.setX(int)) && args(x));
+                                        pointcut setY(int y): (call(void FigureElement.setXY(int, int)) && args(*, y)) || (call(void Point.setY(int)) && args(y));
+                                        before(int x): setX(x) {
+                                            if ( x < MIN_X || x > MAX_X )
+                                                throw new IllegalArgumentException("x is out of bounds.");
+                                        }
+                                        before(int y): setY(y) {
+                                            if ( y < MIN_Y || y > MAX_Y )
+                                                throw new IllegalArgumentException("y is out of bounds.");
+                                        }
+                                     }
+                        合同执行：约束判定。aspect RegistrationProtection {
+                                             pointcut register(): call(void Registry.register(FigureElement));
+                                             pointcut canRegister(): withincode(static * FigureElement.make*(..));
+                                             before(): register() && !canRegister() {
+                                                 throw new IllegalAccessException("Illegal call " + thisJoinPoint);
+                                             }
+                                             declare error: register() && !canRegister(): "Illegal call"
+                                        }
+                        配置管理：可以在构建程序时，让切面的代码不进行编译。配置make file即可。
+                    生产切面：基于名字/基于属性。
+                        变化监测：处理状态位。aspect MoveTracking {
+                                               private static boolean dirty = false;
+                                               public static boolean testAndClear() {
+                                                   boolean result = dirty;
+                                                   dirty = false;
+                                                   return result;
+                                               }
+                                               pointcut move():
+                                                   call(void FigureElement.setXY(int, int)) || call(void Line.setP1(Point)) ||
+                                                   call(void Line.setP2(Point)) || call(void Point.setX(int)) || call(void Point.setY(int));
+                                               after() returning: move() {
+                                                   dirty = true;
+                                               }
+                                           }
+                        上下文传递：aspect ColorControl {
+                                      pointcut CCClientCflow(ColorControllingClient client): cflow(call(* * (..)) && target(client));
+                                      pointcut make(): call(FigureElement Figure.make*(..));
+
+                                      after (ColorControllingClient c) returning (FigureElement fe): make() && CCClientCflow(c) {
+                                          fe.setColor(c.colorFor(fe));
+                                      }
+                                  }
+                        提供一致性行为：记录日志然后继续抛异常。aspect PublicErrorLogging {
+                                                            Log log = new Log();
+                                                            pointcut publicMethodCall():call(public * com.bigboxco.*.*(..));
+                                                            after() throwing (Error e): publicMethodCall() {
+                                                                log.write(e);
+                                                            }
+                                                         }
+                            cflow()可以很好的排除可重入调用。after() throwing (Error e): publicMethodCall() && !cflow(publicMethodCall()) {
+                                                            log.write(e);
+                                                         }
+                            aspect ContextFilling {
+                                pointcut parse(JavaParser jp): call(* JavaParser.parse*(..)) && target(jp) && !call(Stmt parseVarDec(boolean));
+                                around(JavaParser jp) returns ASTObject: parse(jp) {
+                                    Token beginToken = jp.peekToken();
+                                    ASTObject ret = proceed(jp);
+                                    if (ret != null) jp.addContext(ret, beginToken);
+                                    return ret;
+                                 }
+                            }
+                AspectJ语言：
+                   语法剖析：aspect FaultHandler {
+                               private boolean Server.disabled = false;
+                               pointcut services(Server s): target(s) && call(public * *(..));
+                               before(Server s): services(s) {
+                                 if (s.disabled) throw new DisabledException();
+                               }
+                               after(Server s) throwing (FaultException e): services(s) {
+                                 s.disabled = true;
+                                 reportFault();
+                               }
+                               private void reportFault() {
+                                 System.out.println("Failure! Please fix it.");
+                               }
+                               public static void fixServer(Server s) {
+                                 s.disabled = false;
+                               }
+                            }
+                            切点的种类有方法调用/方法执行/异常处理/实例化/构造执行/属性访问等
+                   连接点和切点：首先取名，然后要有对象类，有执行方法，有参数值等。
+                        pointcut setter(): target(Point) && (call(void setX(int)) || call(void setY(int)));
+                        pointcut ioHandler(): within(MyClass) && handler(IOException);
+                        语法种类：可以使用*号通配符
+                             execution(void Point.setX(int))
+                             call(void Point.setX(int))
+                             handler(ArrayOutOfBoundsException)
+                             this(SomeType)
+                             target(SomeType)
+                             within(MyClass)
+                             cflow(call(void Test.main()))
+                        call 和 execution 的区别：
+                            call(void m()) && withincode(void m()):直接捕捉递归调用
+                            execution(void m()) && withincode(void m())：还是只有自己
+
+                            call()不捕获父类的非静态方法
+                            具体的代码执行使用execute(),特殊签名被调用时/生产切面时使用call()
+                        切点的组合使用cflow: 可能有死循环。pointcut setter(Point p, int newval):
+                                                            target(p) && args(newval) &&
+                                                            ( call(void setX(int)) || call(void setY(int)) );
+                        写切点；Kinded指示器： execution, get, set, call, handler
+                               范围指示器: within, withincode
+                               上下文指示器: this, target, @annotation
+                   建议Advise：执行到指定位置，做自己的操作。before(Point p, int x): target(p) && args(x) && call(void setX(int)) {
+                                                             if (!p.assertX(x)) return;
+                                                        }
+                   内部类型声明：比如在声明某个类有一个属性。  private boolean Server.disabled = false;
+                   内置变量：thisJoinPoint，只能在advise中。对象类型是org.aspectj.lang.JoinPoint。可以获取很多静态常量
+                代码案例：
+                    看不懂了。。。
+                    使用Aspect再访和追踪。
+                    没有暴露的追踪对象traceEntry和traceExit。
+                    抽象切面！！
+                    命令行微调ajc
+                    观察者协议和AspectJ的组合使用
+                    执行步骤：ajc -argfile xx.lst
+                            java xx
+                成语方言：AbstractFacade。可能和接口的调用有关。
+                陷阱：死循环。比如：aspect A {
+                                     before(): call(* *(..)) { System.out.println("before"); }
+                                     after():  call(* *(..)) { System.out.println("after"); }
+                                 }
+                     解决方法；指定命名空间/不匹配自己的方法。&& !within(A)。
+                AspectJ快速参考(都是一些常用的方法API)：Pointcuts
+                                                    Type Patterns
+                                                    Advice
+                                                    Inter-type member declarations
+                                                    Other declarations
+                                                    Aspects
+                AspectJ语言语义：还是主要的4个，多了一个静态横切。同样是方法调用，多了代码举例
+                实现注意事项：编译注意/字节码注意/注解风格。
+                            .class,+,句柄，初始化内部类型构造器

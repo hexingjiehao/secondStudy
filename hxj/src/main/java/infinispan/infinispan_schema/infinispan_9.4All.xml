@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<infinispan>
+    <jgroups>
+        <transport value="org.infinispan.remoting.transport.jgroups.JGroupsTransport">
+            <stack-file>
+                <name></name>
+                <path></path>
+            </stack-file>
+        </transport>
+    </jgroups>
+
+    <threads>
+        <thread-factory>
+            <name></name>
+            <group-name></group-name>
+            <thread-name-pattern></thread-name-pattern>
+            <priority></priority>
+        </thread-factory>
+        <blocking-bounded-queue-thread-pool>
+            <name></name>
+            <thread-factory></thread-factory>
+            <max-threads></max-threads>
+            <core-threads></core-threads>
+            <keepalive></keepalive>
+            <queue-length></queue-length>
+        </blocking-bounded-queue-thread-pool>
+        <cached-thread-pool>
+            <name></name>
+            <thread-factory></thread-factory>
+        </cached-thread-pool>
+        <scheduled-thread-pool>
+            <name></name>
+            <thread-factory></thread-factory>
+        </scheduled-thread-pool>
+    </threads>
+
+    <cache-container>
+        <name></name>
+        <aliases></aliases>
+        <jndi-name></jndi-name>
+        <default-cache></default-cache>
+        <zero-capacity-node>false</zero-capacity-node>
+        <start></start>
+        <async-executor></async-executor>
+        <listener-executor></listener-executor>
+        <eviction-executor></eviction-executor>
+        <expiration-executor></expiration-executor>
+        <persistence-executor></persistence-executor>
+        <state-transfer-executor></state-transfer-executor>
+        <module>org.jboss.as.clustering.infinispan</module>
+        <statistics>true</statistics>
+        <shutdown-hook>
+            <transport>......</transport>
+            <security>......</security>
+            <serialization>......</serialization>
+            <jmx>......</jmx>
+            <global-state>......</global-state>
+            <local-cache>......</local-cache>
+            <local-cache-configuration>......</local-cache-configuration>
+            <replicated-cache>......</replicated-cache>
+            <replicated-cache-configuration>......</replicated-cache-configuration>
+            <invalidation-cache>......</invalidation-cache>
+            <invalidation-cache-configuration>......</invalidation-cache-configuration>
+            <distributed-cache>......</distributed-cache>
+            <distributed-cache-configuration>......</distributed-cache-configuration>
+            <scattered-cache>......</scattered-cache>
+            <scattered-cache-configuration>......</scattered-cache-configuration>
+        </shutdown-hook>
+    </cache-container>
+
+</infinispan>

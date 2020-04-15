@@ -1,0 +1,345 @@
+1.学习druid的知识点
+    这里有两个druid,一个是apache的，一个是alibaba的。分别进行学习。
+
+2.apache druid知识点的学习
+    1.官方网站：https://druid.apache.org
+    2.定义：Apache Druid是一个高性能的实时分析数据库。
+           本质就是一个数据库。
+    3.最新版本：0.16.0-Incubting
+    4.源代码仓库：https://github.com/apache/incubator-druid/
+    5.学习官方文档：https://druid.apache.org/docs/latest/design/
+        1.开始
+            Apache Druid是一个设计用于快速切片分析(“OLAP”查询)的大数据集实时分析数据库。
+            Druid的核心架构结合了数据仓库、timeseries数据库和日志搜索系统的思想。
+            特点如下：
+                按照列进行存储：提高查询速度
+                大规模并行处理
+                实时和批量获取大数据
+                进行快速查询的索引
+                基于时间的分区
+                近似排序算法
+            使用场景：
+                大量插入,少量更新
+                大数据的查询
+                从kafka，HFDFS等对象中加载数据
+            druid暂不支持在windows上进行软件安装
+            单机部署：4CPU/16GB RAM，micro-quickstart配置文件
+            环境准备：
+                java8+
+                mac系统
+                apache-druid-0.16.0-incubating-bin.tar.gz
+                zookeeper-3.4.14.tar.gz     //分布式部署druid时，需要的依赖【推荐的包】
+                    ⚠️⚠️：zookeeper软件包需要重命名成zk，然后将它放在druid的根目录下
+                    如果下载3.5.5以后的版本的Zookeeper安装包，我们乖乖的下载带有bin标识的包就不会有问题了。
+            启动Druid服务：默认使用了端口8081,8082,8888
+                ./bin/start-micro-quickstart
+                访问地址：http://localhost:8888
+            干净的加载数据：
+                删除druid软件包下var目录
+                rm -rf /tmp/kafka-logs
+            各种规模的启动脚本：
+                nano-quickstart: 1CPU,4GB RAM
+                    bin/start-nano-quickstart
+                    conf/druid/single-server/nano-quickstart
+                micro-quickstart：4CPU,16GB RAM
+                    bin/start-micro-quickstart
+                    conf/druid/single-server/micro-quickstart
+                small: 8CPU,64GB RAM
+                    bin/start-small
+                    conf/druid/single-server/small
+                medium: 16CPU,128GB RAM
+                    bin/start-medium
+                    conf/druid/single-server/medium
+                large: 32CPU,256GB RAM
+                    bin/start-large
+                    conf/druid/single-server/large
+                x-large: 64CPU,512GB
+                    bin/start-xlarge
+                    conf/druid/single-server/xlarge
+            集群部署：🀄️🀄️🀄️🀄️🀄️
+                master服务器：conf/druid/cluster/master
+                    bin/start-cluster-master-no-zk-server
+                    bin/start-cluster-master-with-zk-server
+                data服务器：conf/druid/cluster/data
+                    bin/start-cluster-data-server
+                query服务器：conf/druid/cluster/query
+                    bin/start-cluster-query-server
+            数据迁移：
+                备份配置conf/druid/cluster目录
+            代码中具体的存储配置：
+                druid.extensions.loadList=["druid-s3-extensions"]
+
+                #druid.storage.type=local
+                #druid.storage.storageDirectory=var/druid/segments
+
+                druid.storage.type=s3
+                druid.storage.bucket=your-bucket
+                druid.storage.baseKey=druid/segments
+                druid.s3.accessKey=...
+                druid.s3.secretKey=...
+
+                #druid.indexer.logs.type=file
+                #druid.indexer.logs.directory=var/druid/indexing-logs
+
+                druid.indexer.logs.type=s3
+                druid.indexer.logs.s3Bucket=your-bucket
+                druid.indexer.logs.s3Prefix=druid/indexing-logs
+        2.教程：
+            加载文件数据：本质是将数据文件转化为规则的数据库数据🌿🌿🌿🌿🌿
+                填写目录(在druid的根目录下开头)：/Users/admin/Downloads/software/apache-druid-0.16.0-incubating/quickstart/tutorial
+                填写过滤规则(具体文件)：wikiticker-2015-09-12-sampled.json.gz
+
+
+本质更像是软件的操作手册。可以作为一个临时数据库，使用浏览器作为管理器
+未完待续......
+
+
+3.alibaba druid知识点的学习
+    1.源代码仓库：https://github.com/alibaba/druid/
+    2.定义：Druid是Java语言中最好的数据库连接池。Druid能够提供强大的监控和扩展功能。
+    3.下载地址：maven中央仓库: http://central.maven.org/maven2/com/alibaba/druid/
+    4.jar包依赖：
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>${druid-version}</version>
+        </dependency>
+    5.打开监控功能：
+        Druid内置提供一个StatFilter，用于统计监控信息
+        常见的4种过滤器配置：
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+                ... ...
+                <property name="filters" value="stat" />
+                <property name="filters" value="stat,log4j" />
+            </bean>
+
+            <bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+            	<property name="slowSqlMillis" value="10000" />
+            	<property name="logSlowSql" value="true" />
+            </bean>
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+            	<property name="proxyFilters">
+            		<list>
+            			<ref bean="stat-filter" />
+            		</list>
+            	</property>
+            </bean>
+
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+              	... ...
+              	<property name="filters" value="stat" />
+              	<property name="connectionProperties" value="druid.stat.mergeSql=true" />
+            </bean>
+        查看慢sql语句：
+            <bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+            	<property name="slowSqlMillis" value="10000" />
+            	<property name="logSlowSql" value="true" />
+            </bean>
+    6.Druid怎么防御SQL注入攻击：WallFilter
+        <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+              ...
+              <property name="filters" value="wall"/>
+        </bean>
+        第二种方法：指定dbType 🌿🌿🌿🌿🌿
+            <bean id="wall-filter" class="com.alibaba.druid.wall.WallFilter">
+                  <property name="dbType" value="mysql" />
+            </bean>
+
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+              ...
+              <property name="proxyFilters">
+                  <list>
+                      <ref bean="wall-filter"/>
+                  </list>
+              </property>
+            </bean>
+    7.Druid的参考应用配置：🀄️🀄️🀄️🀄️🀄️
+        1.通用配置：参考的DBCP
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+                 <property name="url" value="${jdbc_url}" />
+                 <property name="username" value="${jdbc_user}" />
+                 <property name="password" value="${jdbc_password}" />
+
+                 <property name="filters" value="stat" />
+
+                 <property name="maxActive" value="20" />
+                 <property name="initialSize" value="1" />
+                 <property name="maxWait" value="60000" />
+                 <property name="minIdle" value="1" />
+
+                 <property name="timeBetweenEvictionRunsMillis" value="60000" />
+                 <property name="minEvictableIdleTimeMillis" value="300000" />
+
+                 <property name="testWhileIdle" value="true" />
+                 <property name="testOnBorrow" value="false" />
+                 <property name="testOnReturn" value="false" />
+
+                 <property name="poolPreparedStatements" value="true" />
+                 <property name="maxOpenPreparedStatements" value="20" />
+
+                 <property name="asyncInit" value="true" />
+             </bean>
+    8.将执行的sql语句输出到日志：
+        1.别名映射：META-INF/druid-filter.properties文件
+            druid.filters.log4j=com.alibaba.druid.filter.logging.Log4jFilter
+            druid.filters.log4j2=com.alibaba.druid.filter.logging.Log4j2Filter
+            druid.filters.slf4j=com.alibaba.druid.filter.logging.Slf4jLogFilter
+            druid.filters.commonlogging=com.alibaba.druid.filter.logging.CommonsLogFilter
+            druid.filters.commonLogging=com.alibaba.druid.filter.logging.CommonsLogFilter
+        2.loggerName配置:
+            public abstract class LogFilter {
+                  protected String dataSourceLoggerName = "druid.sql.DataSource";
+                  protected String connectionLoggerName = "druid.sql.Connection";
+                  protected String statementLoggerName = "druid.sql.Statement";
+                  protected String resultSetLoggerName = "druid.sql.ResultSet";
+            }
+        3.配置输出日志:
+            <bean id="log-filter" class="com.alibaba.druid.filter.logging.Log4jFilter">
+                <property name="resultSetLogEnabled" value="false" />
+            </bean>
+
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+                ...
+                <property name="proxyFilters">
+                    <list>
+                        <ref bean="log-filter"/>
+                    </list>
+                </property>
+            </bean>
+        4.log4j.properties配置:
+            log4j.logger.druid.sql=warn,stdout
+            log4j.logger.druid.sql.DataSource=warn,stdout
+            log4j.logger.druid.sql.Connection=warn,stdout
+            log4j.logger.druid.sql.Statement=warn,stdout
+            log4j.logger.druid.sql.ResultSet=warn,stdout
+        5.输出可执行的SQL:
+            -Ddruid.log.stmt.executableSql=true
+            <bean id="log-filter" class="com.alibaba.druid.filter.logging.Log4jFilter">
+                <property name="statementExecutableSqlLogEnable" value="true" />
+            </bean>
+    9.加密数据库密码：ConfigFilter
+        命令行生成密码：
+            java -cp druid-1.0.16.jar com.alibaba.druid.filter.config.ConfigTools you_password
+        配置数据源，对密码解密：
+            <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+                 <property name="url" value="jdbc:derby:memory:spring-test;create=true" />
+                 <property name="username" value="sa" />
+                 <property name="password" value="${password}" />
+                 <property name="filters" value="config" />
+                 <property name="connectionProperties" value="config.decrypt=true;config.decrypt.key=${publickey}" />
+            </bean>
+        配置参数，使用ConfgFilter解密密码：
+            my.properties中指定config.decrypt=true
+            DruidDataSource的ConnectionProperties中指定config.decrypt=true
+            jvm启动参数中指定-Ddruid.config.decrypt=true
+    10.如何在Spring Boot中集成Druid连接池和监控？🀄️🀄️🀄️🀄️🀄️
+        1.jar包依赖：<dependency>
+                      <groupId>com.alibaba</groupId>
+                      <artifactId>druid-spring-boot-starter</artifactId>
+                      <version>1.1.17</version>
+                    </dependency>
+        2.配置属性：
+            JDBC配置：多数据源
+                spring.datasource.druid.url=
+                spring.datasource.druid.username=
+                spring.datasource.druid.password=
+                spring.datasource.druid.driver-class-name=
+
+                # Druid 数据源 1 配置，继承spring.datasource.druid.* 配置，相同则覆盖
+                spring.datasource.druid.one.max-active=10
+                spring.datasource.druid.one.max-wait=10000
+
+                # Druid 数据源 2 配置，继承spring.datasource.druid.* 配置，相同则覆盖
+                spring.datasource.druid.two.max-active=20
+                spring.datasource.druid.two.max-wait=20000
+
+                @Primary
+                @Bean
+                @ConfigurationProperties("spring.datasource.druid.one")
+                public DataSource dataSourceOne(){
+                    return DruidDataSourceBuilder.create().build();
+                }
+                @Bean
+                @ConfigurationProperties("spring.datasource.druid.two")
+                public DataSource dataSourceTwo(){
+                    return DruidDataSourceBuilder.create().build();
+                }
+
+            连接池配置：
+                spring.datasource.druid.initial-size=
+                spring.datasource.druid.max-active=
+                spring.datasource.druid.min-idle=
+                spring.datasource.druid.max-wait=
+                spring.datasource.druid.pool-prepared-statements=
+                spring.datasource.druid.max-pool-prepared-statement-per-connection-size=
+                spring.datasource.druid.max-open-prepared-statements= #和上面的等价
+                spring.datasource.druid.validation-query=
+                spring.datasource.druid.validation-query-timeout=
+                spring.datasource.druid.test-on-borrow=
+                spring.datasource.druid.test-on-return=
+                spring.datasource.druid.test-while-idle=
+                spring.datasource.druid.time-between-eviction-runs-millis=
+                spring.datasource.druid.min-evictable-idle-time-millis=
+                spring.datasource.druid.max-evictable-idle-time-millis=
+                spring.datasource.druid.filters= #配置多个英文逗号分隔
+            监控配置：Filter
+                # WebStatFilter配置，说明请参考Druid Wiki，配置_配置WebStatFilter
+                spring.datasource.druid.web-stat-filter.enabled= #是否启用StatFilter默认值false
+                spring.datasource.druid.web-stat-filter.url-pattern=
+                spring.datasource.druid.web-stat-filter.exclusions=
+                spring.datasource.druid.web-stat-filter.session-stat-enable=
+                spring.datasource.druid.web-stat-filter.session-stat-max-count=
+                spring.datasource.druid.web-stat-filter.principal-session-name=
+                spring.datasource.druid.web-stat-filter.principal-cookie-name=
+                spring.datasource.druid.web-stat-filter.profile-enable=
+
+                # StatViewServlet配置，说明请参考Druid Wiki，配置_StatViewServlet配置
+                spring.datasource.druid.stat-view-servlet.enabled= #是否启用StatViewServlet（监控页面）默认值为false（考虑到安全问题默认并未启动，如需启用建议设置密码或白名单以保障安全）
+                spring.datasource.druid.stat-view-servlet.url-pattern=
+                spring.datasource.druid.stat-view-servlet.reset-enable=
+                spring.datasource.druid.stat-view-servlet.login-username=
+                spring.datasource.druid.stat-view-servlet.login-password=
+                spring.datasource.druid.stat-view-servlet.allow=
+                spring.datasource.druid.stat-view-servlet.deny=
+
+                # Spring监控配置，说明请参考Druid Github Wiki，配置_Druid和Spring关联监控配置
+                spring.datasource.druid.aop-patterns= # Spring监控AOP切入点，如x.y.z.service.*,配置多个英文逗号分隔
+        3.数据库密码加密：
+            spring.datasource.url=jdbc:mysql://localhost:3306/test
+            spring.datasource.username=root
+            # 生成的加密后的密码（原密码 123456）
+            spring.datasource.password=WVMjPhfXQrIsWRo0/RCqAVvYtTU9WNVToKJohb8AlUmHwnV6vwFL+FM2CNFDMJwGHW1iCmyaUlF+sgvFdogqEA==
+
+            # 生成的公钥
+            public-key=MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIiwHpFrDijV+GzwRTzWJk8D3j3jFfhsMFJ/7k1NTvBuLgL+TdIHgaMNOIEjHpXzuvX38J3FtOK8hLrySncVGOMCAwEAAQ==
+
+            # 配置 connection-properties，启用加密，配置公钥。
+            spring.datasource.druid.connection-properties=config.decrypt=true;config.decrypt.key=${public-key}
+
+            # 启用ConfigFilter
+            spring.datasource.druid.filter.config.enabled=true
+        4.设置自动测试连接状态：
+            <!-- 用来检测连接是否有效的sql，要求是一个查询语句，常用select 'x'。如果validationQuery为null，testOnBorrow、testOnReturn、testWhileIdle都不会起作用。 -->
+            <property name="validationQuery" value="SELECT 1" />
+            <property name="testOnBorrow" value="false" />
+            <property name="testOnReturn" value="false" />
+            <property name="testWhileIdle" value="true" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

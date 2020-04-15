@@ -1,0 +1,979 @@
+1.学习iText知识点：
+    1.官网：https://itextpdf.com/en。
+           核心jar包的github位置：https://github.com/itext
+           核心的API位置：https://api.itextpdf.com/iText7/7.1.6/
+           demo案例位置：https://itextpdf.com/en/resources/examples
+           版本变化：从itext2，然后是itext5，最新是itext7。目前最新的版本是iText7.1.6
+    2.概念：iText是一种生成PDF报表的Java组件
+    3.最新jar包：<dependency>
+                 <groupId>com.itextpdf</groupId>
+                 <artifactId>itext7-core</artifactId>
+                 <version>7.1.6</version>
+                </dependency>
+
+    4.核心jar：【在AGPL许可下使用】
+        <groupId>com.itextpdf</groupId>
+        <artifactId>
+            kernel：内核操作
+            io：输入输出
+            layout：布局
+            forms：处理AcroForm
+            pdfa：处理pdf的一个特殊功能
+            pdftest：测试功能
+
+            暂不使用模块：
+                barcodes：条形码
+                hyph：文本用连字符连接
+                font-asian：亚洲功能
+                sign：数字签名
+                itext-licensekey：许可密钥--没有这个则闭源模块无法使用
+
+        </artifactId>
+
+
+    5.itext的软件工具：
+        Full iText 7 suite：【工具箱】
+            iText Core：核心类库
+            iText Community：社区版核心库，必须与AGPL许可证结合使用
+            iText：完整的PDF功能和软件开发平台
+
+            遗留工具：
+                iText5：过期的PDF功能和软件开发平台
+                XML Worker：将XHTML内容转换为PDF，包括样式
+                XFA Worker：编写动态pdf，生成可编辑和静态的pdf文件
+
+            重要工具：🌿🌿🌿🌿🌿
+                iText DITO：
+                    设计pdf模版功能，并将模版绑定到后端。
+                    能够创建自己的数据驱动输出模板或输入表单，并将其绑定到功能强大的后端。
+                pdf2Data：【🌿🌿🌿--闭源】
+                    能够从PDF文档中提取数据。
+                pdfHTML：【🌿🌿🌿--开源】
+                    将HTML转换为PDF。
+                RUPS：【🌿🌿🌿】
+                    用于读取和更新PDF语法和调试PDF代码的PDF诊断工具
+                pdfSweep：【🌿🌿🌿--开源】
+                    可以安全编辑PDF文档中的数据，比如隐藏数据等
+                pdfDebug【开源】：
+                    pdf调试器插件，可集成到idea。在debug时查看pdf的生成情况
+                pdfCalligraph：【闭源】
+                    允许解锁PDF排版中的高级工作流功能。对pdf进行排版
+                pdfXFA：【🌿🌿🌿--闭源】
+                    动态pdf生成，转换和保护您的动态PDF文件。生成可编辑和静态的pdf文件
+
+    6.入门电子书：《iText 7 Jump-Start Tutorial Java.pdf》
+        第1章：介绍基础的构建块❤️【document对象】
+            -基础块
+                hello，world入门：
+                    OutputStream fos = new FileOutputStream("dest.pdf");
+                    PdfWriter writer = new PdfWriter(fos);
+                    PdfDocument pdf = new PdfDocument(writer);
+                    Document document = new Document(pdf);
+                    document.add(new Paragraph("Hello World!"));
+                    document.close();
+                字体：
+                    PdfFont font = PdfFontFactory.createFont(FontConstants.TIMES_ROMAN);
+                    document.add(new Paragraph("iText is:").setFont(font));
+                专属List:
+                    List list = new List().setSymbolIndent(12).setListSymbol("\u2022").setFont(font);
+                    list.add(new ListItem("good"))
+                        .add(new ListItem("news"));
+                    document.add(list);
+                图片：
+                    Image fox = new Image(ImageFactory.getImage("FOX.image"));
+                    Image dog = new Image(ImageFactory.getImage("DOG.image"));
+                    Paragraph p = new Paragraph("The quick brown ")
+                                .add(fox)
+                                .add(" jumps over the lazy ")
+                                .add(dog);
+                    document.add(p);
+            -发布数据库
+                数据库表格：
+                    Document document = new Document(pdf, PageSize.A4.rotate());
+                    document.setMargins(20, 20, 20, 20);
+
+                    Table table = new Table(new float[]{4, 1, 3, 4, 3, 3, 3, 3, 1});
+                    table.setWidthPercent(100);
+
+                    BufferedReader br = new BufferedReader(new FileReader("DATA.csv"));
+                    String line = br.readLine();
+                    //处理一行数据
+                    PdfFont font = PdfFontFactory.createFont(FontConstants.HELVETICA);
+                    PdfFont bold = PdfFontFactory.createFont(FontConstants.HELVETICA_BOLD);
+                    process(table, line, bold, true);
+                    //处理剩下数据
+                    while ((line = br.readLine()) != null) {
+                        process(table, line, font, false);
+                    }
+                    br.close();
+                    document.add(table);
+
+                    //---------------------华丽的分割线---------------------------
+                    public void process(Table table, String line, PdfFont font, boolean isHeader) {
+                            StringTokenizer tokenizer = new StringTokenizer(line, ";");
+                            while (tokenizer.hasMoreTokens()) {
+                                if (isHeader) {
+                                    table.addHeaderCell(
+                                        new Cell().add(
+                                            new Paragraph(tokenizer.nextToken()).setFont(font)));
+                                } else {
+                                    table.addCell(
+                                        new Cell().add(
+                                            new Paragraph(tokenizer.nextToken()).setFont(font)));
+                                }
+                            }
+                    }
+            -总结
+                高级对象：Paragraph, List, Image, Table, Cell
+
+        第2章：添加底层内容❤️【PdfCanvas对象】
+            -在画布上画线
+                pdf语法： -406 0 m     //m表示移动，移动到坐标(-406,0)
+                         406 0 l      //l表示路径，构造到坐标(406,0)的路径
+                         S            //s表示画线，将上面的路径进行画线
+                java代码：canvas.moveTo(-406, 0)
+                                .lineTo(406, 0)
+                                .stroke();
+                创建新页：
+                    OutputStream fos = new FileOutputStream("dest.pdf");
+                    PdfWriter writer = new PdfWriter(fos);
+                    PdfDocument pdf = new PdfDocument(writer);
+
+                    PageSize ps = PageSize.A4.rotate();
+                    PdfPage page = pdf.addNewPage(ps);
+                    PdfCanvas canvas = new PdfCanvas(page);
+
+                    pdf.close();
+            -坐标系和变换矩阵
+                默认坐标系原点在左下角。
+                特殊矩阵：最后一列是固定值,保证二维空间。a,b,c,d可用于缩放，旋转，倾斜坐标系。
+                        e,f定义平移。页面大小的高度和宽度除以2, 得到e,f的值。
+                    a b 0
+                    c d 0
+                    e f 1
+                移动坐标系到中心：
+                    canvas.concatMatrix(1, 0, 0, 1, ps.getWidth() / 2, ps.getHeight() / 2);
+            -图形状态
+                画坐标轴：
+                    canvas.moveTo(-(ps.getWidth() / 2 - 15), 0)
+                            .lineTo(ps.getWidth() / 2 - 15, 0)
+                            .stroke();
+
+                    //画x坐标箭头
+                    canvas.setLineJoinStyle(PdfCanvasConstants.LineJoinStyle.ROUND)
+                            .moveTo(ps.getWidth() / 2 - 25, -10)
+                            .lineTo(ps.getWidth() / 2 - 15, 0)
+                            .lineTo(ps.getWidth() / 2 - 25, 10).stroke();
+
+                    canvas.setLineJoinStyle(PdfCanvasConstants.LineJoinStyle.MITER);
+                    canvas.moveTo(0, -(ps.getHeight() / 2 - 15))
+                            .lineTo(0, ps.getHeight() / 2 - 15)
+                            .stroke();
+
+                    //画y坐标箭头
+                    canvas.saveState()
+                            .setLineJoinStyle(PdfCanvasConstants.LineJoinStyle.ROUND)
+                            .moveTo(-10, ps.getHeight() / 2 - 25)
+                            .lineTo(0, ps.getHeight() / 2 - 15)
+                            .lineTo(10, ps.getHeight() / 2 - 25).stroke()
+                            .restoreState();
+
+                    //画x轴衬线--即刻度线
+                    for (int i = -((int) ps.getWidth() / 2 - 61);i < ((int) ps.getWidth() / 2 - 60); i += 40) {
+                        canvas.moveTo(i, 5).lineTo(i, -5);
+                    }
+
+                    //画y轴衬线
+                    for (int j = -((int) ps.getHeight() / 2 - 57);j < ((int) ps.getHeight() / 2 - 56); j += 40) {
+                        canvas.moveTo(5, j).lineTo(-5, j);
+                    }
+                    canvas.stroke();
+                画网格线：
+                    颜色类：DeviceGray(单色系)，DeviceRgb(三色系)，DeviceCmyk(四色系)
+                        Color grayColor = new DeviceCmyk(0.f, 0.f, 0.f, 0.875f);
+                        Color greenColor = new DeviceCmyk(1.f, 0.f, 1.f, 0.176f);
+                        Color blueColor = new DeviceCmyk(1.f, 0.156f, 0.f, 0.118f);
+                    画网格：
+                        canvas.setLineWidth(0.5f).setStrokeColor(blueColor);
+                        for (int i = -((int) ps.getHeight() / 2 - 57);i < ((int) ps.getHeight() / 2 - 56); i += 40) {
+                            canvas.moveTo(-(ps.getWidth() / 2 - 15), i)
+                                  .lineTo(ps.getWidth() / 2 - 15, i);
+                        }
+                        for (int j = -((int) ps.getWidth() / 2 - 61);j < ((int) ps.getWidth() / 2 - 60); j += 40) {
+                            canvas.moveTo(j, -(ps.getHeight() / 2 - 15))
+                                  .lineTo(j, ps.getHeight() / 2 - 15);
+                        }
+                        canvas.stroke();
+                    画虚斜线：（线破折号）
+                        canvas.setLineWidth(2).setStrokeColor(greenColor)
+                                .setLineDash(10, 10, 8)
+                                .moveTo(-(ps.getWidth() / 2 - 15), -(ps.getHeight() / 2 - 15))
+                                .lineTo(ps.getWidth() / 2 - 15, ps.getHeight() / 2 - 15)
+                                .stroke();
+            -文本状态
+                List<String> text = new ArrayList();
+                text.add(" Episode V ");
+                text.add(" THE EMPIRE STRIKES BACK ");
+
+                canvas.concatMatrix(1, 0, 0, 1, 0, ps.getHeight());
+                canvas.beginText()
+                    .setFontAndSize(PdfFontFactory.createFont(FontConstants.COURIER_BOLD), 14)
+                    .setLeading(14 * 1.2f)
+                    .moveText(70, -40);
+
+                for (String s : text) {
+                    canvas.newlineShowText(s);
+                }
+                canvas.endText();
+
+                改变背景颜色：
+                    canvas.rectangle(0, 0, ps.getWidth(), ps.getHeight())
+                          .setColor(Color.BLACK, true)
+                          .fill();
+
+                倾斜角度：
+                    canvas.concatMatrix(1, 0, 0, 1, 0, ps.getHeight());
+                    Color yellowColor = new DeviceCmyk(0.f, 0.0537f, 0.769f, 0.051f);
+                    float lineHeight = 5;
+                    float yOffset = -40;
+                    canvas.beginText()
+                        .setFontAndSize(PdfFontFactory.createFont(FontConstants.COURIER_BOLD), 1)
+                        .setColor(yellowColor, true);
+
+                    for(int j = 0; j < text.size(); j++) {
+                        String line = text.get(j);
+                        float xOffset = ps.getWidth() / 2 - 45 - 8 * j;
+                        float fontSizeCoeff = 6 + j;
+                        float lineSpacing = (lineHeight + j) * j / 1.5f;
+                        int stringWidth = line.length();
+
+                        for (int i = 0; i < stringWidth; i++) {
+                            float angle = (maxStringWidth / 2 - i) / 2f;
+                            float charXOffset = (4 + (float) j / 2) * i;
+                            canvas.setTextMatrix(fontSizeCoeff, 0,angle, fontSizeCoeff / 1.5f,
+                                        xOffset + charXOffset, yOffset - lineSpacing)
+                                    .showText(String.valueOf(line.charAt(i)));
+                        }
+                    }
+                    canvas.endText();
+            -总结
+                一个用户单位对应一个点，72个用户单位=1英寸=2.54厘米。
+
+        第3章：使用渲染器和事件处理程序
+            -文档渲染器
+                整页拆分为3列并且图文并茂：
+                    OutputStream fos = new FileOutputStream("dest.pdf");
+                    PdfWriter writer = new PdfWriter(fos);
+                    PdfDocument pdf = new PdfDocument(writer);
+                    PageSize ps = PageSize.A5;
+                    Document document = new Document(pdf, ps);
+
+                    //设置列参数
+                    float offSet = 36;
+                    float columnWidth = (ps.getWidth() - offSet * 2 + 10) / 3;
+                    float columnHeight = ps.getHeight() - offSet * 2;
+
+                    //设置列的区域
+                    Rectangle[] columns = {
+                        new Rectangle(offSet - 5, offSet, columnWidth, columnHeight),
+                        new Rectangle(offSet + columnWidth, offSet, columnWidth, columnHeight),
+                        new Rectangle(offSet + columnWidth * 2 + 5, offSet, columnWidth, columnHeight)
+                    };
+                    document.setRenderer(new ColumnDocumentRenderer(document, columns));
+
+                    //添加内容
+                    Image inst = new Image(ImageFactory.getImage("INST_IMG.image")).setWidth(columnWidth);
+                    String articleInstagram = new String(Files.readAllBytes(Paths.get("INST_TXT.txt")), StandardCharsets.UTF_8);
+                    NewYorkTimes.addArticle(document,
+                        "Instagram May Change Your Feed, Personalizing It With an Algorithm",
+                        "By MIKE ISAAC MARCH 15, 2016", inst, articleInstagram);
+                    doc.close();
+
+                    //------------------------华丽的分割线------------------------
+                    public static void addArticle(Document doc, String title, String author, Image img, String text) throws IOException {
+                        Paragraph p1 = new Paragraph(title)
+                                    .setFont(timesNewRomanBold)
+                                    .setFontSize(14);
+                        doc.add(p1);
+                        doc.add(img);
+                        Paragraph p2 = new Paragraph()
+                                    .setFont(timesNewRoman)
+                                    .setFontSize(7)
+                                    .setFontColor(Color.GRAY)
+                                    .add(author);
+                        doc.add(p2);
+                        Paragraph p3 = new Paragraph()
+                                    .setFont(timesNewRoman)
+                                    .setFontSize(10)
+                                    .add(text);
+                        doc.add(p3);
+                    }
+            -应用块渲染器
+                在表格数据中的某一列添加背景色：
+                    //设置页面大小
+                    PageSize ps = new PageSize(842, 680);
+
+                    //设置表格居中格式
+                    table.setWidthPercent(100)
+                         .setTextAlignment(Property.TextAlignment.CENTER)
+                         .setHorizontalAlignment(Property.HorizontalAlignment.CENTER);
+
+                    //指定列渲染背景色--逐个小格子进行处理
+                    public void process(Table table, String line, PdfFont font, boolean isHeader) {
+                        StringTokenizer tokenizer = new StringTokenizer(line, ";");
+                        int columnNumber = 0;
+                        while (tokenizer.hasMoreTokens()) {
+                            if (isHeader) {
+                                Cell cell = new Cell().add(new Paragraph(tokenizer.nextToken()));
+                                //使用自定义渲染器
+                                cell.setNextRenderer(new RoundedCornersCellRenderer(cell));
+                                cell.setPadding(5).setBorder(null);
+                                table.addHeaderCell(cell);
+                            } else {
+                                columnNumber++;
+                                Cell cell = new Cell().add(new Paragraph(tokenizer.nextToken()));
+                                cell.setFont(font).setBorder(new SolidBorder(Color.BLACK, 0.5f));
+                                switch (columnNumber) {
+                                    case 4: cell.setBackgroundColor(greenColor); break;
+                                    case 5: cell.setBackgroundColor(yellowColor); break;
+                                    case 6: cell.setBackgroundColor(redColor); break;
+                                    default: cell.setBackgroundColor(blueColor); break;
+                                }
+                                table.addCell(cell);
+                            }
+                        }
+                    }
+
+                    //---------------------------华丽的分割线-------------------------
+                    private class RoundedCornersCellRenderer extends CellRenderer {
+                        public RoundedCornersCellRenderer(Cell modelElement) {
+                            super(modelElement);
+                        }
+
+                        @Override
+                        public void drawBorder(DrawContext drawContext) {
+                            Rectangle rectangle = getOccupiedAreaBBox();
+                            float llx = rectangle.getX() + 1;
+                            float lly = rectangle.getY() + 1;
+                            float urx = rectangle.getX() + getOccupiedAreaBBox().getWidth() - 1;
+                            float ury = rectangle.getY() + getOccupiedAreaBBox().getHeight() - 1;
+                            PdfCanvas canvas = drawContext.getCanvas();
+                            float r = 4;
+                            float b = 0.4477f;
+                            canvas.moveTo(llx, lly)
+                                  .lineTo(urx, lly)
+                                  .lineTo(urx, ury - r)
+                                  .curveTo(urx, ury - r * b, urx - r * b, ury, urx - r, ury)
+                                  .lineTo(llx + r, ury)
+                                  .curveTo(llx + r * b, ury, llx, ury - r * b, llx, ury - r)
+                                  .lineTo(llx, lly)
+                                  .stroke();
+                            super.drawBorder(drawContext);
+                        }
+                    }
+            -处理事件
+                添加背景，页眉页脚，水印和页码：
+                    OutputStream fos = new FileOutputStream(dest);
+                    PdfWriter writer = new PdfWriter(fos);
+                    PdfDocument pdf = new PdfDocument(writer);
+                    //添加事件监听--添加新页时触发
+                    pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new MyEventHandler());
+                    Document document = new Document(pdf);
+
+                    //--------------------华丽的分割线------------------------
+                    protected class MyEventHandler implements IEventHandler {
+
+                        public void handleEvent(Event event) {
+                            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                            PdfDocument pdfDoc = docEvent.getDocument();
+
+                            PdfPage page = docEvent.getPage();
+                            int pageNumber = pdfDoc.getPageNumber(page);
+                            Rectangle pageSize = page.getPageSize();
+                            PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdfDoc);
+
+                            // 设置背景
+                            Color limeColor = new DeviceCmyk(0.208f, 0, 0.584f, 0);
+                            Color blueColor = new DeviceCmyk(0.445f, 0.0546f, 0, 0.0667f);
+                            pdfCanvas.saveState()
+                                     .setFillColor(pageNumber % 2 == 1 ? limeColor : blueColor)
+                                     .rectangle(pageSize.getLeft(), pageSize.getBottom(),pageSize.getWidth(), pageSize.getHeight())
+                                     .fill()
+                                     .restoreState();
+
+                            // 添加页眉页脚
+                            pdfCanvas.beginText()
+                                    .setFontAndSize(helvetica, 9)
+                                    .moveText(pageSize.getWidth() / 2 - 60, pageSize.getTop() - 20)
+                                    .showText("THE TRUTH IS OUT THERE")
+                                    .moveText(60, -pageSize.getTop() + 30)
+                                    .showText(String.valueOf(pageNumber))
+                                    .endText();
+
+                            // 添加水印--就是在指定位置添加文字
+                            Canvas canvas = new Canvas(pdfCanvas, pdfDoc, page.getPageSize());
+                            canvas.setProperty(Property.FONT_COLOR, Color.WHITE);
+                            canvas.setProperty(Property.FONT_SIZE, 60);
+                            canvas.setProperty(Property.FONT, helveticaBold);
+                            canvas.showTextAligned(new Paragraph("CONFIDENTIAL"),298, 421,
+                                                                pdfDoc.getPageNumber(page),
+                                                                TextAlignment.CENTER,
+                                                                VerticalAlignment.MIDDLE, 45);
+                            pdfCanvas.release();
+                        }
+                    }
+            -总结
+                更高级别控制布局内容，并减少复杂代码。方便维护
+
+        第4章：制作PDF互动版本
+            -添加注释
+                文本注释：
+                    PdfAnnotation ann = new PdfTextAnnotation(new Rectangle(20, 800, 0, 0))
+                                                .setColor(Color.GREEN)
+                                                .setTitle(new PdfString("iText"))
+                                                .setContents("With iText,you can truly take your documentation needs to the next level.")
+                                                .setOpen(true);
+                    pdf.getFirstPage().addAnnotation(ann);
+                链接注释：
+                    PdfLinkAnnotation annotation = new PdfLinkAnnotation(new Rectangle(0, 0))
+                                                        .setAction(PdfAction.createURI("http://itextpdf.com/"));
+                    Link link = new Link("here", annotation);
+                    Paragraph p = new Paragraph("The example of link annotation. Click ")
+                            .add(link.setUnderline())
+                            .add(" to learn more...");
+                    document.add(p);
+                行注释：
+                    OutputStream fos = new FileOutputStream(dest);
+                    PdfWriter writer = new PdfWriter(fos);
+                    PdfDocument pdf = new PdfDocument(writer);
+                    PdfPage page = pdf.addNewPage();
+
+                    PdfArray lineEndings = new PdfArray();
+                    lineEndings.add(new PdfName("Diamond"));
+                    lineEndings.add(new PdfName("Diamond"));
+                    PdfAnnotation annotation = new PdfLineAnnotation(new Rectangle(0, 0),new float[]{20, 790, page.getPageSize().getWidth() - 20, 790})
+                                                        .setLineEndingStyles((lineEndings))
+                                                        .setContentsAsCaption(true)
+                                                        .setTitle(new PdfString("iText"))
+                                                        .setContents("The example of line annotation")
+                                                        .setColor(Color.BLUE);
+                    page.addAnnotation(annotation);
+                    pdf.close();
+                选中标记注释：
+                    PdfAnnotation ann = PdfTextMarkupAnnotation.createHighLight(new Rectangle(105, 790, 64, 10),new float[]{169, 790, 105, 790, 169, 800, 105, 800})
+                                                                .setColor(Color.YELLOW)
+                                                                .setTitle(new PdfString("Hello!"))
+                                                                .setContents(new PdfString("I'm a popup."))
+                                                                .setTitle(new PdfString("iText"))
+                                                                .setOpen(true)
+                                                                .setRectangle(new PdfArray(new float[]{100, 600, 200, 100}));
+                    pdf.getFirstPage().addAnnotation(ann);
+            -创建交互式表单
+                本质是注释，不是内容流
+                使用场景：表单格式固定并且精确。当作为模版时。
+                    PdfAcroForm form = PdfAcroForm.getAcroForm(doc.getPdfDocument(), true);
+                文本框：
+                    PdfTextFormField nameField = PdfTextFormField.createText( doc.getPdfDocument(), new Rectangle(99, 753, 425, 15), "name", "");
+                    form.addField(nameField);
+                单选按钮：
+                    PdfButtonFormField group = PdfFormField.createRadioGroup(doc.getPdfDocument(), "language", "");
+                    PdfFormField.createRadioButton(doc.getPdfDocument(), new Rectangle(130, 728, 15, 15), group, "English");
+                    PdfFormField.createRadioButton(doc.getPdfDocument(), new Rectangle(200, 728, 15, 15), group, "French");
+                    PdfFormField.createRadioButton(doc.getPdfDocument(), new Rectangle(260, 728, 15, 15), group, "German");
+                    PdfFormField.createRadioButton(doc.getPdfDocument(), new Rectangle(330, 728, 15, 15), group, "Russian");
+                    PdfFormField.createRadioButton(doc.getPdfDocument(), new Rectangle(400, 728, 15, 15), group, "Spanish");
+                    form.addField(group);
+                复选框：
+                    for(inti=0;i<3;i++){
+                        PdfButtonFormField checkField = PdfFormField.createCheckBox(
+                                                                        doc.getPdfDocument(),
+                                                                        new Rectangle(119 + i * 69, 701, 15, 15),
+                                                                        "experience".concat(String.valueOf(i+1)),
+                                                                        "Off",
+                                                                        PdfFormField.TYPE_CHECK);
+                        form.addField(checkField);
+                    }
+                选择字段：(下拉框中单选或者多选)
+                    String[] options = {"Any", "6.30 am - 2.30 pm", "1.30 pm - 9.30 pm"};
+                    PdfChoiceFormField choiceField = PdfFormField.createComboBox(
+                                                                    doc.getPdfDocument(),
+                                                                    new Rectangle(163, 676, 115, 15),
+                                                                    "shift",
+                                                                    "Any",
+                                                                    options);
+                    form.addField(choiceField);
+                多行字段：（富文本框）
+                    PdfTextFormField infoField = PdfTextFormField.createMultilineText( doc.getPdfDocument(), new Rectangle(158, 625, 366, 40), "info", "");
+                    form.addField(infoField);
+                按钮：
+                    PdfButtonFormField button = PdfFormField.createPushButton(doc.getPdfDocument(), new Rectangle(479, 594, 45, 15), "reset", "RESET");
+                    button.setAction(PdfAction.createResetForm(
+                        new String[] {"name", "language", "experience1", "experience2","experience3", "shift", "info"},
+                        0 )
+                    );
+                    form.addField(button);
+            -填写表格
+                Map<String, PdfFormField> fields = form.getFormFields();
+                fields.get("name").setValue("James Bond");
+
+                预填写表单：
+                    PdfReader reader = new PdfReader("src.pdf);
+                    PdfWriter writer = new PdfWriter("dest.pdf");
+                    PdfDocument pdf = new PdfDocument(reader, writer);
+
+                    PdfAcroForm form = PdfAcroForm.getAcroForm(pdf, true);
+                    Map<String, PdfFormField> fields = form.getFormFields();
+                    fields.get("name").setValue("James Bond");
+                    pdf.close();
+
+                扁平化表单：即不可修改
+                    form.flattenFields();
+            -总结
+                4个注释，1个交互式表单
+
+        第5章：操作现有PDF文档❤️【PdfReader】
+            -添加注释和内容
+                PdfReader reader = new PdfReader(src);
+                PdfWriter writer = new PdfWriter(dest);
+                PdfDocument pdfDoc = new PdfDocument(reader, writer);
+                //添加注释
+                PdfTextAnnotation ann = new PdfTextAnnotation(new Rectangle(400, 795, 0, 0))
+                                                .setTitle(new PdfString("iText"))
+                                                .setContents("Please, fill out the form.")
+                                                .setOpen(true);
+                pdfDoc.getFirstPage().addAnnotation(ann);
+
+                //添加内容--需要PdfCanvas和PdfPage
+                PdfCanvas canvas = new PdfCanvas(pdfDoc.getFirstPage());
+                canvas.beginText().setFontAndSize(PdfFontFactory.createFont(FontConstants.HELVETICA), 12)
+                        .moveText(265, 597)
+                        .showText("I agree to the terms and conditions.")
+                        .endText();
+
+                PdfAcroForm form = PdfAcroForm.getAcroForm(pdfDoc, true);
+                PdfButtonFormField checkField = PdfFormField.createCheckBox(pdfDoc, new Rectangle(245, 594, 15, 15),
+                                                                                "agreement",
+                                                                                "Off",
+                                                                                PdfFormField.TYPE_CHECK);
+                checkField.setRequired(true);
+                form.addField(checkField);
+                //修改数据
+                form.getField("reset")
+                    .setAction(PdfAction.createResetForm(
+                                    new String[]{"name", "language", "experience1", "experience2","experience3", "shift", "info", "agreement"}, 0));
+                pdfDoc.close();
+            -更改表单字段的属性
+                PdfAcroForm form = PdfAcroForm.getAcroForm(pdfDoc, true);
+                Map<String, PdfFormField> fields = form.getFormFields();
+                fields.get("name").setValue("James Bond").setBackgroundColor(Color.ORANGE);
+                fields.get("language").setValue("English");
+                //修改属性
+                List<PdfString> options = new ArrayList<PdfString>();
+                options.add(new PdfString("Any"));
+                options.add(new PdfString("8.30 am - 12.30 pm"));
+                options.add(new PdfString("12.30 pm - 4.30 pm"));
+                PdfArray arr = new PdfArray(options);
+                fields.get("shift").setOptions(arr);
+
+                PdfFont courier = PdfFontFactory.createFont(FontConstants.COURIER);
+                fields.get("info").setValue("I was 38 years old when I became a 007 agent.", courier, 7);
+            -添加页眉、页脚和水印
+                PdfReader reader = new PdfReader(src);
+                PdfWriter writer = new PdfWriter(dest);
+                PdfDocument pdfDoc = new PdfDocument(reader, writer);
+                Document document = new Document(pdfDoc);
+                Rectangle pageSize;
+                PdfCanvas canvas;
+                int n = pdfDoc.getNumberOfPages();
+                for(inti=1;i<=n;i++){
+                    PdfPage page = pdfDoc.getPage(i);
+                    pageSize = page.getPageSize();
+                    canvas = new PdfCanvas(page);
+                    //画页眉
+                    canvas.beginText().setFontAndSize(
+                            PdfFontFactory.createFont(FontConstants.HELVETICA), 7)
+                            .moveText(pageSize.getWidth() / 2 - 24, pageSize.getHeight() - 10)
+                            .showText("I want to believe")
+                            .endText();
+                    //画页脚
+                    canvas.setStrokeColor(Color.BLACK)
+                            .setLineWidth(.2f)
+                            .moveTo(pageSize.getWidth() / 2 - 30, 20)
+                            .lineTo(pageSize.getWidth() / 2 + 30, 20)
+                            .stroke();
+                    //画页码
+                    canvas.beginText().setFontAndSize(PdfFontFactory.createFont(FontConstants.HELVETICA), 7)
+                            .moveText(pageSize.getWidth() / 2 - 7, 10)
+                            .showText(String.valueOf(i))
+                            .showText(" of ")
+                            .showText(String.valueOf(n))
+                            .endText();
+                    //画水印
+                    Paragraph p = new Paragraph("CONFIDENTIAL").setFontSize(60);
+                    canvas.saveState();
+                    PdfExtGState gs1 = new PdfExtGState().setFillOpacity(0.2f);
+                    canvas.setExtGState(gs1);
+                    document.showTextAligned(p,pageSize.getWidth() / 2,
+                                             pageSize.getHeight() / 2,
+                                             pdfDoc.getPageNumber(page),
+                                             Property.TextAlignment.CENTER,
+                                             Property.VerticalAlignment.MIDDLE, 45);
+                    canvas.restoreState();
+                }
+                pdfDoc.close();
+            -更改页面大小和方向
+                PdfReader reader =new PdfReader(src);
+                PdfWriter writer =new PdfWriter(dest);
+                PdfDocument pdfDoc= new PdfDocument(reader, writer);
+                float margin = 72;
+                for (int i = 1; i <= pdfDoc.getNumberOfPages(); i++) {
+                    PdfPage page = pdfDoc.getPage(i);
+                    //修改页面大小
+                    Rectangle mediaBox = page.getMediaBox();
+                    Rectangle newMediaBox = new Rectangle(mediaBox.getLeft() - margin,
+                                                          mediaBox.getBottom() - margin,
+                                                          mediaBox.getWidth() + margin * 2,
+                                                          mediaBox.getHeight() + margin * 2);
+                    page.setMediaBox(newMediaBox);
+                    //增加边界
+                    PdfCanvas over = new PdfCanvas(page);
+                    over.setStrokeColor(Color.GRAY);
+                    over.rectangle(mediaBox.getLeft(), mediaBox.getBottom(),mediaBox.getWidth(), mediaBox.getHeight());
+                    over.stroke();
+                    //旋转页面
+                    if (i % 2 == 0) {
+                        page.setRotation(180);
+                    }
+                }
+                pdfDoc.close();
+            -总结
+                在存在的pdf文档上添加注释，页眉等操作
+
+        第6章：重用现有PDF文档
+            -缩放，填充，N倍扩大
+                PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+                PdfDocument origPdf = new PdfDocument(new PdfReader(src));
+                PdfPage origPage = origPdf.getPage(1);
+                Rectangle orig = origPage.getPageSizeWithRotation();
+
+                // 添加A4页面
+                PdfPage page = pdf.addNewPage(PageSize.A4.rotate());
+
+                // 使用转换矩阵进行缩放
+                PdfCanvas canvas = new PdfCanvas(page);
+                AffineTransform transformationMatrix = AffineTransform.getScaleInstance(
+                    page.getPageSize().getWidth() / orig.getWidth(),
+                    page.getPageSize().getHeight() / orig.getHeight());
+
+                canvas.concatMatrix(transformationMatrix);
+                PdfFormXObject pageCopy = origPage.copyAsFormXObject(pdf);
+                canvas.addXObject(pageCopy, 0, 0);
+
+                // 添加原始页面
+                pdf.addPage(origPage.copyTo(pdf));
+
+                // 添加A2页面
+                page = pdf.addNewPage(PageSize.A2.rotate());
+                canvas = new PdfCanvas(page);
+                transformationMatrix = AffineTransform.getScaleInstance(
+                    page.getPageSize().getWidth() / orig.getWidth(),
+                    page.getPageSize().getHeight() / orig.getHeight());
+                canvas.concatMatrix(transformationMatrix);
+                canvas.addXObject(pageCopy, 0, 0);
+
+                pdf.close();
+                origPdf.close();
+            -装配文件（多个pdf文档进行拼图操作）
+                PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+                PdfDocument sourcePdf = new PdfDocument(new PdfReader(src));
+                PdfPage origPage = sourcePdf.getPage(1);
+                PdfFormXObject pageCopy = origPage.copyAsFormXObject(pdf);
+                Rectangle orig = origPage.getPageSize();
+
+                //标题测试
+                Rectangle tileSize = PageSize.A4.rotate();
+                AffineTransform transformationMatrix = AffineTransform.getScaleInstance(
+                    tileSize.getWidth() / orig.getWidth() * 2f,
+                    tileSize.getHeight() / orig.getHeight() * 2f);
+
+                //第一标题
+                PdfPage page = pdf.addNewPage(PageSize.A4.rotate());
+                PdfCanvas canvas = new PdfCanvas(page);
+                canvas.concatMatrix(transformationMatrix);
+                canvas.addXObject(pageCopy, 0, -orig.getHeight() / 2f);
+
+                //第二标题
+                page = pdf.addNewPage(PageSize.A4.rotate());
+                canvas = new PdfCanvas(page);
+                canvas.concatMatrix(transformationMatrix);
+                canvas.addXObject(pageCopy, -orig.getWidth() / 2f, -orig.getHeight() / 2f);
+
+                //第三标题
+                page = pdf.addNewPage(PageSize.A4.rotate());
+                canvas = new PdfCanvas(page);
+                canvas.concatMatrix(transformationMatrix);
+                canvas.addXObject(pageCopy, 0, 0);
+
+                //第四标题
+                page = pdf.addNewPage(PageSize.A4.rotate());
+                canvas = new PdfCanvas(page);
+                canvas.concatMatrix(transformationMatrix);
+                canvas.addXObject(pageCopy, -orig.getWidth() / 2f, 0);
+                pdf.close();
+                sourcePdf.close();
+
+                在一个pdf文件上存放多个pdf文件:
+                    PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+                    PdfDocument sourcePdf = new PdfDocument(new PdfReader(SRC));
+
+                    //原始页面
+                    PdfPage origPage = sourcePdf.getPage(1);
+                    Rectangle orig = origPage.getPageSize();
+                    PdfFormXObject pageCopy = origPage.copyAsFormXObject(pdf);
+
+                    //n个小页面
+                    PageSize nUpPageSize = PageSize.A4.rotate();
+                    PdfPage page = pdf.addNewPage(nUpPageSize);
+                    PdfCanvas canvas = new PdfCanvas(page);
+
+                    //缩放页面
+                    AffineTransform transformationMatrix = AffineTransform.getScaleInstance(
+                        nUpPageSize.getWidth() / orig.getWidth() / 2f,
+                        nUpPageSize.getHeight() / orig.getHeight() / 2f);
+                    canvas.concatMatrix(transformationMatrix);
+
+                    //将小页面存放到大页面上
+                    canvas.addXObject(pageCopy, 0, orig.getHeight());
+                    canvas.addXObject(pageCopy, orig.getWidth(), orig.getHeight());
+                    canvas.addXObject(pageCopy, 0, 0);
+                    canvas.addXObject(pageCopy, orig.getWidth(), 0);
+                    pdf.close();
+                    sourcePdf.close();
+
+                使用pdfmerger合并文档：
+                    PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+                    PdfMerger merger = new PdfMerger(pdf);
+                    PdfDocument firstSourcePdf = new PdfDocument(new PdfReader(SRC1));
+                    merger.addPages(firstSourcePdf, 1, firstSourcePdf.getNumberOfPages());
+
+                    PdfDocument secondSourcePdf = new PdfDocument(new PdfReader(SRC2));
+                    merger.addPages(secondSourcePdf, 1, secondSourcePdf.getNumberOfPages());
+                    merger.merge();
+                    firstSourcePdf.close();
+                    secondSourcePdf.close();
+                    pdf.close();
+
+                目录格式：
+                    public static final Map<String, Integer> TheRevenantNominations = new TreeMap<String, Integer>();
+                    static {
+                        TheRevenantNominations.put("Performance by an actor in a leading role", 4);
+                        TheRevenantNominations.put("Performance by an actor in a supporting role", 4);
+                        TheRevenantNominations.put("Achievement in cinematography", 4);
+                        TheRevenantNominations.put("Achievement in costume design", 5);
+                        TheRevenantNominations.put("Achievement in directing", 5);
+                        TheRevenantNominations.put("Achievement in film editing", 6);
+                        TheRevenantNominations.put("Achievement in makeup and hairstyling", 7);
+                        TheRevenantNominations.put("Best motion picture of the year", 8);
+                        TheRevenantNominations.put("Achievement in production design", 8);
+                        TheRevenantNominations.put("Achievement in sound editing", 9);
+                        TheRevenantNominations.put("Achievement in sound mixing", 9);
+                        TheRevenantNominations.put("Achievement in visual effects", 10);
+                    }
+
+                    PdfDocument pdfDoc = new PdfDocument(new PdfWriter(dest));
+                    Document document = new Document(pdfDoc);
+                    document.add(new Paragraph(new Text("The Revenant nominations list"))
+                            .setTextAlignment(Property.TextAlignment.CENTER));
+
+                    PdfDocument firstSourcePdf = new PdfDocument(new PdfReader(SRC1));
+                    for (Map.Entry<String, Integer> entry : TheRevenantNominations.entrySet()) {
+
+                        //复制页
+                        PdfPage page = firstSourcePdf.getPage(entry.getValue()).copyTo(pdfDoc);
+                        pdfDoc.addPage(page);
+
+                        //重写页码
+                        Text text = new Text(String.format("Page %d", pdfDoc.getNumberOfPages() - 1));
+                        text.setBackgroundColor(Color.WHITE);
+                        document.add(new Paragraph(text).setFixedPosition(pdfDoc.getNumberOfPages(), 549, 742, 100));
+
+                        //添加目的地
+                        String destinationKey = "p" + (pdfDoc.getNumberOfPages() - 1);
+                        PdfArray destinationArray = new PdfArray();
+                        destinationArray.add(page.getPdfObject());
+                        destinationArray.add(PdfName.XYZ);
+                        destinationArray.add(new PdfNumber(0));
+                        destinationArray.add(new PdfNumber(page.getMediaBox().getHeight()));
+                        destinationArray.add(new PdfNumber(1));
+                        pdfDoc.addNameDestination(destinationKey, destinationArray);
+
+                        //使用书签
+                        Paragraph p = new Paragraph();
+                        p.addTabStops(new TabStop(540, Property.TabAlignment.RIGHT, new DottedLine()));
+                        p.add(entry.getKey());
+                        p.add(new Tab());
+                        p.add(String.valueOf(pdfDoc.getNumberOfPages() - 1));
+                        p.setProperty(Property.ACTION, PdfAction.createGoTo(destinationKey));
+                        document.add(p);
+                    }
+                    firstSourcePdf.close();
+            -合并表格
+                PdfDocument destPdfDocument = new PdfDocument(new PdfWriter(dest));
+                PdfDocument[] sources = new PdfDocument[] {
+                    new PdfDocument(new PdfReader(SRC1)), new PdfDocument(new PdfReader(SRC2))
+                };
+                for (PdfDocument sourcePdfDocument : sources) {
+                    sourcePdfDocument.copyPagesTo(1, sourcePdfDocument.getNumberOfPages(),
+                                                     destPdfDocument,
+                                                     new PdfPageFormCopier());
+                    sourcePdfDocument.close();
+                }
+                destPdfDocument.close();
+
+                //
+                PdfDocument pdfDocument = new PdfDocument(new PdfWriter(dest));
+                BufferedReader bufferedReader = new BufferedReader(new FileReader(DATA));
+                String line;
+                boolean headerLine = true;
+                inti=1;
+                while ((line = bufferedReader.readLine()) != null) {
+                    if (headerLine) {
+                        headerLine = false;
+                        continue;
+                    }
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    PdfDocument sourcePdfDocument = new PdfDocument(
+                    new PdfReader(SRC), new PdfWriter(baos));
+
+                    //重命名字段
+                    i++;
+                    PdfAcroForm form = PdfAcroForm.getAcroForm(sourcePdfDocument, true);
+                    form.renameField("name", "name_" + i);
+                    form.renameField("abbr", "abbr_" + i);
+                    form.renameField("dst", "dst_" + i);
+
+                    //填充字段
+                    StringTokenizer tokenizer = new StringTokenizer(line, ";");
+                    Map<String, PdfFormField> fields = form.getFormFields();
+                    fields.get("name_" + i).setValue(tokenizer.nextToken());
+                    fields.get("abbr_" + i).setValue(tokenizer.nextToken());
+                    fields.get("dst_" + i).setValue(tokenizer.nextToken());
+
+                    sourcePdfDocument.close();
+
+                    sourcePdfDocument = new PdfDocument(new PdfReader(new ByteArrayInputStream(baos.toByteArray())));
+                    sourcePdfDocument.copyPagesTo(1, sourcePdfDocument.getNumberOfPages(),pdfDocument, new PdfPageFormCopier());
+                    sourcePdfDocument.close();
+                }
+                bufferedReader.close();
+                pdfDocument.close();
+            -合并扁平化表格（压缩pdf文件大小）
+                PdfDocument destPdfDocument =new PdfDocument(new PdfWriter(dest1));
+                PdfDocument destPdfDocumentSmartMode =new PdfDocument(new PdfWriter(dest2).setSmartMode(true));
+                BufferedReader bufferedReader = new BufferedReader(new FileReader(DATA));
+                String line;
+                boolean headerLine = true;
+                while ((line = bufferedReader.readLine()) != null) {
+                    if (headerLine) {
+                        headerLine = false;
+                        continue;
+                    }
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    PdfDocument sourcePdfDocument = new PdfDocument(new PdfReader(SRC), new PdfWriter(baos));
+
+                    PdfAcroForm form = PdfAcroForm.getAcroForm(sourcePdfDocument, true);
+                    StringTokenizer tokenizer = new StringTokenizer(line, ";");
+                    Map<String, PdfFormField> fields = form.getFormFields();
+                    fields.get("name").setValue(tokenizer.nextToken());
+                    fields.get("abbr").setValue(tokenizer.nextToken());
+                    fields.get("dst").setValue(tokenizer.nextToken());
+                    form.flattenFields();
+
+                    sourcePdfDocument.close();
+                    sourcePdfDocument = new PdfDocument(
+                    new PdfReader(new ByteArrayInputStream(baos.toByteArray())));
+
+                    sourcePdfDocument.copyPagesTo(1, sourcePdfDocument.getNumberOfPages(), destPdfDocument, null);
+                    sourcePdfDocument.copyPagesTo(1, sourcePdfDocument.getNumberOfPages(), destPdfDocumentSmartMode, null);
+                    sourcePdfDocument.close();
+                }
+                bufferedReader.close();
+                destPdfDocument.close();
+                destPdfDocumentSmartMode.close();
+            -总结
+                对文件进行缩放等操作，得到不同的文件。
+
+        第7章：创建PDF/UA和PDF/A文档（特殊pdf文档）
+            -创建可访问的PDF文档
+                PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
+                Document document = new Document(pdf);
+
+                pdf.setTagged();
+                pdf.getCatalog().setLang(new PdfString("en-US"));
+                pdf.getCatalog().setViewerPreferences(new PdfViewerPreferences().setDisplayDocTitle(true));
+                PdfDocumentInfo info = pdf.getDocumentInfo();
+                info.setTitle("iText7 PDF/UA example");
+
+                pdf.createXmpMetadata();
+                PdfFont font = PdfFontFactory.createFont(FONT, PdfEncodings.WINANSI, true);
+                Paragraph p = new Paragraph();
+                p.setFont(font);
+                p.add(new Text("The quick brown "));
+                Image foxImage = new Image(ImageFactory.getImage(FOX));
+
+                foxImage.getAccessibilityProperties().setAlternateDescription("Fox");
+                p.add(foxImage);
+                p.add(" jumps over the lazy ");
+                Image dogImage = new Image(ImageFactory.getImage(DOG));
+
+                dogImage.getAccessibilityProperties().setAlternateDescription("Dog");
+                p.add(dogImage);
+                document.add(p);
+                document.close();
+            -创建用于长期保存的pdf文件
+                PdfADocument pdf = new PdfADocument(new PdfWriter(dest),
+                PdfAConformanceLevel.PDF_A_1B,new PdfOutputIntent("Custom", "", "http://www.color.org","sRGB IEC61966-2.1", new FileInputStream(INTENT)));
+                Document document = new Document(pdf);
+
+                pdf.createXmpMetadata();
+                PdfFont font = PdfFontFactory.createFont(FONT, PdfEncodings.WINANSI, true);
+                Paragraph p = new Paragraph();
+                p.setFont(font);
+                p.add(new Text("The quick brown "));
+                Image foxImage = new Image(ImageFactory.getImage(FOX));
+                p.add(foxImage);
+                p.add(" jumps over the lazy ");
+                Image dogImage = new Image(ImageFactory.getImage(DOG));
+                p.add(dogImage);
+                document.add(p);
+                document.close();
+            -合并PDF文档（相同级别才能合并）
+                PdfADocument pdf = new PdfADocument(new PdfWriter(dest),
+                PdfAConformanceLevel.PDF_A_1A,new PdfOutputIntent("Custom", "", "http://www.color.org","sRGB IEC61966-2.1", new FileInputStream(INTENT)));
+
+                pdf.setTagged();
+                pdf.getCatalog().setLang(new PdfString("en-US"));
+                pdf.getCatalog().setViewerPreferences(new PdfViewerPreferences().setDisplayDocTitle(true));
+                PdfDocumentInfo info = pdf.getDocumentInfo();
+                info.setTitle("iText7 PDF/A-1a example");
+
+                pdf.createXmpMetadata();
+                PdfMerger merger = new PdfMerger(pdf);
+
+                PdfDocument firstSourcePdf = new PdfDocument(new PdfReader(SRC1));
+                merger.addPages(firstSourcePdf, 1, firstSourcePdf.getNumberOfPages());
+
+                PdfDocument secondSourcePdf = new PdfDocument(new PdfReader(SRC2));
+                merger.addPages(secondSourcePdf, 1, secondSourcePdf.getNumberOfPages());
+
+                merger.merge();
+                firstSourcePdf.close();
+                secondSourcePdf.close();
+                pdf.close();
+            -总结
+                pdf中引入文档结构
+
+
+
+
+

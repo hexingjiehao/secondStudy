@@ -1,0 +1,348 @@
+1.详细学习Pebble Template引擎：
+    1.主页的介绍：
+        1个模版html页面，一个jar包，一个main方法。关键是html页面和java代码变量替换的语法
+    2.和Twig模版引擎的兼容性：
+        起源于Twig，扩展了新功能，但是不是完整的实现。差异体现在
+            tag：标签
+            filter:过滤器
+            functions:函数
+            tests:测试
+            operators:运算符号
+    3.引擎的贡献者和原理：
+        主要组件有PebbleEngine，LexerImpl，ParserImpl。
+        PebbleEngine启动模版编译过程，将模版源传递给Lexer接口。
+        Lexer接口将模版转化为一组令牌对象，一个令牌是最小对象，表示多种元素。当完整的令牌流建立时，返回给PebbleEngine。
+        PebbleEngine将令牌流发送给解析器Parser。解析器将令牌对象转化为节点对象，并组装成document
+        PebbleEngine有一个节点对象树，开始节点是NodeRoot。它将创建PebbleTemplateImpl对象。然后NodeVisitor处理节点树对象。模板将被放入缓存并最终返回给用户
+        用户在模版上调用evaluate()方法,模版在根节点上调用render(),层层向下render()。最后返回给writer对象
+    4.版本的更新日志：
+        3.0.0开始支持java8
+        3.0.7开始支持java9
+        3.0.10开始支持Java9++
+    5.电子文档的详细介绍：
+        引导教程：
+            插入和配置：
+                中央仓库：<dependency>
+                            <groupId>io.pebbletemplates</groupId>
+                            <artifactId>pebble</artifactId>
+                            <version>3.0.10</version>
+                         </dependency>
+                其他仓库：<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+
+                        <repositories>
+                          <repository>
+                            <id>sonatype-public</id>
+                            <name>Sonatype Public</name>
+                            <url>https://oss.sonatype.org/content/groups/public</url>
+                            <snapshots>
+                              <enabled>true</enabled>
+                            </snapshots>
+                          </repository>
+                        </repositories>
+                创建引擎，然后编译模版，传入map,得到渲染好的Writer结果
+                模版加载器：用于寻找模版。创建引擎时传入参数
+                    ClasspathLoader：搜索类路径
+                    FileLoader：使用文件系统路径
+                    ServletLoader：使用servlet上下文。web时推荐
+                    StringLoader：使用模版名字作为模版的内容
+                    DelegatingLoader：将责任委托给子加载器集合。默认值。底层使用ClasspathLoader和FileLoader
+            spring的集成：
+                jar包依赖：<dependency>
+                            <groupId>io.pebbletemplates</groupId>
+                            <artifactId>pebble-spring{3/4/5}</artifactId>
+                            <version>3.0.10</version>
+                          </dependency>
+                在类路径(/WEB-INF/templates/)创建模版。
+                    @Configuration
+                    @ComponentScan(basePackages = { "com.example.controller", "com.example.service" })
+                    @EnableWebMvc
+                    public class MvcConfig extends WebMvcConfigurerAdapter {
+                        @Autowired
+                        private ServletContext servletContext;
+                        @Bean
+                        public Loader templateLoader(){
+                            return new ServletLoader(servletContext);
+                        }
+                        @Bean
+                        public SpringExtension springExtension() {
+                            return new SpringExtension();
+                        }
+                        //创建引擎
+                        @Bean
+                        public PebbleEngine pebbleEngine() {
+                             return new PebbleEngine.Builder()
+                                    .loader(this.templateLoader())
+                                    .extension(springExtension())
+                                    .build();
+                        }
+                        //查找模版
+                        @Bean
+                        public ViewResolver viewResolver() {
+                            PebbleViewResolver viewResolver = new PebbleViewResolver();
+                            viewResolver.setPrefix("/WEB-INF/templates/");
+                            viewResolver.setSuffix(".html");
+                            viewResolver.setPebbleEngine(pebbleEngine());
+                            return viewResolver;
+                        }
+                    }
+
+                    @Controller
+                    @RequestMapping(value = "/profile")
+                    public class ProfileController {
+                    	@Autowired
+                    	private UserService userService;
+
+                    	@RequestMapping
+                    	public ModelAndView getUserProfile(@RequestParam("id") long id) {
+                    		ModelAndView mav = new ModelAndView();
+                    		mav.addObject("user", userService.getUser(id));
+                    		mav.setViewName("profile");
+                    		return mav;
+                    	}
+                    }
+                模版中访问Spring beans: {{ beans.beanName }}
+                         http request: {{ request.contextPath }}
+                         http response: {{ response.contentType }}
+                         http session: {{ session.maxInactiveInterval }}
+                spring扩展：自动添加上文路径到指定的url：<a href="{{ href('/foobar') }}">Example</a>
+                           消息函数：Label = {{ message('label.test') }}
+                                    Label with params = {{ message('label.test.params', 'params1', 'params2') }}
+                           验证和错误信息：{{ hasErrors('formName' }}
+                                         {{ hasGlobalErrors('formName' }}
+                                         {{ hasFieldErrors('formName', 'fieldName' }}
+
+                                         {% for err in getAllErrors('formName') %}
+                                             <p>{{ err }}</p>
+                                         {% endfor %}
+                                         {% for err in getGlobalErrors('formName') %}
+                                             <p>{{ err }}</p>
+                                         {% endfor %}
+                                         {% for err in getFieldErrors('formName', 'fieldName') %}
+                                             <p>{{ err }}</p>
+                                         {% endfor %}
+                           时间处理器：<Logger name="com.mitchellbosecke.pebble.spring.PebbleView.timer" level="DEBUG" additivity="false">
+                                       <AppenderRef ref="STDOUT" />
+                                     </Logger>
+            springboot的集成：
+                jar包依赖：<dependency>
+                            <groupId>io.pebbletemplates</groupId>
+                            <artifactId>pebble-spring-boot-2-starter</artifactId>
+                            <version>3.0.10</version>
+                          </dependency>
+                自动加载模版文件：classpath：/templates/*.pebble
+                版本兼容性：pebble:2.6.0+  对应  springboot：2.0.1+
+                外部配置：pebble.prefix: 默认值 /templates/
+                         pebble.suffix: 默认值 .pebble
+                         pebble.cache: 默认值 true
+                         pebble.contentType: 默认值 text/html
+                         pebble.encoding: 默认值 UTF-8
+                         pebble.exposeRequestAttributes: 默认值 false
+                         pebble.exposeSessionAttributes: 默认值 false
+                         pebble.defaultLocale: 默认值 null
+                         pebble.strictVariables: 默认值 false
+                使用自定义的pebble组件：应该将所有@bean放到同一个@Configuration。部分方法名需要固定
+                    @Bean
+                    public Extension myPebbleExtension1() {
+                       return new MyPebbleExtension1();
+                    }
+
+                    @Bean
+                    public Loader<?> pebbleLoader() {
+                       return new MyCustomLoader();
+                    }
+
+                    @Bean
+                    public PebbleEngine pebbleEngine() {
+                       return new PebbleEngine.Builder().build();
+                    }
+
+                    @Bean
+                    public PebbleViewResolver pebbleViewResolver() {
+                       return new PebbleViewResolver();
+                    }
+            基础用法：
+                能够生成html,css，xml,js等
+                语法结构；
+                    {{ }}：变量名或者表达式
+                    {% %}：导入模版，或者控制流，创建模块
+                变量：
+                    {{ foo }}
+                    {{ foo.bar }}
+                    {{ foo["bar"] }}
+                    {{ foo.get("bar") }}
+
+                    foo.getBar()
+                    foo.isBar()
+                    foo.hasBar()
+                    foo.bar()
+                    foo.bar
+                类型安全：
+                    strictVariables属性默认为false，无类型正常打印空值。设置为true时会抛出异常
+                过滤器：| 竖线表示或者。过滤器作用是修改变量
+                    {{ "If life gives you lemons, eat lemons." | upper | abbreviate(13) }}
+                函数：作用是生成新内容
+                    {{ max(user.score, highscore) }}
+                控制流：if和for
+                    {% for article in articles %}
+                        <h3>{{ article.title }}</h3>
+                        <p>{{ article.content }}</p>
+                    {% else %}
+                        <p> There are no articles. </p>
+                    {% endfor %}
+
+                    {% if category == "news" %}
+                        {{ news }}
+                    {% elseif category == "sports" %}
+                        {{ sports }}
+                    {% else %}
+                        <p>Please select a category</p>
+                    {% endif %}
+                导入其他模版：
+                    <div class="sidebar">
+                    	{% include "advertisement.html" %}
+                    </div>
+                模版继承：
+                    可以覆盖操作。{%block %} 可以被覆盖 {%endblock%}
+                    {% extends "parent.html" %}
+                    {% extends ajax ? 'ajax.html' : 'base.html' %}
+                宏命令：类似于创建函数
+                    {% macro input(type, name) %}
+                    	<input type="{{ type }}" name="{{ name }}" />
+                    {% endmacro %}
+
+                    {{ input("text", "name", "Mitchell") }}
+                命名参数：
+                    {{ stringDate | date(existingFormat="yyyy-MMMM-d", format="yyyy/MMMM/d") }}
+                自动转义：{% set danger = "<br>" %}
+                         {{ danger }}
+
+                         {{ danger | raw }}  //排除掉需要转义的部分
+
+                         {% set danger = "alert(...)" %}
+                         <script>var username="{{ danger | escape(strategy="js") }}"</script>
+                空白：自动忽略
+                    <p>{{- "no whitespace" -}}</p>
+                注释：{# THIS IS A COMMENT #}
+                表达式：
+                    文字："字符串"，"#{字符串的占位符}"
+                    集合：["a","b"],{"c":"d"}
+                    数学：+-*/%
+                    逻辑：and, or, not, (...)
+                    比较：==,!=,<,>,>=,<=
+                        {% if user.age >= 18 %}
+                        	...
+                        {% endif %}
+                    测试：is
+                        {% if 3 is odd %}
+                        	...
+                        {% endif %}
+
+                        {% if name is not null %}
+                        	...
+                        {% endif %}
+                    条件操作符：{{ foo ? "yes" : "no" }}
+                    运算符优先级：. | % /* - +......
+            转义：
+                自动转义：当raw过滤器是最后一个时，正常打印html标签，不转义。有html策略和js策略，还有css策略和url_param策略。
+                    {% autoescape false %}
+                        {{ danger }} {# will not be escaped #}
+                    {% endautoescape %}
+
+                    禁用：PebbleEngine engine = new PebbleEngine.Builder().autoEscaping(false).build();
+                手动转义：
+                    {% set danger = "<br>" %}
+                    {{ danger | escape }}
+
+                    PebbleEngine engine = new PebbleEngine.Builder().defaultEscapingStrategy("js").build();
+
+                    var username ="{{ user.name | escape(strategy="js") }}";
+                    自定义策略：PebbleEngine engine = new PebbleEngine.Builder().addEscapingStrategy("custom", new CustomEscapingStrategy()).build();
+            扩展：自定义过滤器，测试，函数等
+                PebbleEngine engine = new PebbleEngine.Builder().extension(new CustomExtension()).build();
+                过滤器：public UpperFilter implements Filter {
+                            @Override
+                            public List<String> getArgumentNames() {
+                                return null;
+                            }
+                            @Override
+                            public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber){
+                                if(input == null){
+                                    return null;
+                                }
+                                if (input instanceof String) {
+                                    return ((String) input).toUpperCase(context.getLocale());
+                                } else {
+                                    return input.toString().toUpperCase(context.getLocale());
+                                }
+                            }
+                       }
+
+                       public EvenTest implements Test {
+                            @Override
+                            public List<String> getArgumentNames() {
+                                return null;
+                            }
+                            @Override
+                            public boolean apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber){
+                                if (input == null) {
+                                    throw new PebbleException(null, "Can not pass null value to \"even\" test.", lineNumber, self.getName());
+                                }
+                                if (input instanceof Integer) {
+                                    return ((Integer) input) % 2 == 0;
+                                } else {
+                                    return ((Long) input) % 2 == 0;
+                                }
+                            }
+                       }
+
+                       public FibonnaciStringFunction implements Function {
+                            @Override
+                            public List<String> getArgumentNames() {
+                                List<String> names = new ArrayList<>();
+                                names.add("length");
+                                return names;
+                            }
+                            @Override
+                            public Object execute(Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) {
+                                Integer length = (Integer)args.get("length");
+                                Integer prev1 = 0;
+                                Integer prev2 = 1;
+                                StringBuilder result = new StringBuilder();
+                                result.append("01");
+                                for(int i = 2; i < length; i++){
+                                    Integer next = prev1 + prev2;
+                                    result.append(next);
+                                    prev1 = prev2;
+                                    prev2 = next;
+                                }
+                                return result.toString();
+                            }
+                       }
+        标签：
+            // card.peb
+            <div class="card">
+                {% block cardContent %}
+                {% endblock %}
+            </div>
+
+            {% embed 'card.peb' %}
+                {% block cardContent %}
+                    <a href="...">See all 100+ products</a>
+                {% endblock %}
+            {% endembed %}
+        过滤器：
+            {% filter upper %}
+            	hello
+            {% endfilter %}}
+        函数：
+        测试：
+        操作符：
+    6.java API中的关键class：
+        PebbleEngine： PebbleEngine engine = new PebbleEngine.Builder().build();
+        PebbleTemplate： PebbleTemplate compiledTemplate = engine.getTemplate("home.html");
+
+                        Map<String, Object> context = new HashMap<>();
+                        context.put("name", "Mitchell");
+                        Writer writer = new StringWriter();
+                        compiledTemplate.evaluate(writer, context);
+        Writer: String output = writer.toString();

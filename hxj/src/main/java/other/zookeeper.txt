@@ -1,0 +1,113 @@
+1.学习zookeeper的知识点：
+    1.官网地址：https://zookeeper.apache.org
+    2.本质：zookeeper=文件系统+监听通知机制。🌿🌿🌿🌿🌿
+
+           ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。
+           它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。
+    3.定义：【它是一个服务，一个软件】🌿🌿🌿🌿🌿
+        ZooKeeper是一个集中的服务，用于维护配置信息、命名、提供分布式同步和提供组服务
+    4.版本：3.5.6 而且jar包非常小巧
+    5.文档知识点学习：
+        1.综述：zookeeper是简单
+               zookeeper是复本的
+               zookeeper是有序的
+               zookeeper是快速的
+        2.教程：
+            配置文件：conf/zoo.cfg
+                tickTime=2000
+                dataDir=/var/lib/zookeeper
+                clientPort=2181
+            启动zookeeper: bin/zkServer.sh start 🌿🌿🌿🌿🌿
+            使用命令行连接zookeeper:
+                 bin/zkCli.sh -server 127.0.0.1:2181
+        3.Zookeeper的程序员指导：文件树结构🌲🌲🌲🌲🌲
+            Zookeeper 数据模型：分层的名称空间，分布式文件系统。
+                ZNodes：ZooKeeper树中的每个节点都被称为znode。
+                Watches:在节点上设置监听器。节点改变会触发监听器
+                Data Access: 节点上的命名空间的数据是自动读写的
+            Zookeeper Sessions:
+                开始-->连接ing-->连接完成-->session过期-->连接丢失-->关闭
+            Zookeeper Watches：🌿🌿🌿🌿🌿
+                zookeeper中的读取数据方法【getData(),getChildren(),exists()】可以设置watch
+                One-time trigger: 一个watch事件将会发送到客户端，当数据改变时
+                sent to the client: 意味着一个事件正在发送到客户端
+                the data for which the watch was set: 一个节点改变的不同方式
+                能够触发watch的语法:
+                    created event:
+                    delete event:
+                    changed event:
+                    child event:
+                删除watches:
+                    child remove event:
+                    data remove event:
+        4.zookeeper的java代码举例：
+            public static void main(String[] args) {
+                if (args.length < 4) {
+                    System.err
+                            .println("USAGE: Executor hostPort znode filename program [args ...]");
+                    System.exit(2);
+                }
+                String hostPort = args[0];
+                String znode = args[1];
+                String filename = args[2];
+                String exec[] = new String[args.length - 3];
+                System.arraycopy(args, 3, exec, 0, exec.length);
+                try {
+                    new Executor(hostPort, znode, filename, exec).run();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            public Executor(String hostPort, String znode, String filename,String exec[]) throws KeeperException, IOException {
+                this.filename = filename;
+                this.exec = exec;
+                zk = new ZooKeeper(hostPort, 3000, this);
+                dm = new DataMonitor(zk, znode, null, this);
+            }
+
+            public void run() {
+                try {
+                    synchronized (this) {
+                        while (!dm.dead) {
+                            wait();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                }
+            }
+
+            执行器：public class Executor implements Watcher, Runnable, DataMonitor.DataMonitorListener
+        5.使用zookeeper实现消息队列的代码教程：🌹🌹🌹信号量的本质是对象锁
+            zookeeper server 运行中：信号量
+            static ZooKeeper zk = null;
+            static Integer mutex;
+            String root;
+
+            SyncPrimitive(String address) {
+                if(zk == null){
+                    try {
+                        System.out.println("Starting ZK:");
+                        zk = new ZooKeeper(address, 3000, this);
+                        mutex = new Integer(-1);
+                        System.out.println("Finished starting ZK: " + zk);
+                    } catch (IOException e) {
+                        System.out.println(e.toString());
+                        zk = null;
+                    }
+                }
+            }
+
+            synchronized public void process(WatchedEvent event) {
+                synchronized (mutex) {
+                    mutex.notify();
+                }
+            }
+
+未完待续......
+
+
+
+
+
+

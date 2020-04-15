@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rocksdb-store>
+    <relative>jboss.server.data.dir</relative>
+    <path></path>
+    <block-size>0</block-size>
+    <cache-size>0</cache-size>
+    <clear-threshold value="10000">
+        <expiration>
+            <path></path>
+            <queue-size>10000</queue-size>
+        </expiration>
+        <compression>
+            <type>NONE</type>
+        </compression>
+    </clear-threshold>
+
+
+    <shared>false</shared>
+    <transactional>false</transactional>
+    <preload>false</preload>
+    <fetch-state>false</fetch-state>
+    <purge>false</purge>
+    <singleton>false</singleton>
+    <read-only>false</read-only>
+    <max-batch-size value="100">
+        <write-behind>
+            <modification-queue-size>1024</modification-queue-size>
+            <thread-pool-size>1</thread-pool-size>
+            <fail-silently>false</fail-silently>
+        </write-behind>
+        <property>
+            <name></name>
+            <value></value>
+        </property>
+    </max-batch-size>
+
+</rocksdb-store>

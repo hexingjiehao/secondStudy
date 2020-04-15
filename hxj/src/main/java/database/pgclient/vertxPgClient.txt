@@ -1,0 +1,134 @@
+1.学习vertx自带的Reactive PostgreSQL Client: 也就是vertx-pg-client
+    1.官网地址：https://vertx.io/docs/vertx-pg-client/java/#_using_transactions
+    2.定义：它是PostgreSQL的客户端。响应式和非阻塞的。可以单线程处理多个数据库连接。
+    3.jar包依赖：
+        <dependency>
+         <groupId>io.vertx</groupId>
+         <artifactId>vertx-pg-client</artifactId>
+         <version>3.8.4</version>
+        </dependency>
+
+        可能需要的依赖：netty-transport-native
+    4.开始代码：
+        //准备配置项
+        PgConnectOptions connectOptions = new PgConnectOptions()
+          .setPort(5432)
+          .setHost("the-host")
+          .setDatabase("the-db")
+          .setUser("user")
+          .setPassword("secret");
+        PoolOptions poolOptions = new PoolOptions()
+          .setMaxSize(5);
+
+        //连接池对数据库进行操作，也可以和vertx组合使用
+        PgPool client = PgPool.pool(connectOptions, poolOptions);
+        PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
+
+        client.query("SELECT * FROM users WHERE id='julien'", ar -> {
+          if (ar.succeeded()) {
+            RowSet<Row> result = ar.result();
+            System.out.println("Got " + result.size() + " rows ");
+          } else {
+            System.out.println("Failure: " + ar.cause().getMessage());
+          }
+          client.close();
+        });
+    5.相同连接执行多个操作：connect🌿🌿🌿🌿🌿
+        client.getConnection(ar1 -> {
+          if (ar1.succeeded()) {
+            System.out.println("Connected");
+            SqlConnection conn = ar1.result();
+
+            // All operations execute on the same connection
+            conn.query("SELECT * FROM users WHERE id='julien'", ar2 -> {
+              if (ar2.succeeded()) {
+                conn.query("SELECT * FROM users WHERE id='emad'", ar3 -> {
+                  conn.close();
+                });
+              } else {
+                conn.close();
+              }
+            });
+          } else {
+            System.out.println("Could not connect: " + ar1.cause().getMessage());
+          }
+        });
+    6.使用事务：🀄️🀄️🀄️🀄️🀄️
+        使用连接的事务：
+            pool.getConnection(res -> {
+              if (res.succeeded()) {
+                SqlConnection conn = res.result();
+                Transaction tx = conn.begin();
+
+                conn.query("INSERT INTO Users (first_name,last_name) VALUES ('Julien','Viet')", ar1 -> {
+                  if (ar1.succeeded()) {
+                    conn.query("INSERT INTO Users (first_name,last_name) VALUES ('Emad','Alblueshi')", ar2 -> {
+                      if (ar2.succeeded()) {
+
+                        //提交事务
+                        tx.commit(ar3 -> {
+                          if (ar3.succeeded()) {
+                            System.out.println("Transaction succeeded");
+                          } else {
+                            System.out.println("Transaction failed " + ar3.cause().getMessage());
+                          }
+                          conn.close();
+                        });
+                      } else {
+                        conn.close();
+                      }
+                    });
+                  } else {
+                    conn.close();
+                  }
+                });
+              }
+            });
+        直接使用事务：start,commit,rollback
+            pool.begin(res -> {
+              if (res.succeeded()) {
+                Transaction tx = res.result();
+
+                //用事务的方式查询
+                tx.query("INSERT INTO Users (first_name,last_name) VALUES ('Julien','Viet')", ar1 -> {
+                  if (ar1.succeeded()) {
+                    tx.query("INSERT INTO Users (first_name,last_name) VALUES ('Emad','Alblueshi')", ar2 -> {
+                      if (ar2.succeeded()) {
+
+                        //提交事务
+                        tx.commit(ar3 -> {
+                          if (ar3.succeeded()) {
+                            System.out.println("Transaction succeeded");
+                          } else {
+                            System.out.println("Transaction failed " + ar3.cause().getMessage());
+                          }
+                        });
+                      }
+                    });
+                  } else {
+                    // 不需要手动关闭🌿，事务终止时自动关闭
+                  }
+                });
+              }
+            });
+        直接使用最上层父类引用：SqlClient
+             ((PgPool) sqlClient).begin(begin -> {
+                  if (begin.succeeded()) {
+                    Transaction tx = begin.result();
+
+                    txProcessor.apply(new PgWrapper(tx, sqlMapper, logger)).setHandler(ar ->
+
+                      tx.commit(v -> {
+                        if (v.succeeded()) {
+                          logger.info("[{}][{}] transaction succeeded", name, txid);
+                        } else {
+                          logger.info("[{}][{}] transaction failed", name, txid);
+                        }
+                        resultHandler.handle(ar);
+                      }));
+                  } else {
+                    resultHandler.handle(ServiceException.fail(INTERNAL_ERROR, begin.cause().getMessage()));
+                  }
+                });
+
+

@@ -1,0 +1,58 @@
+1.学习Zookeeper Cluster Manager的知识点：
+    1.概念：这是一个基于zookeeper的用于vertx的集群管理实现。
+    2.jar包依赖：<dependency>
+                 <groupId>io.vertx</groupId>
+                 <artifactId>vertx-zookeeper</artifactId>
+                 <version>3.8.3</version>
+                </dependency>
+    3.操作原理：
+        使用Curator框架而不是zookeeper客户端
+        配置信息：io.vertx
+                 /io.vertx/cluster/nodes/
+                 /io.vertx/asyncMap/$name/
+                 /io.vertx/locks/
+                 /io.vertx/counters/
+    4.使用集群管理器：
+        ClusterManager mgr = new ZookeeperClusterManager();
+        VertxOptions options = new VertxOptions().setClusterManager(mgr);
+        Vertx.clusteredVertx(options, res -> {
+          if (res.succeeded()) {
+            Vertx vertx = res.result();
+          } else {
+            // failed!
+          }
+        });
+    5.配置集群管理器：zookeeper.json
+        启动：zookeeper.json文件在当前目录下
+             java -jar xxx.jar -cp . -cluster
+             veretx run xxVerticle -cp . -cluster
+
+             java -jar xxx.jar -cp conf -cluster
+        使用系统属性：vertx.zookeeper.conf
+        外部配置文件的启动使用：
+            java -Dvertx.zookeeper.config=./config/my-zookeeper-conf.json -jar ... -cluster
+            java -Dvertx.zookeeper.config=classpath:my/package/config/my-cluster-config.json -jar ... -cluster
+        代码中指定配置：
+            JsonObject zkConfig = new JsonObject();
+            zkConfig.put("zookeeperHosts", "127.0.0.1");
+            zkConfig.put("rootPath", "io.vertx");
+            zkConfig.put("retry", new JsonObject()
+                .put("initialSleepTime", 3000)
+                .put("maxTimes", 3));
+
+            ClusterManager mgr = new ZookeeperClusterManager(zkConfig);
+            VertxOptions options = new VertxOptions().setClusterManager(mgr);
+
+            Vertx.clusteredVertx(options, res -> {
+              if (res.succeeded()) {
+                Vertx vertx = res.result();
+              } else {
+                // failed!
+              }
+            });
+    6.日志配置：vertx-default-jul-logging.properties
+        org.apache.zookeeper.level=INFO
+        java.util.logging.ConsoleHandler.level=INFO
+        java.util.logging.FileHandler.level=INFO
+    7.版本选择：
+         Curator2.12.0 + Zookeeper 3.4.8
