@@ -1,20 +1,5 @@
-# secondStudy
-复习java的基础知识，主要是多线程这块。后续作为各种知识点的学习仓库
-
-经过一段时间的学习,这个项目整合成1个java学习的知识点项目。其中包括了大量知识点的学习：
-1. jvm的原理，启动，堆内存调优
-2. springboot
-3. springcloud。包括服务注册，远程调用，服务的不同端口号注册后就能够负载均衡
-4. 异常
-5. java集合,主要是hashmap的原理和相关线程安全集合
-6. jdk的版本特点比较
-7. redis的数据结构
-8. 消息队列的选型策略
-9. jdbc的实现
-10. 网络7层中常见协议的学习
-11. 线程池和连接池的参数和原理
-12. 后续还会增加....(当前时间2019年6月5日)
-
+#自己梳理的大量java application知识点
+    springcloud,dubbo,redis,消息队列，vert.x,zeebe,unitTest,java核心等
 
 # markdown标记语法的学习--README.md文件的格式使用markdown语法
 

@@ -1,17 +1,3 @@
 *.iml
 .idea/
 target/
-hxj/src/main/java/myGradle/gradlew
-hxj/src/main/java/myGradle/gradlew.bat
-hxj/src/main/java/myGradle/.gradle/4.10/gc.properties
-hxj/src/main/java/myGradle/.gradle/4.10/fileChanges/last-build.bin
-hxj/src/main/java/myGradle/.gradle/4.10/fileHashes/fileHashes.bin
-hxj/src/main/java/myGradle/.gradle/4.10/fileHashes/fileHashes.lock
-hxj/src/main/java/myGradle/.gradle/4.10/taskHistory/taskHistory.bin
-hxj/src/main/java/myGradle/.gradle/4.10/taskHistory/taskHistory.lock
-hxj/src/main/java/myGradle/.gradle/buildOutputCleanup/buildOutputCleanup.lock
-hxj/src/main/java/myGradle/.gradle/buildOutputCleanup/cache.properties
-hxj/src/main/java/myGradle/.gradle/buildOutputCleanup/outputFiles.bin
-hxj/src/main/java/myGradle/.gradle/vcs-1/gc.properties
-hxj/src/main/java/myGradle/gradle/wrapper/gradle-wrapper.jar
-hxj/src/main/java/myGradle/gradle/wrapper/gradle-wrapper.properties
