@@ -1,0 +1,11 @@
+1.GitFlow的学习
+    1.概念：它是一个工作流。进行版本管理的工作流规范。严格的限制分支的命名和设置。它是一个git的分支模型
+    2.idea的gitflow使用插件：Git Flow Integration
+    2.常用的分支命名：{类似与约定大于配置}
+        master: 生产环境分支
+        hotfix：热修复分支，从master拉取。修改后合并到master和develp分支
+        feature：功能分支。从develop分支拉出来。合并到develop分支
+        develop: 主开发分支
+        release：预发布分支。从develop分支拉出来，修改然后合并到master和develop分支
+    3.git flow命令举例:
+
