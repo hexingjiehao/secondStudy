@@ -8,4 +8,6 @@
         develop: 主开发分支
         release：预发布分支。从develop分支拉出来，修改然后合并到master和develop分支
     3.git flow命令举例:
-
+        git flow init
+        git flow feature
+        git flow feature start <name> [<base>]
