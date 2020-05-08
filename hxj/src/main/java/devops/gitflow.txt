@@ -2,13 +2,39 @@
     1.概念：它是一个工作流。进行版本管理的工作流规范。严格的限制分支的命名和设置。它是一个git的分支模型
     2.idea的gitflow使用插件：Git Flow Integration
         使用方法：IDEA-->VCS-->Git-->GitFlow-->然后是feature/release/bugfix/hotfix
-    2.常用的分支命名：{类似与约定大于配置}
+    3.常用的分支命名：{类似与约定大于配置}
         master: 生产环境分支
         hotfix：热修复分支，从master拉取。修改后合并到master和develp分支。完成后后自动删除分支
         feature：功能分支。从develop分支拉出来。合并到develop分支。完成后自动删除分支
         develop: 主开发分支
         release：预发布分支。从develop分支拉出来，修改然后合并到master和develop分支
-    3.git flow命令举例:
+    4.git flow命令举例:
         git flow init
         git flow feature
         git flow feature start <name> [<base>]
+    5.自己对GitFlow的理解【！！！】
+        对于一个开发场景：可能会增加分支，合并分支，发布分支等多个操作。
+        GitFlow将一些常见的关联操作整个起来，当我们点击按钮的时候，将这些指令按顺序一次执行完成
+    6.使用GitFlow的注意事项：
+        子分支名：
+            功能分支前缀：feature/
+            发布/测试分支前缀：release/
+            热修复/补丁分支前缀：hotfix/
+            版本标签前缀：v
+        分支名区分大小写。
+        命名规范：
+            不允许提交报错的代码
+            尽量保证每次Commit都是有意义且是有效提交
+            尽量不要出现修改了很多文件一次提交的情况，打散每次更改的颗粒度
+        Commit规范：【！！！】
+            fix: bug修复
+            docs：不影响实际功能的改动，例 代码规范调整/文档注释调整/代码优化
+            feat：正常功能迭代
+            Commit Message的内容由 前缀+ 简短的改动说明+可能会有的影响/修改的bug单号，格式如下
+                feat:组织架构功能哦
+                # 这里是修改的内容
+
+
+
+
+
