@@ -1,17 +1,8 @@
 package iText;
 
-
-import com.itextpdf.forms.fields.PdfFormField;
-import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDictionary;
-import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfReader;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.kernel.pdf.annot.PdfAnnotation;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.signatures.*;
-import com.itextpdf.styledxmlparser.jsoup.nodes.Element;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.*;

@@ -28,6 +28,7 @@ public class Zprint {
         while (!queue.isEmpty()){
             System.out.print(queue.poll()+" ");
         }
+        System.out.println();
     }
 
     public static void dfs(TreeNode root,int h,Queue queue) {
