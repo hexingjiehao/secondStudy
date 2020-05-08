@@ -1,0 +1,49 @@
+学习接口文档编写平台
+    1.常见的平台：Swagger, YApi, showdoc
+    2.idea中的YApi插件：YapiUpload插件，某些idea版本market没有，需要自己网上下载。
+    3.接口编写的注意事项：
+        2.1 接口命名规范：
+                接口路径必须为 /项目名/模块名/接口名,URL多个单词建使用 '_' 链接,不要出现驼峰命名
+                    正例:/customer/plan/get_all_level_plan
+        2.2 接口版本规范：
+        2.3 接口的状态：
+                接口自测完成,并且部署到开发库后,将接口状态改成已完成,方便前端对接
+        2.4 接口参数的命名规范：
+                请求消息体: 使用json格式,目前前后端统一使用json, 参数少量可以使用get
+                请求json和返回json：
+                    命名使用驼峰命名,
+                    是否必选框:根据接口设计勾选,
+                    备注:如果是枚举需要在备注中说明。
+                    参数类型: 对应关系如下【yapi类型--java类型】
+                        String	String,Date
+                        Number	Double,float
+                        Integer	Integer,Long
+                        array	Collection<基础类型>
+                        object	Collection<对象>
+                        boolean	Boolean
+    4.yapi的使用步骤：{最终的效果：直接在idea中写controller接口，通过快捷键alt+u，就将接口信息上传到yapi服务器上了}【！！！】
+        1.找到项目的.idea-->misc.xml文件
+        2.增加如下内容：
+            <componentname="yapi">
+                <option name="projectToken">token</option>
+                <option name="projectId">id</option>
+                <option name="yapiUrl">yapi的服务器url</option>
+                <option name="projectType">api</option>
+                <option name="自己的接口名字">具体的自己的接口url地址</option>
+            </component>
+        3.在yapi服务器上获取：token/id/yapiUrl
+        4.doc注释说明：
+            对象字段注释说明：【自动将注释添加到接口说明中】
+                /**
+                * 年龄
+                */
+                private Integer age;
+            方法参数注释说明：【自动将注释添加到接口说明中】
+                **
+                 * 添加员工-员工列表  【接口说明】
+                 * @menu 组织-角色管理  【针对于你的接口分组的，如没有，会自动创建】
+                 * @status done 【接口完成情况，默认不写未完成。done表示已完成】
+                 * @param userName 用户名字 【参数的字段说明】
+                 */
+                @GetMapping("/users-company")
+
