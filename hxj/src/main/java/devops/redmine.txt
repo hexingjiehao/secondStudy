@@ -1,0 +1,7 @@
+1.学习redmine
+    1.官网：https://www.redmine.org/
+    2.概念：Redmine是一个灵活的项目管理web应用程序，使用Ruby on Rails框架编写。
+            它和confluence+jira是类似的。也有权限，邮件，搜索，任务，评论，bug追踪等
+    3.自己的理解：它是一个web程序。能偶进行项目管理。
+    4.应用场景：
+        使用redmine的项目追踪部分功能推动进度 + 使用confluence记录企业的知识库
