@@ -1,35 +1,128 @@
-1.学习apollo分布式全局配置:
+1.学习apollo分布式全局配置: 【还是要实战才能理解效果！！！】
     0.github官网地址：https://github.com/ctripcorp/apollo
     1.官方定义：Apollo（阿波罗）是携程框架部门研发的分布式配置中心，能够集中化管理应用不同环境、不同集群的配置，
                 配置修改后能够实时推送到应用端，并且具备规范的权限、流程治理等特性，适用于微服务配置管理场景。
     2.依赖配置：java和mysql
     3.使用指南：
         2.1 应用接入指南{如何在一个现有的apollo服务器上进行分布式配置}
+                ❀❀❀配置只有在发布、回滚动作后才会被应用实际使用到。单纯修改不影响应用。
                 名词解释：
                     普通应用：独立运行程序。比如web程序，main程序
                     公共组件：发布的类库、客户端程序，不会自己独立运行。比如Java的jar包，.Net的dll文件
-                普通应用接入apollo服务器：
-                    在Apollo服务器创建项目：输入 部门/“appid”/名称/负责人
-                    然后给项目分配修改权限和发布权限🐖🐖🐖
-                    给指定的命名控件增加指定配置项：❀❀❀
+                普通应用接入apollo服务器：【在浏览器界面上点击按钮配置❀❀❀】
+                    1.在Apollo服务器创建项目：输入 部门/“appid”/名称/负责人
+                    2.然后给项目分配修改权限和发布权限🐖🐖🐖
+                    3.给指定的命名控件增加指定配置项：❀❀❀
                         表格添加：创建-输入-提交
                         文本添加：可以用properties整个添加
-                    将添加好的配置，进行发布，通知到嵌入应用程序的apollo客户端
-                    apollo客户端读取配置：java客户端或者http接口
+                    4.将添加好的配置，进行发布，通知到嵌入应用程序的apollo客户端
+                    6.apollo客户端读取配置：java客户端或者http接口
                         java客户端使用文档：https://github.com/ctripcorp/apollo/wiki/Java%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97
-                    回滚已发布配置：”客户端不会存配置版本信息，只有服务器端才有“
+                    7.回滚已发布配置：”客户端不会存配置版本信息，只有服务器端才有“
                         将发布到客户端的配置回滚到上一个已发布版本，也就是说客户端读取到的配置会恢复到上一个版本，但页面上编辑状态的配置是不会回滚的，从而开发可以在修复配置后重新发布。
-
-
-                配置只有在发布、回滚动作后才会被应用实际使用到。单纯修改不影响应用。
-
-
-        2.2 java客户端使用指南{如何在java项目中使用apllo配置}
+                公共组件接入的区别：需要创建自己唯一的Namespace。这需要管理员权限。Namespace是一个更大的空间。
+                应用覆盖公用组件配置步骤：
+                    1.应用配置创建，公用组件配置创建，二者的namespace进行关联
+                集群独立配置说明：❀❀❀
+                    1.创建集群
+                    2.集群设置环境
+                    3.集群创建配置文件，并发布
+                多个应用使用同一个配置：❀❀❀【一个项目中的多个模块】
+                    具体来说，就是在其中一个AppId下创建一个namespace，写入公共的配置信息；
+                    然后在各个项目中读取该namespace的配置即可。
+                灰度发布：{目的是多台机器，选一台试试新的配置是否更好}❀❀❀
+                    1.在命名空间创建灰度
+                    2.对某个配置进行灰度操作
+                    3.可以新增灰度规则：也就是那些ip电脑会被灰度发布
+                全量发布：{将灰度发布合并到主分支上}
+        2.2 java客户端使用指南{如何在java项目中使用apllo配置}❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀
+                AppId属性的配置从高到低：
+                    系统属性：-Dapp.id=YOUR-APP-ID
+                    环境变量：APP_ID=YOUR-APP-ID
+                    application.properties文件： app.id=YOUR-APP-ID
+                    classpath:/META-INF/app.properties文件：app.id=YOUR-APP-ID
+                Apoll Meta Server属性的配置从高到低：
+                    系统属性：apollo.meta=
+                    jvm参数：-Dapollo.meta=http://config-service-url
+                    运行jar文件：java -Dapollo.meta=http://config-service-url -jar xxx.jar
+                    程序指定：System.setProperty("apollo.meta", "http://config-service-url");
+                    application.properties或bootstrap.properties文件：apollo.meta=http://config-service-url
+                    环境变量：APOLLO_META
+                    server.properties文件：apollo.meta=http://config-service-url
+                        对于Mac/Linux，文件位置为/opt/settings/server.properties
+                        对于Windows，文件位置为C:\opt\settings\server.properties
+                    classpath:/META-INF/app.properties文件：apollo.meta=http://config-service-url
+                    java系统属性：-Ddev_meta=http://config-service-url
+                    系统环境变量：DEV_META=http://config-service-url
+                    apollo-env.properties文件：
+                        dev.meta=http://1.1.1.1:8080
+                        fat.meta=http://apollo.fat.xxx.com
+                        uat.meta=http://apollo.uat.xxx.com
+                        pro.meta=http://apollo.xxx.com
+                    规则是较小的Order具有较高的优先级，因此Order=0的MetaServerProvider会排在Order=1的MetaServerProvider的前面。
+                    apollo的无文件配置：❀❀❀❀❀
+                        写一个项目：里面依赖apollo-client.jar。使用spi代码写配置。然后应用依赖该项目
+                本地缓存路径：❀❀❀❀❀
+                    Apollo客户端会把从服务端获取到的配置在本地文件系统缓存一份，用于在遇到服务不可用，
+                    或网络不通的时候，依然能从本地恢复配置，不影响应用正常运行。
+                    本地的缓存位置：C:\opt\data\{appId}\config-cache。  格式为{appId}+{cluster}+{namespace}.properties
+                开始使用代码依赖：
+                    <dependency>
+                        <groupId>com.ctrip.framework.apollo</groupId>
+                        <artifactId>apollo-client</artifactId>
+                        <version>1.1.0</version>
+                    </dependency>
+                apollo配置在代码中的使用方式：
+                    1.@value
+                    2.占位符
+                    3.apollo托管spring的配置。将配置文件放在apollo上。
+                    4.注解：@ApolloConfig
+                            private Config config;
+                api方式在代码中获取配置：
+                    Config config = ConfigService.getAppConfig();
+                    String someKey = "someKeyFromDefaultNamespace";
+                    String someDefaultValue = "someDefaultValueForTheKey";
+                    String value = config.getProperty(someKey, someDefaultValue);
+                代码监听配置文件的动态变化：
+                    Config config = ConfigService.getAppConfig();
+                    config.addChangeListener(new ConfigChangeListener() {
+                        @Override
+                        public void onChange(ConfigChangeEvent changeEvent) {
+                            System.out.println("Changes for namespace " + changeEvent.getNamespace());
+                            for (String key : changeEvent.changedKeys()) {
+                                ConfigChange change = changeEvent.getChange(key);
+                                System.out.println(String.format("Found change - key: %s, oldValue: %s, newValue: %s, changeType: %s", change.getPropertyName(), change.getOldValue(), change.getNewValue(), change.getChangeType()));
+                            }
+                        }
+                    });
+                非常重要的代码配置：基于java的配置(推荐)--两个注解同时使用才生效。
+                    //这个是最简单的配置形式，一般应用用这种形式就可以了，用来指示Apollo注入application namespace的配置到Spring环境中
+                    @Configuration
+                    @EnableApolloConfig
+                    public class AppConfig {
+                      @Bean
+                      public TestJavaConfigBean javaConfigBean() {
+                        return new TestJavaConfigBean();
+                      }
+                    }
         2.3 apollo的使用场景和示例代码
-
-
     4.设计原理：
+        apollo的7大模块：4大功能+3大辅助
+            ConfigService: 客户端，配置内容的读取和推送接口
+            AdminService: 配置内容的管理和发布
+            Client: 实时更新配置内容，调用ConfigService
+            Portal: 管理界面，调用AdminService
+
+            Eureka: 将ConfigService和AdminService服务注册和发现
+            MetaServer: 相当于Eureka Proxy。Portal通过它访问AdminService，Client通过它访问ConfigService
+            NginxLB: 协助域名系统进行负载均衡
+        精彩的Apollo架构分析：
+            https://mp.weixin.qq.com/s/-hUaQPzfsl9Lm3IqQW3VDQ
     5.开发指南：
+        Apollo的源码解析：http://www.iocoder.cn/categories/Apollo/
+        springboot + Apollo的Demo实战：http://www.iocoder.cn/Apollo/install/   【验证码：coke】
+        快速启动Apollo：https://github.com/ctripcorp/apollo/wiki/Quick-Start 【推荐❀❀❀❀❀】
+        docker快速部署Apollo：https://github.com/ctripcorp/apollo/wiki/Apollo-Quick-Start-Docker%E9%83%A8%E7%BD%B2 【推荐❀❀❀❀❀】
     6.部署指南：
     7.常见问题：
     8.apollo的前世今生：

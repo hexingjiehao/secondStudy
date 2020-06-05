@@ -18,5 +18,9 @@
     delete: deletexxById() / removexxById() ,不返回值，状态码200。
 
 
+查看某个jar包的线程号：
+ps aux|grep 你的jar包.jar
+
+
 
 
