@@ -126,3 +126,51 @@
     6.部署指南：
     7.常见问题：
     8.apollo的前世今生：
+
+
+实战操作：❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀❀
+    1.apollo的docker的yaml文件：
+        version: '2'
+        services:
+          apollo-quick-start:
+            image: nobodyiam/apollo-quick-start
+            container_name: apollo-quick-start
+            depends_on:
+              - apollo-db
+            ports:
+              - "8080:8080"
+              - "8070:8070"
+            links:
+              - apollo-db
+          apollo-db:
+            image: mysql:5.7
+            container_name: apollo-db
+            environment:
+              TZ: Asia/Shanghai
+              MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+            depends_on:
+              - apollo-dbdata
+            ports:
+              - "13306:3306"
+            volumes:
+              - ./sql:/docker-entrypoint-initdb.d
+            volumes_from:
+              - apollo-dbdata
+          apollo-dbdata:
+            image: alpine:latest
+            container_name: apollo-dbdata
+            volumes:
+              - /var/lib/mysql
+
+    2.docker关联mysql用户名密码：
+        端口：13306
+        用户名：root
+        密码留空
+        登录命令：docker exec -it apollo-quick-start bash
+        docker上的日志：/apollo-quick-start/service
+                        /apollo-quick-start/portal
+        运行apollo客户端: docker exec -i apollo-quick-start /apollo-quick-start/demo.sh client
+        执行效果：自带eureka,能够在localhost:8080看到注册的两个服务
+        服务器端界面：http://localhost:8070/signin
+            用户名：apollo
+            密码：admin
