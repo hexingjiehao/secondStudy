@@ -12,3 +12,8 @@
 
 4.我短期计划是什么？
 答：画原型图，系统分析，画流程图，画时序图，运维脚本，画页面......
+
+5.我的第一个产品空间
+答: 使用的阿里的语雀。
+    个人首页：https://www.yuque.com/tianyalangzi-jbwjp
+    个人工作台网址为：https://xiongjie.yuque.com/home
