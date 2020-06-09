@@ -1,0 +1,21 @@
+mysql:
+    container_name: mysql
+    restart: always
+    image: mysql:5.7
+    ports:
+    - "3306:3306"
+    environment:
+        MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+    - /mysql/conf:/etc/mysql/mysql.conf.d
+    - /mysql/data:/usr/local/mysql/data
+    - /mysql/logs/:/usr/local/mysql/logs
+
+confluence:
+    container_name: wiki_confluence
+    restart: always
+    image: cptactionhank/atlassian-confluence:latest
+    ports:
+    - "8090:8090"
+    links:
+    - mysql:mysql      

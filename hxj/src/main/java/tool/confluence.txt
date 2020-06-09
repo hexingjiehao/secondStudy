@@ -1,0 +1,17 @@
+1.学习confluence
+    定义：confluence是一个专业的企业知识管理与协同软件，可以用于构建企业wiki。通过它可以实现团队成员之间的协作和知识共享
+    很有价值的参考文档：https://www.cnblogs.com/mxmbk/p/9347359.html
+
+2.具体的安装步骤：【最终的界面不好看，不推荐使用】
+    1.执行命令：docker-compose up -d启动容器
+    2.访问浏览器：localhost:8090, 获取Server id
+    3.将容器中的jar包拉取到本地：
+        docker cp 容器名:/opt/atlassian/confluence/confluence/WEB-INF/lib/atlassian-extras-decoder-v2-3.4.1.jar 本地地址
+    4.将jar包文件改名：atlassian-extras-decoder-v2-3.4.1.jar修改为atlassian-extras-2.4.jar
+    5.执行命令：java -jar confluence_keygen.jar
+    6.在注册机中将拉取下来的jar包进行破解
+    7.将破解后的jar包改名：atlassian-extras-2.4.jar修改为atlassian-extras-decoder-v2-3.4.1.jar
+    8.将破解后的jar包放回容器中：docker cp atlassian-extras-decoder-v2-3.4.1.jar  wiki_confluence:/opt/atlassian/confluence/confluence/WEB-INF/lib/atlassian-extras-decoder-v2-3.4.1.jar
+    9.停止容器：docker-compose stop
+    10.重启容器：docker-compose up -d
+    11.在浏览器中输入注册机重点额激活码。选择试用产品
