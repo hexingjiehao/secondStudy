@@ -29,7 +29,7 @@
                 <option name="projectId">id</option>
                 <option name="yapiUrl">yapi的服务器url</option>
                 <option name="projectType">api</option>
-                <option name="attachUploadUrl">http://localhost/fileupload</option>   //这个时写死的，本质是将改controller文件上传到服务器解析
+                <option name="attachUploadUrl">http://localhost/fileupload</option>   //这个是写死的，本质是将改controller文件上传到服务器解析
             </component>
         3.在yapi服务器上获取：token/id/yapiUrl
         4.doc注释说明：
