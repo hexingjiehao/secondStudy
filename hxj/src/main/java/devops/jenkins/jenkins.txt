@@ -7,7 +7,16 @@
         最新版本为2.206
         默认用户名密码：admin
             密码在文件：/Users/admin/.jenkins/secrets/initialAdminPassword文件中
-    4.Jenkins入门教程：【主要是用于前端页面的部署】
+    4.5 常见的安装方法：
+        下载jenkins.war包，然后再机器上执行java -jar jenkins.war
+        完整的jenkins发布流程：
+            1.通过war包安装好jenkins:包括长时间的安装插件和创建用户
+            2.准备一台linux服务器，一般是centos系统；再jenkins上创建环境，通过ssh协议绑定到该linux服务器
+            3.准备一个github或者gitlab的账号和项目；将该项目存放到该linux上
+            4.在jenkins上配置该项目的的用户名和密码
+            5.在Jenkins上编写脚本，让该脚本能够自动执行
+
+    5.Jenkins入门教程：【主要是用于前端页面的部署】
         1.下载并运行：[加载时间较长]
             brew install jenkins    //安装
             brew uninstall jenkins  //卸载
