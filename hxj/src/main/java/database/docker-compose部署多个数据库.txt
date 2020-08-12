@@ -1,4 +1,4 @@
-1.使用docker-compose部署mysql：
+1.使用docker-compose部署mysql：注意如果要将数据保存到本地，使用volume卷挂载，本地路径写法必须是./前缀
     1.目录结构：
         /docker-compose.yml
         /my.cnf
