@@ -17,7 +17,7 @@ CREATE TABLE person
     PRIMARY KEY (person_id)
 );
 
---------------------------------------------------- Test data operate ---------------------------------------------------
+--------------------------------------------------- AutoCreateClassAnnotationTemplatesWhenCreateClass data operate ---------------------------------------------------
 insert into person (person_id, name) values (1,'小红');
 insert into person (person_id, name) values (2,'小绿');
 insert into person (person_id, name) values (3,'小蓝');

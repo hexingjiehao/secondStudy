@@ -1,0 +1,55 @@
+1.JRebeL和XRebel
+安装使用步骤：
+    1.idea市场安装该插件
+    2.重启idea, 在idea的设置选项左边栏找到JRebel
+    3.进行证书激活：
+        https://jrebel.qekang.com/e3ccf60b-dbab-4ae7-9c5b-dffed3729e58
+        xyqierkang@163.com
+    4.在idea的正常页面左边栏：选择要热部署的项目
+    5.在项目的启动配置中，选择更新class和resource
+    5.以小火箭debug的模式启动。
+    6.当修改之后，切出idea页面，热部署自动启动
+
+2.idea中terminal配置成git终端？
+答：最终效果为terminal中能够看到项目的分支
+参考：https://blog.csdn.net/m0_37438942/article/details/86504392?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-6.nonecase&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-6.nonecase
+
+3.idea自动创建类注释和方法注释
+    3.1 类和接口注释：
+        操作： File -> Settings - > Editor -> File and Code Templates -> Files -> Class
+        修改模板内容：
+            /**
+             * @version 1.0
+             * @program: ${PROJECT_NAME}
+             * @packageName: ${PACKAGE_NAME}
+             * @className ${NAME}
+             * @description: TODO
+             * @author: xj
+             * @create: ${YEAR}-${MONTH}-${DAY} ${HOUR}:${MINUTE}:${SECOND}
+             **/
+            public class ${NAME} {
+            }
+    3.2 方法注释：{方法外注释，param,return没有值；方法内注释，param,return有值}
+        操作： File -> Settings - > Editor -> Live Templates -> 点击"+"号 -> 选择 Template Group -> 输入自己的名字创建自定义模板组
+        操作： File -> Settings - > Editor -> Live Templates -> 点击"+"号 -> 选择 Live Template -> 输入自己的名字创建自定义模板
+        修改Abbreviation的值：/**
+        修改Description的值：新增方法时的注释
+        修改模板内容：
+            /**
+             * @Description TODO
+             * @menu TODO
+             * @status done
+             * @methodName $methodName$
+             * @param $param$
+             * @return $return$
+             * @Author xj
+             * @Date $date$ $time$
+             **/
+        修改Edit variables中的内容：
+            methodName=menthodName()
+            param=methodParameters()
+            return=methodReturnType()
+            date=date()
+            time=time()
+        修改最下方的Define蓝色字体。只选择Java
+        修改Expand with= Enter

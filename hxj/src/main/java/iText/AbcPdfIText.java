@@ -33,7 +33,7 @@ public class AbcPdfIText {
         //序号6
         showPdfNameInfo(PdfName.Contents);
         showPdfNameInfo(new PdfName("CustomName"));
-        showPdfNameInfo(new PdfName("Test #1 100%"));
+        showPdfNameInfo(new PdfName("AutoCreateClassAnnotationTemplatesWhenCreateClass #1 100%"));
 
         //序号7
         showPdfNullInfo(PdfNull.PDF_NULL);
@@ -49,9 +49,9 @@ public class AbcPdfIText {
         showPdfStreamInfo(stream);
 
         //序号10
-        showPdfStringInfo(new PdfString("Test"));
+        showPdfStringInfo(new PdfString("AutoCreateClassAnnotationTemplatesWhenCreateClass"));
         showPdfStringInfo(new PdfString("\u6d4b\u8bd5", PdfEncodings.UTF8) );
-        PdfString s1=new PdfString("Test");
+        PdfString s1=new PdfString("AutoCreateClassAnnotationTemplatesWhenCreateClass");
         s1.setHexWriting(true);
         showPdfStringInfo(s1);
     }

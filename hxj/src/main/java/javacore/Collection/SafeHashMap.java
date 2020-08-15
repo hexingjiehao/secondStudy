@@ -30,15 +30,15 @@ public class SafeHashMap {
 
         Stack stack;
 
-        // Test with Hashtable Object
+        // AutoCreateClassAnnotationTemplatesWhenCreateClass with Hashtable Object
         safeHashTable = new Hashtable<String, Integer>();
         calSafeHashMapTime(safeHashTable);
 
-        // Test with synchronizedMap Object
+        // AutoCreateClassAnnotationTemplatesWhenCreateClass with synchronizedMap Object
         safeSynchronizedHashMap = Collections.synchronizedMap(new HashMap<String, Integer>());
         calSafeHashMapTime(safeSynchronizedHashMap);
 
-        // Test with ConcurrentHashMap Object
+        // AutoCreateClassAnnotationTemplatesWhenCreateClass with ConcurrentHashMap Object
         safeConcurrentHashMap = new ConcurrentHashMap<String, Integer>();
         calSafeHashMapTime(safeConcurrentHashMap);
 
@@ -52,7 +52,7 @@ public class SafeHashMap {
      */
     public static void calSafeHashMapTime(final Map<String, Integer> map) throws InterruptedException {
 
-        System.out.println("Test started for: " + map.getClass());
+        System.out.println("AutoCreateClassAnnotationTemplatesWhenCreateClass started for: " + map.getClass());
         long averageTime = 0;
         for (int i = 0; i < 5; i++) {
 

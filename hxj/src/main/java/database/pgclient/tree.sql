@@ -248,7 +248,7 @@ $$
 LANGUAGE PLPGSQL;
 
 
--------------------------------------------------- Test data operate -------------------------------------------------
+-------------------------------------------------- AutoCreateClassAnnotationTemplatesWhenCreateClass data operate -------------------------------------------------
 insert into department (department_id, title,path) values(0,'顶层部门','0');
 SELECT create_department('{"title":"一级部门1","parent_id":0}');
 SELECT remove_department(1);
