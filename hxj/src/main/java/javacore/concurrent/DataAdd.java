@@ -1,5 +1,10 @@
 package core.concurrent;
 
+import me.zhyd.oauth.config.AuthConfig;
+import me.zhyd.oauth.request.AuthGiteeRequest;
+import me.zhyd.oauth.request.AuthRequest;
+import me.zhyd.oauth.utils.AuthStateUtils;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -18,6 +23,9 @@ import java.util.concurrent.Executors;
 public class DataAdd {
 
     public static void main(String[] args){
+
+
+
         List<Student> list=new ArrayList<>();
         for(int i=0;i<10000;i++){
             list.add( new Student(i,2*i,"name="+(3*i) ) );
