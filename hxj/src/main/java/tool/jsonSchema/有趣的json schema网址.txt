@@ -1,0 +1,16 @@
+1.一个vue做的前端可拖拽的页面，基于json schema校验
+https://zhuanlan.zhihu.com/p/179005445
+
+2.使用网页来校验json schema匹配json:
+https://jsonschemalint.com/#!/version/draft-07/markup/json#%2Fversion%2Fdraft-07%2Fmarkup%2Fjson
+
+3.根据json schema生成json:
+https://www.jeremydorn.com/json-editor
+
+
+4.根据json生成json schema：
+https://jsonschema.net/login#/
+
+
+5.页面上编辑json:
+https://gitee.com/yourtion/vue-json-ui-editor/
