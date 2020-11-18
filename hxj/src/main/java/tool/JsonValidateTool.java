@@ -14,7 +14,17 @@ import java.io.IOException;
  * @program: hxj
  * @packageName: tool
  * @className JsonValidateTool
- * @description: 模板化方法校验json格式:  可以使用idea的插件pojo to json李大麦，生成json字符串；然后使用json schema tool工具生成 json schema字符串。最后使用json=schema-validate包校验json格式
+ * @description: 模板化方法校验json格式:
+ * 可以使用idea的插件pojo to json李大麦，生成json字符串；
+ * 然后使用json schema tool工具生成 json schema字符串。网页版生成工具：https://www.jsonschema.net/login。需要翻墙
+ *
+ * 使用网页来校验json schema匹配json: https://jsonschemalint.com/#!/version/draft-07/markup/json#%2Fversion%2Fdraft-07%2Fmarkup%2Fjson
+ * 最后使用json=schema-validate包校验json格式
+ *
+ * 代码实现github地址：https://github.com/jsonsystems/json-schema#contact
+ * json schema官网：http://json-schema.org/specification.html
+ *
+ *
  * @author: xj
  * @create: 2020-11-13 13:38:33
  **/
@@ -25,7 +35,7 @@ public class JsonValidateTool {
         String dataString = "";
         String schemaString = "";
         ProcessingReport processingMessages = jsonValidateTool.validate(dataString, schemaString);
-        System.out.println(core.json.JsonUtil.toJsonString(processingMessages));
+        System.out.println(processingMessages);
     }
 
 
@@ -43,3 +53,5 @@ public class JsonValidateTool {
         return processingReport;
     }
 }
+
+
