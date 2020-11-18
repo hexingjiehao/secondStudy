@@ -14,3 +14,7 @@ https://jsonschema.net/login#/
 
 5.页面上编辑json:
 https://gitee.com/yourtion/vue-json-ui-editor/
+
+
+6.输入json，可以选择不同的json schema规范进行校验：
+https://www.jsonschemavalidator.net/
