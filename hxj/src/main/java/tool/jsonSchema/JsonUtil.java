@@ -1,4 +1,4 @@
-package core.json;
+package tool.jsonSchema;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;

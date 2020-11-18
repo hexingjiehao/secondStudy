@@ -1,4 +1,4 @@
-package other.jsonSchema;
+package tool.jsonSchema;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchemaFactory;
