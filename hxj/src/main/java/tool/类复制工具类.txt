@@ -1,0 +1,2 @@
+1.依赖：cn.hutool:hutool-all:4.3.2
+类名：cn.hutool.core.bean.BeanUtil

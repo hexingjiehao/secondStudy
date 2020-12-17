@@ -43,6 +43,12 @@
             <artifactId>JustAuth</artifactId>
             <version>1.14.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>4.3.2</version>
+        </dependency>
     </dependencies>
 
 
