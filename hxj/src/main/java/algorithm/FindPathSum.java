@@ -1,10 +1,6 @@
 package algorithm;
 
-import scala.Char;
-
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by xiongjie on 2020/4/7.
