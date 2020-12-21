@@ -117,7 +117,7 @@
             3.org.infinispan.notifications.cachelistener.filter和org.infinispan.filter有什么不同？
                 答：都是数据的转换和过滤。org.infinispan.filter包中被用于缓存加载器，实体迭代器等领域；
                    org.infinispan.notifications.cachelistener.filter包中被用于监听事件
-        9.IaaS /云基础设施的问题：
+        9.IaaS/云基础设施的问题：
             1.当您不知道IP地址时，如何让Infinispan通过特定的网络发送复制流量?
                 答：JGroup是连接infinispan的底层组通信库，它使用户绑定到一种类型地址，而不是ID地址。
                     GLOBAL：选一个公共IP地址，但你不希望复制通信

@@ -1,4 +1,4 @@
-package other.JGroup;
+package database.infinispan.JGroup;
 
 import org.jgroups.JChannel;
 import org.jgroups.Message;
