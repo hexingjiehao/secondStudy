@@ -2,7 +2,7 @@
     1.官网网站：https://getbootstrap.com。最新版本v4.4.1
     2.定义：Bootstrap是一个用于开发HTML、CSS和JS的开源工具包。
            里面是编译好后的CSS和JS文件。🌿🌿🌿🌿🌿
-           BootStreap是需要jQuery的
+           BootStrap是需要jQuery的
            参考工具：https://www.runoob.com/bootstrap/bootstrap-tutorial.html
     3.快捷操作：
         插入：npm install bootstrap

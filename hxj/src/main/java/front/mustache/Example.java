@@ -1,4 +1,4 @@
-package other.mustache;
+package front.mustache;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
