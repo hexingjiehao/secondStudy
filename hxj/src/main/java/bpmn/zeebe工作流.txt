@@ -44,7 +44,7 @@
                         ZEEBE_HOST: 设置主机地址而不是容器的IP地址
                         BOOTSTRAP: 设置内部系统分区的副本元素
                         ZEEBE_CONTACT_POINTS: 设置集群中其他brokers的连接点
-                        DEPLOY_ON_KUBERNETES: 取值微true/false
+                        DEPLOY_ON_KUBERNETES: 取值为true/false
                 注意：使用虚拟机虚拟该docker容器，至少需要分配4GB的内存😺😺😺😺😺
                     以下是docker-machine来运行docker容器：docker-machine也是需要安装的
                         docker-machine create --driver virtualbox --virtualbox-memory 4000 zeebe
