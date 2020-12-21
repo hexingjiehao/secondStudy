@@ -478,7 +478,7 @@
                     判断一个服务是否挂掉时，使用ping方法时行不通的。因为ip时虚拟的
             5.2 连接到集群外部的服务
                 5.2.1 介绍服务节点
-                    服务不是直接谅解到pods上的。资源位于端点资源之间
+                    服务不是直接连接到pods上的。资源位于端点资源之间
                     kubectl describe svc kubia
                     kubectl get endpoints kubia
                 5.2.2 手动配置服务节点
