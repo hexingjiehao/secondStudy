@@ -183,7 +183,7 @@
             2.一般说来新生代占整个堆1/3比较合适
             3.通过-XX:MaxTenuringThreshold=n来控制新生代存活时间,尽量让对象在新生代被回收
             4.设置线程栈的大小,保证线程数的经验值在3000~5000左右
-        3.工具 ：JConsole和Java VisualVM
+        3.工具 ：JConsole和Java VisualVM【它是jdk/bin自带分析工具exe,能够分析堆内存泄露的原因】
         3.目的：(减少CPU的占用率)
             减少GC的频率
             减少Full GC的次数：(即老生代GC很多次之后的全部GC)
