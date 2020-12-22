@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 public class MyReflect {
 
     public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InstantiationException, InvocationTargetException {
-        Class<?> c = Class.forName("core.reflect.DemoReflectService");
+        Class<?> c = Class.forName("javacore.reflect.DemoReflectService");
 
         //单个参数的反射
         Method m = c.getMethod("sayHello", String.class);
