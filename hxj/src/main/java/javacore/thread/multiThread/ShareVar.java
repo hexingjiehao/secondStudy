@@ -7,7 +7,6 @@ public class ShareVar extends Thread{
 
     @Override
     public void run() {
-
         //线程名是传入的线程对象参数或者正在调用的线程
         System.out.println("name="+Thread.currentThread().getName());
         //线程名是创建的类对象
