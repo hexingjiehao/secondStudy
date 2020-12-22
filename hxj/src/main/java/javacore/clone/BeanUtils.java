@@ -1,4 +1,4 @@
-package core.clone;
+package javacore.clone;
 
 import java.io.*;
 

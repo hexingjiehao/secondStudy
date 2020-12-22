@@ -1,4 +1,4 @@
-package core.nio;
+package javacore.nio;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

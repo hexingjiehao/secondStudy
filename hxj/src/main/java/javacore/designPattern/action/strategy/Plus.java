@@ -1,4 +1,4 @@
-package core.designPattern.action.strategy;
+package javacore.designPattern.action.strategy;
 
 /**
  * Created by xiongjie on 2018/11/18.

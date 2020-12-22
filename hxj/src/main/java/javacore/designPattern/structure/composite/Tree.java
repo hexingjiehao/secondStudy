@@ -1,4 +1,4 @@
-package core.designPattern.structure.composite;
+package javacore.designPattern.structure.composite;
 
 /**
  * Created by xiongjie on 2018/11/18.

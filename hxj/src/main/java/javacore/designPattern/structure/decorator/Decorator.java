@@ -1,6 +1,6 @@
-package core.designPattern.structure.decorator;
+package javacore.designPattern.structure.decorator;
 
-import core.designPattern.create.simpleFactory.CommonInterface;
+import javacore.designPattern.create.simpleFactory.CommonInterface;
 
 /**
  * Created by xiongjie on 2018/11/18.

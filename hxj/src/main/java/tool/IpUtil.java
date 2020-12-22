@@ -1,4 +1,4 @@
-package core.ip;
+package javacore.ip;
 
 import javax.servlet.http.HttpServletRequest;
 

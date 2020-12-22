@@ -1,4 +1,4 @@
-package core.designPattern.structure.flyweight;
+package javacore.designPattern.structure.flyweight;
 
 import java.util.Vector;
 

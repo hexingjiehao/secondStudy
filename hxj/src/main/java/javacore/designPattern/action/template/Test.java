@@ -1,7 +1,7 @@
-package core.designPattern.action.template;
+package javacore.designPattern.action.template;
 
-import core.designPattern.action.strategy.AbstractCalc;
-import core.designPattern.action.strategy.Plus;
+import javacore.designPattern.action.strategy.AbstractCalc;
+import javacore.designPattern.action.strategy.Plus;
 
 /**
  * Created by xiongjie on 2018/11/18.

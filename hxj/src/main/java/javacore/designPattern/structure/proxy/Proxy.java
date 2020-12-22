@@ -1,7 +1,7 @@
-package core.designPattern.structure.proxy;
+package javacore.designPattern.structure.proxy;
 
-import core.designPattern.create.simpleFactory.CommonInterface;
-import core.designPattern.structure.decorator.Source;
+import javacore.designPattern.create.simpleFactory.CommonInterface;
+import javacore.designPattern.structure.decorator.Source;
 
 /**
  * Created by xiongjie on 2018/11/18.

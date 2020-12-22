@@ -1,4 +1,4 @@
-package core.initClass;
+package javacore.initClass;
 
 /**
  * Created by xiongjie on 2018/11/12.

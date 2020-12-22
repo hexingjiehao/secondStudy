@@ -1,4 +1,4 @@
-package core.reflect;
+package javacore.reflect;
 
 public class DemoReflectService {
 

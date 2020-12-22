@@ -1,4 +1,4 @@
-package core.designPattern.action.observer;
+package javacore.designPattern.action.observer;
 
 import java.util.Enumeration;
 import java.util.Vector;

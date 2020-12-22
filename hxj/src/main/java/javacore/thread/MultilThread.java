@@ -1,4 +1,4 @@
-package core.thread;
+package javacore.thread;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;

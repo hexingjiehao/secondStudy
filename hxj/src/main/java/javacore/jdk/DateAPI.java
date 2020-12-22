@@ -1,4 +1,4 @@
-package core.jdk;
+package javacore.jdk;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;

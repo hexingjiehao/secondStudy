@@ -1,4 +1,4 @@
-package core.designPattern.structure.bridge;
+package javacore.designPattern.structure.bridge;
 
 /**
  * Created by xiongjie on 2018/11/18.

@@ -1,4 +1,4 @@
-package core.designPattern.create.singleton;
+package javacore.designPattern.create.singleton;
 
 /**
  * Created by xiongjie on 2018/11/18.

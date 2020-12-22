@@ -1,4 +1,4 @@
-package core.exception;
+package javacore.exception;
 
 import java.rmi.RemoteException;
 

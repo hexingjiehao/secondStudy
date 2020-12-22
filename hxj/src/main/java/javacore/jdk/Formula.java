@@ -1,4 +1,4 @@
-package core.jdk;
+package javacore.jdk;
 
 /**
  * Created by xiongjie on 2018/10/18.

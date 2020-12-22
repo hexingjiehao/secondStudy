@@ -1,4 +1,4 @@
-package core.thread.multiThread;
+package javacore.thread.multiThread;
 
 /**
  * Created by xiongjie on 2018/11/3.

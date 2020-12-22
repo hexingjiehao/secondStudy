@@ -1,4 +1,4 @@
-package core.designPattern.structure.facade;
+package javacore.designPattern.structure.facade;
 
 /**
  * Created by xiongjie on 2018/11/18.

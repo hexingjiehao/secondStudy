@@ -1,4 +1,4 @@
-package core.designPattern.structure.adapter;
+package javacore.designPattern.structure.adapter;
 
 /**
  * Created by xiongjie on 2018/11/18.

@@ -332,7 +332,7 @@ public class JdkNewFeature implements AutoCloseable {
      */
     public void jdk8Dynamic(){
         //6.访问对象字段和静态变量
-        core.jdk.Formula formula1=(a)->{
+        Formula formula1=(a)->{
             numClass=2;
             System.out.println(numClass);
             return a;
@@ -340,7 +340,7 @@ public class JdkNewFeature implements AutoCloseable {
         double a1=formula1.calculate(100);
         System.out.println(a1);
 
-        core.jdk.Formula formula2=(a)->{
+        Formula formula2=(a)->{
             numStatic=3;
             System.out.println(numStatic);
             return a;

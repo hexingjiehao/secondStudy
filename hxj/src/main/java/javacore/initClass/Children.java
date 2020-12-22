@@ -1,4 +1,4 @@
-package core.initClass;
+package javacore.initClass;
 
 import java.util.Arrays;
 import java.util.Comparator;

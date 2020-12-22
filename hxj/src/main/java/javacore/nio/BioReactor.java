@@ -1,4 +1,4 @@
-package core.nio;
+package javacore.nio;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

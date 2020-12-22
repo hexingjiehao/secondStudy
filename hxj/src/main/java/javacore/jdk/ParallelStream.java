@@ -1,4 +1,4 @@
-package core.jdk;
+package javacore.jdk;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package core.thread;
+package javacore.thread;
 
 import java.util.Map;
 import java.util.concurrent.*;

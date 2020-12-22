@@ -1,4 +1,4 @@
-package core.exception;
+package javacore.exception;
 
 /**
  * Created by xiongjie on 2018/10/17.
