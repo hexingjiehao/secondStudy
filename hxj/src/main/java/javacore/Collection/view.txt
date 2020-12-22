@@ -51,7 +51,7 @@
         Properties类
 
 
-注意：map的key集中类似set,无序不重复;
+注意：map的key集合类似set,无序不重复;
      value集合类似List，可重复,索引取值。
      除ConcurrentHashMap,都实现了cloneable接口和Serializable接口
 

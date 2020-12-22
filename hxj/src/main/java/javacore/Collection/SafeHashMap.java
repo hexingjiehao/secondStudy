@@ -1,4 +1,4 @@
-package core.Collection;
+package javacore.Collection;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,8 +27,6 @@ public class SafeHashMap {
      * @throws InterruptedException
      */
     public static void main(String[] args) throws InterruptedException {
-
-        Stack stack;
 
         // AutoCreateClassAnnotationTemplatesWhenCreateClass with Hashtable Object
         safeHashTable = new Hashtable<String, Integer>();
