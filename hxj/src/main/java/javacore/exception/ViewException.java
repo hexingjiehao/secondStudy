@@ -8,8 +8,8 @@ import java.rmi.RemoteException;
 public class ViewException {
 
     public static void main(String[] args){
-//        DealruntimeException();
-//        System.out.println(DealExceptionReturn());
+        DealruntimeException();
+        System.out.println(DealExceptionReturn());
 //        DealThrowsAndThrowException();  //必须处理被抛出异常
     }
 
