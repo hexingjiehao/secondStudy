@@ -1,0 +1,46 @@
+核心：https://www.cnblogs.com/duanxz/p/4515437.html
+有各种jdk自带的分析工具
+
+一、jdk工具之jps（JVM Process Status Tools）命令使用【OK】
+答：
+jps的概念：显示当前所有java进程pid的命令，简单实用，非常适合在linux/unix平台上简单察看当前java进程的一些简单情况。
+          类似与linux的ps明显，显示进程信息
+事先准备：将%JAVA_HOME%\bin添加到path中
+命令行操作：
+jps：列出所有的jvm实例
+列出本机所有的jvm实例:以下时linux上的3种命令【jps】 【sudo jps】 【ps aux | grep java】
+jps -q:  只显示pid
+jps -m:  输出传递给main方法的参数
+jps -l:  输出应用程序main class的完整package名 或者 应用程序的jar文件完整路径名
+jps -v:  输出传递给JVM的参数
+jps 192.168.0.77：列出远程服务器192.168.0.77机器所有的jvm实例，采用rmi协议，默认连接端口为1099（前提是远程服务器提供jstatd服务）
+
+注：jps命令有个地方很不好，似乎只能显示当前用户的java进程，要显示其他用户的还是只能用unix/linux的ps命令。
+
+
+二、jdk命令之javah命令(C Header and Stub File Generator)【OK】
+答：
+javah是用于根据JAVA本地方法，生成对应的c语言头文件及相应的stub文件的命令，使用比较简单，使用示例可以查看这篇文章：https://blog.csdn.net/fenglibing/article/details/4300381
+
+
+三、jdk工具之jstack(Java Stack Trace)
+答：
+
+
+
+四、jdk工具之jstat命令(Java Virtual Machine Statistics Monitoring Tool)
+答：
+
+
+
+四、jdk工具之jstat命令2(Java Virtual Machine Statistics Monitoring Tool)详解
+五、jdk工具之jmap（java memory map）、 mat之四--结合mat对内存泄露的分析
+六、jdk工具之jinfo命令(Java Configuration Info)
+七、jdk工具之jconsole命令(Java Monitoring and Management Console)
+八、jdk工具之JvisualVM、JvisualVM之二--Java程序性能分析工具Java VisualVM
+九、jdk工具之jhat命令(Java Heap Analyse Tool)
+十、jdk工具之Jdb命令(The Java Debugger)
+十一、jdk命令之Jstatd命令(Java Statistics Monitoring Daemon)
+十一、jdk命令之Jstatd命令(Java Statistics Monitoring Daemon)
+十二、jdk工具之jcmd介绍（堆转储、堆分析、获取系统信息、查看堆外内存）
+十三、jdk命令之Java内存之本地内存分析神器：NMT 和 pmap

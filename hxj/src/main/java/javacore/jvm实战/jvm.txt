@@ -230,3 +230,12 @@
             年老代较小堆的碎片问题：(尽可能压缩)
                 -XX:+UseCMSCompactAtFullCollection：使用并发收集器时，开启对年老代的压缩。
                 -XX:CMSFullGCsBeforeCompaction=0：上面配置开启的情况下，这里设置多少次Full GC后，对年老代进行压缩
+
+
+马老师的调优建议：
+垃圾回收效率的提高
+：使用TLAB会提升一截，使用逃逸分析和标量替换性能又能够提升一截。
+-XX:DoEscapeAnalysis //不做逃逸分析 与栈上分配有关
+-XX:-EliminateAllocations //不做标量提换 与栈上分配有关
+-XX:UseTLAB// 不使用本地缓存
+-XX:+PrintGC // 打印GC过程
