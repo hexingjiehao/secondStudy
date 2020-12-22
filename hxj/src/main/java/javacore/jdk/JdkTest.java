@@ -23,21 +23,21 @@ public class JdkTest {
     public static void main(String [] args){
 
         //测试自动关闭接口和try-catch-resource
-//        try(JdkNewFeature lock = new JdkNewFeature()){
-//            System.out.println("doing business...");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+        try(JdkNewFeature lock = new JdkNewFeature()){
+            System.out.println("doing business...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-//        try {
-//            writeToFileZipFileContents("E://test.zip","E://xiongjie.txt");
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            writeToFileZipFileContents("E://test.zip","E://xiongjie.txt");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-//        hashMapNewMethod();
+        hashMapNewMethod();
 
-//        jdk8NewAnnotation();
+        jdk8NewAnnotation();
 
     }
 

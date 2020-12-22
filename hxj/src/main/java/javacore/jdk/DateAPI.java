@@ -3,6 +3,7 @@ package javacore.jdk;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Locale;
@@ -13,10 +14,10 @@ import java.util.Locale;
 public class DateAPI {
 
     public static void main(String[] args){
-//        ClockTest();
-//        TimezonesTest();
-//        LocalTimeTest();
-//        LocalDateTest();
+        ClockTest();
+        TimezonesTest();
+        LocalTimeTest();
+        LocalDateTest();
         LocalDateTimeTest();
     }
 
@@ -102,21 +103,21 @@ public class DateAPI {
      * 4.LocalDateTime类
      */
     public static void LocalDateTimeTest(){
-//        LocalDateTime sylvester = LocalDateTime.of(2014, Month.DECEMBER, 31, 23, 59, 59);
-//        DayOfWeek dayOfWeek = sylvester.getDayOfWeek();
-//        System.out.println(dayOfWeek);
-//
-//        Month month = sylvester.getMonth();
-//        System.out.println(month);
-//
-//        long minuteOfDay = sylvester.getLong(ChronoField.MINUTE_OF_DAY);
-//        System.out.println(minuteOfDay);    // 1439
-//
-//        Instant instant = sylvester
-//                            .atZone(ZoneId.systemDefault())
-//                            .toInstant();
-//        Date legacyDate = Date.from(instant);
-//        System.out.println(legacyDate);     // Wed Dec 31 23:59:59 CET 2014
+        LocalDateTime sylvester = LocalDateTime.of(2014, Month.DECEMBER, 31, 23, 59, 59);
+        DayOfWeek dayOfWeek = sylvester.getDayOfWeek();
+        System.out.println(dayOfWeek);
+
+        Month month = sylvester.getMonth();
+        System.out.println(month);
+
+        long minuteOfDay = sylvester.getLong(ChronoField.MINUTE_OF_DAY);
+        System.out.println(minuteOfDay);    // 1439
+
+        Instant instant = sylvester
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant();
+        Date legacyDate = Date.from(instant);
+        System.out.println(legacyDate);     // Wed Dec 31 23:59:59 CET 2014
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd,yyyy - HH:mm");
         LocalDateTime parsed = LocalDateTime.parse("Nov 03,2014 - 07:13", formatter);

@@ -55,17 +55,17 @@ public class JdkNewFeature implements AutoCloseable {
     public void runtimeLevel(){};
 
     public static void main(String[] args){
-//        jdk5(1,2);
-//        reflectMethod();
-//        jdk7();
+        jdk5(1,2);
+        reflectMethod();
+        jdk7();
         jdk8();
-//        new JdkNewFeature().jdk8Dynamic();
+        new JdkNewFeature().jdk8Dynamic();
 
-//        try {
-//            rethrow("First");
-//        } catch (FirstException | SecondException | ThirdException  e) {
-//            System.out.println(e.getMessage());
-//        }
+        try {
+            rethrow("First");
+        } catch (FirstException | SecondException | ThirdException  e) {
+            System.out.println(e.getMessage());
+        }
     }
 
 
@@ -186,7 +186,7 @@ public class JdkNewFeature implements AutoCloseable {
      * jdk1.8
      * 1.接口的默认方法
      * 2.lambda优化字符串比较器
-     * 3.函数是接口,用lambda语言表示
+     * 3.函数式接口,用lambda语言表示
      * 4.方法与构造函数的引用
      * 5.lambda访问局部变量
      * 7.java8提供的默认接口，我们可以使用lambda实现
@@ -196,15 +196,15 @@ public class JdkNewFeature implements AutoCloseable {
          final int numLocal=1;
 
 //        1.匿名实现类
-//        Formula formula = new Formula() {
-//            @Override
-//            public double calculate(int a) {
-//                return sqrt(a * 100);
-//            }
-//        };
-//        double a=formula.calculate(100);     // 100.0
-//        double b=formula.sqrt(16);           // 4.0
-//        System.out.println(a+"="+b);
+        Formula formula = new Formula() {
+            @Override
+            public double calculate(int a) {
+                return sqrt(a * 100);
+            }
+        };
+        double a=formula.calculate(100);     // 100.0
+        double b=formula.sqrt(16);           // 4.0
+        System.out.println(a+"="+b);
 
 
 //        //2.lambda优化字符串比较器
@@ -230,47 +230,47 @@ public class JdkNewFeature implements AutoCloseable {
 //        names = Arrays.asList("44", "beijing", "china", "5");
 //        Collections.sortFind(names, (a, b) -> b.compareTo(a));
 //        System.out.println(names);
-
-        //3.函数是接口,用lambda语言表示
+//
+////        3.函数式接口,用lambda语言表示
 //        Formula formula=(a)-> (a * 100); //匿名实现类,实现了接口方法
 //        double a=formula.calculate(100);
 //        System.out.println(a);
-
-        //4.方法与构造函数的引用
+//
+////        4.方法与构造函数的引用
 //        Formula formula=Integer::valueOf; //匿名实现类,实现了接口方法
 //        double a=formula.calculate(100);
 //        System.out.println(a);
-
-
-        //使用 Person::new 来获取Person类构造函数的引用，Java编译器会自动根据UserFactory.create方法的签名来选择合适的构造函数。
+//
+//
+////        使用 Person::new 来获取Person类构造函数的引用，Java编译器会自动根据UserFactory.create方法的签名来选择合适的构造函数。
 //        UserFactory<User> factory=User::new;
 //        User templates.user=factory.create();
 //        System.out.println(templates.user.getUsername()+"="+templates.user.getPassword());
-
-        //5.访问局部变量，lambda表达式
+//
+////        5.访问局部变量，lambda表达式
 //        Formula formula=(a)->(a*num*20); //匿名实现类,实现了接口方法
 //        double a=formula.calculate(100);
 //        System.out.println(a);
-
-        //7.基础的默认接口
+//
+////        7.基础的默认接口
 //        Predicate<String> predicate = (s) -> s.length() > 0; //匿名实现类
 //        System.out.println(predicate.test("123"));
 //        System.out.println( predicate.negate().test("123") );
 //        Predicate<Boolean> nonNull = Objects::nonNull;
 //        System.out.println(nonNull.test(true));
-
+//
 //        Function<String,Integer> function=Integer::valueOf;
 //        int a=function.apply("123");
 //        System.out.println(a);
-
-        //都是接口的匿名实现类，使用lambda表达式
+//
+////        都是接口的匿名实现类，使用lambda表达式
 //        Supplier<User> userSupplier=User::new;
 //        User templates.user=userSupplier.get();
 //        System.out.println(templates.user.getUsername()+"="+templates.user.getPassword());
-
+//
 //        Consumer<User> consumer=(templates.user)-> System.out.println(templates.user.getPassword());
 //        consumer.accept(new User());
-
+//
 //        Comparator<User> comparable=(user1,user2)-> user1.getUsername().compareTo(user2.getUsername());
 //        User user1=new User();
 //        User user2=new User("ccc","sss");
@@ -280,12 +280,12 @@ public class JdkNewFeature implements AutoCloseable {
 //        int value2=comparable.reversed().compare(user1,user2);
 //        System.out.println(value2);
 
-        //null的封装值,不能传递null
-//        Optional<String> optional = Optional.of("bam");
-//        System.out.println(optional.isPresent());           // true
-//        System.out.println(optional.get());                 // "bam"
-//        System.out.println(optional.orElse("fallback"));    // "bam"
-//        optional.ifPresent((s) -> System.out.println(s.charAt(0)));     // "b"
+//        null的封装值,不能传递null
+        Optional<String> optional = Optional.of("bam");
+        System.out.println(optional.isPresent());           // true
+        System.out.println(optional.get());                 // "bam"
+        System.out.println(optional.orElse("fallback"));    // "bam"
+        optional.ifPresent((s) -> System.out.println(s.charAt(0)));     // "b"
 
         List<String> list =new ArrayList<>();
         list.add("ddd2");list.add("aaa2");list.add("bbb1");
@@ -317,9 +317,9 @@ public class JdkNewFeature implements AutoCloseable {
 //                              .filter((s) -> s.startsWith("b"))
 //                              .count() );
 
-        Optional<String> optional=list.stream()
-                                        .sorted()
-                                        .reduce( (c1,c2)-> c1+"|"+c2 );
+//        Optional<String> optional=list.stream()
+//                                        .sorted()
+//                                        .reduce( (c1,c2)-> c1+"|"+c2 );
 
         //用方法作为参数
         optional.ifPresent(System.out::println);
@@ -352,7 +352,7 @@ public class JdkNewFeature implements AutoCloseable {
 
     /**
      * jdk1.7
-     * 测试重新抛出异常的类型检查，认为缩小范围
+     * 测试重新抛出异常的类型检查，人为缩小范围
      *
      * @param s
      * @throws FirstException

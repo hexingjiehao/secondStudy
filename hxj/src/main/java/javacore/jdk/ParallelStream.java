@@ -16,14 +16,14 @@ public class ParallelStream {
     //测试并行Stream
     public static void main(String[] args){
 
-//        List<String> list =new ArrayList<>();
-//        list.add("ddd2");list.add("aaa2");list.add("bbb1");
-//        list.add("aaa1");list.add("bbb3");list.add("ccc");
-//        list.add("bbb2");list.add("ddd1");
+        List<String> list =new ArrayList<>();
+        list.add("ddd2");list.add("aaa2");list.add("bbb1");
+        list.add("aaa1");list.add("bbb3");list.add("ccc");
+        list.add("bbb2");list.add("ddd1");
 
-//        List<String> list=readyData();
-//        calcTimeByOrder(list);
-//        calcTimeByParallel(list);
+        List<String> list2=readyData();
+        calcTimeByOrder(list2);
+        calcTimeByParallel(list2);
 
         try {
             parallelStreamInnerTheory();
