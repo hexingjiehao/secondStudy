@@ -1,7 +1,7 @@
-package core.clone;
+package javacore.clone;
 
-import core.jdk.Hint;
-import core.jdk.Hints;
+import javacore.jdk.Hint;
+import javacore.jdk.Hints;
 
 import javax.annotation.Resource;
 import java.io.Serializable;

@@ -1,7 +1,7 @@
-package core.jdk;
+package javacore.jdk;
 
-import core.clone.CloneMain;
-import core.clone.User;
+import javacore.clone.CloneMain;
+import javacore.clone.User;
 
 import java.io.BufferedWriter;
 import java.io.IOException;

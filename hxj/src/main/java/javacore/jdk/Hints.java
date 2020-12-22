@@ -1,4 +1,4 @@
-package core.jdk;
+package javacore.jdk;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;

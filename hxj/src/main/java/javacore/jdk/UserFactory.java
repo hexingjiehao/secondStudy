@@ -1,7 +1,6 @@
-package core.jdk;
+package javacore.jdk;
 
-
-import core.clone.User;
+import javacore.clone.User;
 
 /**
  * Created by xiongjie on 2018/10/19.

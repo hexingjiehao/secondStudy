@@ -1,4 +1,4 @@
-package core.clone;
+package javacore.clone;
 
 /**
  * Created by xiongjie on 2018/10/17.
@@ -65,7 +65,7 @@ public class CloneMain {
         Company companyOne, companyTwo, companyThree;
         companyOne = new Company(new User("username", "password"), "上海市");
         companyTwo = companyOne;
-        companyThree = BeanUtils.cloneTo (companyOne);
+        companyThree = core.clone.BeanUtils.cloneTo (companyOne);
 
         System.out.println(companyTwo==companyOne);                //true
         System.out.println(companyTwo.equals(companyOne));        //true

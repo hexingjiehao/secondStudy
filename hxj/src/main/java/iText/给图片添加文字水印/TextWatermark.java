@@ -1,4 +1,4 @@
-package other.给图片添加文字水印;
+package iText.给图片添加文字水印;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

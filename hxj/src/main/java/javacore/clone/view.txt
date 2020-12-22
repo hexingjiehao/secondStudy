@@ -22,6 +22,6 @@
     这里需要注意的是，对于基本数据类型（primitive）和使用常量池方式创建的String类型，都会针对原值克隆，所以不存在引用地址一说。
     当然不包括他们对应的包装类。
 
-4.对于深克隆，如果层层重写clone函数，非常不方便，于是使用心得clone方法--Serializable
+4.对于深克隆，如果层层重写clone函数，非常不方便，于是使用新的clone方法--Serializable
     使用ObjectOutputStream和ObjectInputStrean来实现对象的序列化和反序列化
     写一个静态方法的类，参数是对象泛型，使用流进行clone
