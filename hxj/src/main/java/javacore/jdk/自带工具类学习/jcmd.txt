@@ -1,0 +1,18 @@
+核心：https://www.cnblogs.com/duanxz/p/4515437.html
+有各种jdk自带的分析工具
+
+一、jdk工具之jps（JVM Process Status Tools）命令使用
+二、jdk命令之javah命令(C Header and Stub File Generator)
+三、jdk工具之jstack(Java Stack Trace)
+四、jdk工具之jstat命令(Java Virtual Machine Statistics Monitoring Tool)
+四、jdk工具之jstat命令2(Java Virtual Machine Statistics Monitoring Tool)详解
+五、jdk工具之jmap（java memory map）、 mat之四--结合mat对内存泄露的分析
+六、jdk工具之jinfo命令(Java Configuration Info)
+七、jdk工具之jconsole命令(Java Monitoring and Management Console)
+八、jdk工具之JvisualVM、JvisualVM之二--Java程序性能分析工具Java VisualVM
+九、jdk工具之jhat命令(Java Heap Analyse Tool)
+十、jdk工具之Jdb命令(The Java Debugger)
+十一、jdk命令之Jstatd命令(Java Statistics Monitoring Daemon)
+十一、jdk命令之Jstatd命令(Java Statistics Monitoring Daemon)
+十二、jdk工具之jcmd介绍（堆转储、堆分析、获取系统信息、查看堆外内存）
+十三、jdk命令之Java内存之本地内存分析神器：NMT 和 pmap
