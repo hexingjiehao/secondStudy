@@ -23,24 +23,123 @@ jps 192.168.0.77：列出远程服务器192.168.0.77机器所有的jvm实例，�
 javah是用于根据JAVA本地方法，生成对应的c语言头文件及相应的stub文件的命令，使用比较简单，使用示例可以查看这篇文章：https://blog.csdn.net/fenglibing/article/details/4300381
 
 
-三、jdk工具之jstack(Java Stack Trace)
+三、jdk工具之jstack(Java Stack Trace)【非常重要！！！】
 答：
+jstack是java虚拟机自带的一种堆栈跟踪工具。jstack用于生成java虚拟机当前时刻的线程快照。
+定位线程出现长时间停顿的原因，如线程间死锁、死循环、请求外部资源导致的长时间等待等。【重要】
+命令行操作：
+jstack -F {pid}: 强制打印栈信息
+jstack -l {pid}: 长列表。打印关于锁的附加信息,例如属于java.util.concurrent的ownable synchronizers列表
+jstack -m {pid}：打印java和native c/c++框架的所有栈信息
+jstack -h: 打印帮助信息
+案例说明：
+    不同的 JAVA虚机的线程 DUMP的创建方法和文件格式是不一样的，不同的 JVM版本， dump信息也有差别。
+    在实际运行中，往往一次 dump的信息，还不足以确认问题。建议产生三次 dump信息，如果每次 dump都指向同一个问题，我们才确定问题的典型性。
+1.cpu占用过高分析：
+    1.1 列出jvm进程：jps -l
+    1.2 查看进程启动命令：cat /proc/{pid}/cmdline
+    1.3 以线程模式查看下进程{pid}的所有系统线程情况:top -Hp {pid}
+    1.4 将列出的系统线程的id转化为16进制：printf '%x' {tid}
+    1.5 查看指定系统线程的20行堆栈情况：jstack {pid} | grep {tid} -A 20
+2.死锁分析：
+    2.1 使用dump文件。看死锁内容：FoundoneJava-leveldeadlock:......
+    2.2 jstack {pid}: 直接打印出死锁信息
+3.线程状态waiton condition的可能原因：
+    3.1 正等待网络读写，这可能是一个网络瓶颈的征兆。因为网络阻塞导致线程无法执行。
+        一种情况是网络非常忙，几乎消耗了所有的带宽，仍然有大量数据等待网络读写；
+            比如 netstat统计单位时间的发送包的数目，如果很明显超过了所在网络带宽的限制 ;
+            观察 cpu的利用率，如果系统态的 CPU时间，相对于用户态的 CPU时间比例较高；
+            如果程序运行在 Solaris 10平台上，可以用 dtrace工具看系统调用的情况，如果观察到 read/write的系统调用的次数或者运行时间遥遥领先；
+            这些都指向由于网络带宽所限导致的网络瓶颈。
+        另一种情况也可能是网络空闲，但由于路由等问题，导致包无法正常的到达。
+        另外一种出现 Wait on condition的常见情况是该线程在 sleep，等待 sleep的时间到了时候，将被唤醒。
 
 
-
-四、jdk工具之jstat命令(Java Virtual Machine Statistics Monitoring Tool)
+四、jdk工具之jstat命令(Java Virtual Machine Statistics Monitoring Tool)【非常重要！！！】
 答：
+Jstat用于监控基于HotSpot的JVM, 对其堆的使用情况进行实时的命令行的统计。
+命令行操作：
+jstat -<option> [-t] [-h<lines>] <vmid> [<interval> [<count>]]
+jstat -options: 显示所有的可显示操作
+jstat -class pid: 显示指定进程的类加载情况
+jstat -gc pid: 显示指定进程的垃圾收集情况
+jstat -gcutil {pid} 1000： 查看指定进程的新生代，年老代的垃圾收集情况，打印1000次
+jstat -gc {pid}: 查看进程的垃圾收集情况【重要！！！】
 
 
-
-四、jdk工具之jstat命令2(Java Virtual Machine Statistics Monitoring Tool)详解
 五、jdk工具之jmap（java memory map）、 mat之四--结合mat对内存泄露的分析
+答：
+jmap打印出某个java进程（使用pid）内存内的，所有‘对象’的情况（如：产生那些对象，及其数量）。
+命令行操作：
+jmap -histo {pid}: 查看堆中所有对象信息
+jmap -histo:live {pid}：快速定位内存泄漏的方法：只统计存活的对象
+jmap -histo:live {pid} >1.txt: 将堆信息输出到指定文件中
+案例说明：
+5.1 tasklist: 列出windows中的任务进程
+5.2 jmap -histo:live {pid}: 展示列的内存情况
+5.3 jmap -finalizerinfo {pid}: 打印等待回收的对象信息
+5.4 jmap -heap {pid}: 打印pid的整体堆信息
+5.5 jmap -dump:live,format=b,file=test.bin {pid}: 导出对信息到dump中
+5.6 使用eclipse插件mat进行内存泄露分析, 使用idea的jprofiler进行内存分析
+
+
 六、jdk工具之jinfo命令(Java Configuration Info)
+答：
+info用于打印指定Java进程、核心文件或远程调试服务器的Java配置信息。配置信息包括Java系统属性、Java虚拟机命令行标识参数。
+命令操作：
+jinfo {pid}: 打印进程配置信息
+jinfo -flags {pid}: 查看jvm参数
+jinfo -sysprops {pid}: 查看java系统参数
+
+
 七、jdk工具之jconsole命令(Java Monitoring and Management Console)
+答：
+jconsole:一个java GUI监视工具，可以以图表化的形式显示各种数据。并可通过远程连接监视远程的服务器VM。用java写的GUI程序，用来监控VM，并可监控远程的VM，非常易用，而且功能非常强。命令行里打 jconsole，选则进程就可以了。
+图形化工具的使用：直接命令行输入：jconsole, 然后就弹出来了。
+
+
 八、jdk工具之JvisualVM、JvisualVM之二--Java程序性能分析工具Java VisualVM
+答：
+VisualVM 是一款免费的集成了多个JDK 命令行工具的可视化工具，它能为您提供强大的分析能力，对 Java 应用程序做性能分析和调优。这些功能包括生成和分析海量数据、跟踪内存泄漏、监控垃圾回收器、执行内存和 CPU 分析，同时它还支持在 MBeans 上进行浏览和操作。
+命令行操作：jvisualvm，然后就弹出窗口了。
+
+
 九、jdk工具之jhat命令(Java Heap Analyse Tool)
+答：
+jhat是虚拟机堆转储快照分析工具，用于分析heapdump文件，它会建立一个HTTP/HTML服务器，让用户可以在浏览器上查看分析结果，可以查找诸如内存方面的问题。
+案例分析：
+9.1 导出堆：jmap -dump:live,file=b.bin {pid}
+9.2 分析堆：jhat a.bin 或者 jhat-J-Xmx512m b.bin 【以指定堆内存启动一个jvm程序】
+9.3 在浏览器输入：localhost:7000,查看堆分析
+
+
 十、jdk工具之Jdb命令(The Java Debugger)
-十一、jdk命令之Jstatd命令(Java Statistics Monitoring Daemon)
-十一、jdk命令之Jstatd命令(Java Statistics Monitoring Daemon)
+答：
+用来对core文件和正在运行的Java进程进行实时地调试，里面包含了丰富的命令帮助您进行调试，它的功能和Sun studio里面所带的dbx非常相似，
+但jdb是专门用来针对Java应用程序的。现在应该说日常的开发中很少用到JDB了，因为现在的IDE已经帮我们封装好了，如使用ECLIPSE调用程序就是非常方便的，、
+只要在非常特定的情况下可能会用到这个命令，如远程服务器的维护，没有IDE进行调试，那这个时候JDB应该可以帮上忙。
+
+
+十一、jdk命令之 Jstatd 命令(Java Statistics Monitoring Daemon)
+答：
+jstatd是一个基于RMI（Remove Method Invocation）的服务程序，它用于监控基于HotSpot的JVM中资源的创建及销毁，并且提供了一个远程接口允许远程的监控工具连接到本地的JVM执行命令。
+可以远程调试，高级教程
+
+
 十二、jdk工具之jcmd介绍（堆转储、堆分析、获取系统信息、查看堆外内存）
+答：
+jcmd可以用来导出堆，查看Java进程，导出线程信息，执行GC【重要！！！】
+命令行操作：
+jcmd -l: 列出所有运行虚拟机
+jcmd {pid} help: 列出指定虚拟机的可用操作
+jcmd {pid} VM.uptime: 查看虚拟机的启动时间
+jcmd {pid} Thread.print: 打印虚拟机中的线程栈信息
+
+
 十三、jdk命令之Java内存之本地内存分析神器：NMT 和 pmap
+答：
+NMT是Native Memory Tracking的缩写，是Java7U40引入的HotSpot新特性。
+pmap，众所周知，就是Linux上用来看进程地址空间的。
+注意：
+开启NMT: -XX:NativeMemoryTracking=off
+访问NMT: -XX:MaxDirectMemorySize=10m -XX:NativeMemoryTracking=detail  -XX:+UnlockDiagnosticVMOptions -XX:+PrintNMTStatistics
