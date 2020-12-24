@@ -1,4 +1,4 @@
-package javacore.thread;//package com.xiongjie.secondStudy.thread;
+//package javacore.thread;//package com.xiongjie.secondStudy.thread;
 //
 //import io.vertx.core.AsyncResult;
 //import io.vertx.core.Future;

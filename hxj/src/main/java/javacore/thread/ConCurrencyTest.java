@@ -10,7 +10,7 @@ public class ConCurrencyTest {
     private static final long count=10L;
 
     public static void main(String[] args) throws InterruptedException {
-//        concurrency();
+        concurrency();
         includeThread();
     }
 

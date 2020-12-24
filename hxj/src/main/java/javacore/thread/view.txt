@@ -35,7 +35,7 @@
 
     2.并发机制的实现原理：(cpu->缓存->内存->硬盘。volatile+synchronized(锁)+原子操作(锁+CAS))
         1.volatile: (轻量级锁：保证共享变量能够被准确和一致的被更新,排它锁获取变量)
-            底层原理：lock指令--(将数据从缓存写入内存，同时其他cpu中该缓存数据无效)
+            底层原理：lock指令--(将数据从缓存写入内存，同时其他cpu中改缓存数据无效)
             数据流向：提高速度,cpu和缓存交互,所以系统提前将内存数据写入缓存。什么时候写回内存呢？
                      volatile变量被写时，jvm发送lock指令，可以写回去了。
             使用优化：(追加字节的方式，可以有多种实现)
@@ -121,7 +121,7 @@
                 volatile变量规则：写要happens-before随后的读
                 传递性:a->b,b->c,要a->c
                 start():线程A中启动线程B，那么ThreadB.start()操作happens-before线程B中任何操作
-                join():线程A中执行ThreadB.join(),线程B中任意操作happens-before于线程A从线程线程B.join()操作成功返回
+                join():线程A中执行ThreadB.join(),线程B中任意操作happens-before于线程A从线程B.join()操作成功返回
         2.顺序一致性模型：(理想化，操作对所有线程可见)
             定义：如果程序是正确同步的,那么它具有顺序一致性
             特性：
