@@ -20,8 +20,8 @@ public class ExtendVertxShell {
     static Vertx vertx = Vertx.vertx();
 
     public static void main(String[] args) {
-//        shellServiceViaTelnet();
-//        userShellServer();
+        shellServiceViaTelnet();
+        userShellServer();
         userShellServerWithPseudoTerminal();
     }
 

@@ -1,4 +1,4 @@
-package other.将文件中的image的版本号和主机号替换;
+package tool.将文件中的image的版本号和主机号替换;
 
 import java.io.*;
 import java.util.ArrayList;

@@ -7,8 +7,8 @@
         定义：它是一个Java模拟框架。行为驱动开发。辅助工具Yourkit可以检测Java性能，比如死锁，死循环等
         局限：不能模拟静态方法，不能模拟构造函数。不能模拟equals()和hashCode()方法。默认返回zeros, falseys, empty collections or nulls.
               可以使用JMockit / Powermock来模拟静态方法。不能模拟私有方法。不能调用toString(),但是可以打桩toString() ？
-              不能在thenReturn()方法中嵌入调用mock()方法。不能在when()进行链式结构的方法调用
-              最好模拟实体类，尽量少模拟接口
+                                           不能在thenReturn()方法中嵌入调用mock()方法。不能在when()进行链式结构的方法调用
+                                           最好模拟实体类，尽量少模拟接口
         核心方法；
             mock()/@Mock: 创建对象，可选的指定应答--模拟设置行为方式。
                           举例：@Mock private ArticleCalculator calculator;

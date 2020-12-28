@@ -24,25 +24,25 @@ public class DemoVertxShell {
     static Vertx vertx = Vertx.vertx();
 
     public static void main(String[] args) {
-//        shellServiceViaTelnet();
-//        shellServiceViaSSH();
+        shellServiceViaTelnet();
+        shellServiceViaSSH();
         shellServiceViaHTTP();
-//
-//        customShellServiceViaTelnet();
-//        customShellServiceViaSSH();
-//        customShellServiceViaHTTP();
 
-//        customVertxShellCommand();
-//        customVertxShellCommandViaCLI();
+        customShellServiceViaTelnet();
+        customShellServiceViaSSH();
+        customShellServiceViaHTTP();
 
-//        useTerminal();
+        customVertxShellCommand();
+        customVertxShellCommandViaCLI();
 
-//        useShellServer();
-//        useShell();
+        useTerminal();
 
-//        useSSHTerm();
-//        useTelnetTerm();
-//        useHTTPTerm();
+        useShellServer();
+        useShell();
+
+        useSSHTerm();
+        useTelnetTerm();
+        useHTTPTerm();
     }
 
     public static void shellServiceViaTelnet() {

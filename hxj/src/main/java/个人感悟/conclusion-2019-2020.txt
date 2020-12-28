@@ -3,7 +3,8 @@
     学习书籍《高效能认识的切割习惯》，每周进行读书分享。进行转正PPT报告
 
 2.学习gitflow流程。学习Yapi接口管理工具。学习confluence使用。学习Redmine的使用。学习apoll配置。学习tidb mysql集群数据库。学习xxl-job定时任务工具。学习雪花算法
-  学习vue视频搭建自己的前端项目。学习工作流引擎activity。学习influx时序数据库的存储。学习idea上的.http文件进行模拟发送请求。学习语雀。学习tapd。学习spring cloud项目的使用和代码开发，eureka的注册启动。
+  学习vue视频搭建自己的前端项目。学习工作流引擎activity。学习influx时序数据库的存储。学习idea上的.http文件进行模拟发送请求。学习语雀。学习tapd。
+  学习spring cloud项目的使用和代码开发，eureka的注册启动。
   学习各种规范，包括业务规范，代码规范，开发规范等。学习openVPN可以同时连接3个内网
 
 3.修改代码bug,做需求：对单据进行各种增加展示字段，减少展示字段的处理。将表结构维护到confluence上。学习腾讯tapd的使用，使用tapd画时序图，思维导图，流程图。

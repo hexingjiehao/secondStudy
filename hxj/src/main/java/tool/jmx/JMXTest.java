@@ -1,4 +1,4 @@
-package other.jmx;
+package tool.jmx;
 
 import javax.management.*;
 import java.lang.management.ManagementFactory;
@@ -6,7 +6,7 @@ import java.lang.management.ManagementFactory;
 public class JMXTest {
 
     public static void main(String[] args) throws Exception{
-//        standardMBean();
+        standardMBean();
         dynamicMBean();
     }
 

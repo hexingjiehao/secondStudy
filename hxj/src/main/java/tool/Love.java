@@ -1,6 +1,4 @@
-package other.打印爱心;
-
-import cn.hutool.core.bean.BeanUtil;
+package tool;
 
 public class Love {
 

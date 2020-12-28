@@ -1,4 +1,4 @@
-package other.jmx;
+package tool.jmx;
 
 public class SimpleMBeanImpl implements SimpleMBean {
 
