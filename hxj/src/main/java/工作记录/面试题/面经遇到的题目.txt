@@ -13,11 +13,11 @@ ClassLoader.loadClass()，默认数据不会被初始化；
 
 3.spring的事务传播机制？【OK】
 答：
-PROPAGATION_REQUIRED：如果当前没有事务，就新建一个事务，如果已经存在一个事务中，加入到这个事务中。【默认】
 PROPAGATION_SUPPORTS：支持当前事务，如果当前没有事务，就以非事务方式执行。
-
-PROPAGATION_REQUIRES_NEW：新建事务，如果当前存在事务，把当前事务挂起。
 PROPAGATION_NOT_SUPPORTED：以非事务方式执行操作，如果当前存在事务，就把当前事务挂起。
+
+PROPAGATION_REQUIRED：如果当前没有事务，就新建一个事务，如果已经存在一个事务中，加入到这个事务中。【默认】
+PROPAGATION_REQUIRES_NEW：新建事务，如果当前存在事务，把当前事务挂起。
 
 PROPAGATION_MANDATORY：使用当前的事务，如果当前没有事务，就抛出异常。
 PROPAGATION_NEVER：以非事务方式执行，如果当前存在事务，则抛出异常。
