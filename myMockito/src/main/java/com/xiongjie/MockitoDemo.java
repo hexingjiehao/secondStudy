@@ -242,6 +242,4 @@ public class MockitoDemo {
         verify(mockedList).add("one");
         verify(mockedList).clear();
     }
-
-
 }
