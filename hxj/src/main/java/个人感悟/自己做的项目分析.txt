@@ -1,22 +1,36 @@
 1.HCloud-ERP项目
-1.1 目的和使用场景：
-1.2 大致的客户操作是什么样的：
-1.3 技术框架：
+答：
 
 
 2.企简ERP项目
-2.1 目的和使用场景：
-2.2 大致的客户操作是什么样的：
-2.3 技术框架：
+答：
 
 
-3.江苏精细化预报质量检验平台项目
-3.1 目的和使用场景：
-3.2 大致的客户操作是什么样的：
-3.3 技术框架：
+3.江苏精细化预报质量检验平台项目【estimate_cloud】【OK】
+答：
+1.内网电脑的远程桌面连接。各种模式的实况数据和历史数据，还有预报数据: 例子ECEN:smb://用户名:密码@主机/wrf/ECEN-STATION/
+  数据分为站点数据和格点数据。数据格式为：txt文件，结构返回值json,smb协议，ftp协议，接口协议，sqlserver，Oracle
+2.气象模式：ECEN，ECFI,ECWMF,GFS,GRAPES,INCA,JSGF,NRGF,PWAFS,NSGF,SPCC,T639,T639_GRID,BCSH,SJDZ,GFE_NC，ECNEW,SCMOC
+3.江苏省的经纬度情况：116E~122E，30N~36N。数据分为准确率，空报率，漏报率
+4.归一化文件的代码和文件位置。天气数据分为：晴天，小雨，中雨，大雨，暴雨，大暴雨，特大暴雨，温度，风
+5.项目架构是springcloud,其中有很多modul
+  estimate_server	服务类，其他模块进行注册的地方
+  Estimate_core	核心工具公共模块
+  Estimate_standard	归一化模块，将各个模式的源文件转化为归一化文件，同时，格式实况的入库也在这里
+  Estimate_dataimport	预报入库模块，将归一化文件时效合并后生成预报数据，写入sql文件，同时站点实况的入库也在这里
+  Estimate_semi	Semi入库模块，将预报数据和实况数据进行合并降水温度风，将结果写入sql文件
+  Estimate_rabbitmq	消息队列模块，主要处理各种消息，主要是预报和semi的sql文件执行
+  algorithm_ts	Ts评分模块，各个模式的ts评分
+  algorithm_mode_data	Mode评分模块，各个模式的mode评分
+  back 江苏智能网格预报检验业务后台监控平台。备注：主要是预报，实况，semi，缺失数据，报表等数据的监控查询
+  estimate_fact 气象一期的站点实况项目
+  estimate_ws 实时评分项目
+6.MongoDB 是一个基于分布式文件存储的数据库。由 C++ 语言编写。旨在为 WEB 应用提供可扩展的高性能数据存储解决方案。他使用bson格式
+7.robot 3T是mongo的数据库客户端
+8.mongodb的非关系型数据库的sql语句
+9.echart图的前后端配合使用
+10.启动方式，查看日志：
+    nohup java -jar semi.jar >semi.out 2>&1 &
+    tail -f semi.out
+11.做了好多产品的工作，分析需求，撰写文档
 
-
-
-额外注意的：
-1.jvm调优:
-2.多线程：
