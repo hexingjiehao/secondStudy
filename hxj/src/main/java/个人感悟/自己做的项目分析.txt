@@ -4,6 +4,30 @@
 
 2.企简ERP项目
 答：
+0.进销存项目的功能都有：物流，库存，采购，退货，部门，员工，供应商，加工中心，权限，系统参数，外协
+1.html转化为pdf上传到腾讯云
+2.keycloak压力测试：初始化员工和企业，多线程测试登录，修改密码等设计到keycloak权限的操作
+3.kafka的消息发送很重要，还是需要消息中间件的牵线搭桥
+4.使用gradle创建多模块项目
+5.项目结构：kubernetes: 项目的部署方式，使用kubernetes云部署
+demo-zeebe：zeebe工作流引擎的测试项目
+docker：一键式部署多个项目，将gitlab项目下拉并打包成docker，诶个docker附带配置文件，并且docker启动
+job-worker：zeebe工作流引擎的后端接口处理器，htmltopdf,html渲染2个verticle
+keycloak: 权限认证模块：admin,node,rbac
+libs: 基础工具包模块：https,json,sql,string,test,verticle,zeebe
+openapi: 各个木块的接口文档yaml文件
+qcloud：云工具模块。短信，腾讯云，文档，邮件，签名，验证码
+service：外部接口模块，提供服务。
+sql-import：sql模块，提供各种初始化sql,以及代码需要调用的存储过程定义
+tenant-hr：员工和部门模块。提供员工服务
+tenant-inventory：仓库模块。提仓库服务
+tenant-material：物料模块。提供物流服务
+tenant-partner：供应商模块。提供供应商服务。api提供接口暴露，eventbus提供接口实现，rest提供http协议访问
+tenant-qjnext：企业模块。提供企业服务
+tenant-trading：交易模块。提供交易服务，加工中心，配送
+6.用的技术有：jbpm,postgreSQL,vim,苹果电脑的操作，mattermost,workbeach,brew命令
+            swagger,npm,rest assured,ssh连接linux,rest风格http接口,docker
+
 
 
 3.江苏精细化预报质量检验平台项目【estimate_cloud】【OK】
