@@ -1,5 +1,23 @@
 1.HCloud-ERP项目
 答：
+1.用到的技术spring cloud,feign,eureka,apoll,confluence,tapd,spring cloud gateway,spring boot admin,
+           kibana,kubernete,jenkins,nginx,xxl-job,rocketmq,redis,雪花算法，
+           分布式事务，rocketmq半消息,spring boot,maven,nexus,activity工作流
+           vue,yapi等
+2.医药零售云平台saas:
+    common: 公共模块
+    h3-basic-setting: 基础模块
+    h3-dream-app: 与梦同行模块
+    h3-jointown-app: 九州通模块
+    h3-openapp: 开发平台模块
+    h3-orgmanager: 组织模块
+    h3-price: 价格模块
+    h3-stock: 库存模块
+    h3-store: 门店模块
+    h3-supplier: 供应商模块
+    h3-warehouse: 仓储模块
+    hydee-api-gateway: 网关模块
+
 
 
 2.企简ERP项目
