@@ -1,0 +1,177 @@
+版本1.spring boot的main应用的搭建：
+步骤：
+	1.使用https://start.spring.io。不安装任何插件
+	2.设置快速重启策略：重要！！！
+		On 'update' action: Update classes and resources
+		On frame deactivation: Update classes and resources
+		
+
+版本2.spring boot的web项目搭建：
+步骤：
+	1.使用https://start.spring.io。
+	2.安装插件：spring web
+				thymeleaf（可选, @Controller）
+    3.启动web页面的2个方法：
+		2.1 @RestController + @RequestMapping(value="/hello",method = RequestMethod.GET) + 不需要html页面配置
+        2.2 @Controller	+ @RequestMapping(value="/hello",method = RequestMethod.GET) + 	resources/templates/index.html				
+		
+		
+版本3.spring boot的web项目+mybatis+mysql项目的搭建：		
+步骤：
+	1.使用https://start.spring.io。
+	2.安装插件：spring web	
+				MySQL Driver
+				MyBatis Framework
+	3.application.properties配置数据源和mybatis的映射位置：
+		spring.datasource.url = jdbc:mysql://192.168.10.130:3306/xj_test?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowMultiQueries=true
+		spring.datasource.username = agent
+		spring.datasource.password = agent123
+		spring.datasource.driverClassName = com.mysql.jdbc.Driver
+		
+		mybatis.mapper-locations = classpath:mapper/**/*.xml
+		mybatis.type-aliases-package = com.xj.entity
+		###带有下划线的表字段映射为驼峰格式的实体类属性
+		mybatis.configuration.map-underscore-to-camel-case = true  
+    4.idea创建mybatis.xml的配置文件模板
+		File-->setting-->Editor-->File and Code Templates-->新增模板
+		命名：mybatisMapperXml,后缀：xml
+		内容：<?xml version="1.0" encoding="UTF-8"?>
+			  <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+			  <mapper namespace="com.**.XXXDao">
+			  </mapper>
+	5.创建实体类： /entity/XXX
+	  创建Dao接口: /dao/XXXDao	需要@Mapper和Interface类型
+	  创建mapper:  resources/mapper/XXXMapper.xml
+	  创建service接口和Impl实现类：/service/XXXService 
+								   /impl/XXXServiceImpl  需要@Service和@Override和@Transactional(rollbackFor = Exception.class)
+	  创建Controller: /controller/XXXController  需要@ResponseBody将返回的list<Objet>转化为json字符串						   
+	  注意：为了解决注入bean爆红：设置File-->setting-->Editor-->inspections-->spring->spring Core-->Autowiring for Bean Class取消打勾
+		
+		
+版本4：spring boot的web项目+mybatis+mysql+阿里Druid连接池 项目的搭建
+	1.版本3的全部配置
+	2.maven增加依赖：
+		<dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
+            <version>1.1.24</version>
+        </dependency>	
+	3.pplication.properties增加配置：
+		#Druid 连接池配置
+        spring.datasource.driverClassName = com.mysql.jdbc.Driver
+        spring.datasource.type = com.alibaba.druid.pool.DruidDataSource
+        # 这4个参数key里不带druid也可以，即可以还用上面的这个4个参数
+        # 初始化时建立物理连接的个数
+        spring.datasource.druid.initial-size = 5
+        # 最大连接池数量
+        spring.datasource.druid.max-active = 30
+        # 最小连接池数量
+        spring.datasource.druid.min-idle = 5
+        # 获取连接时最大等待时间，单位毫秒
+        spring.datasource.druid.max-wait = 60000
+        # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+        spring.datasource.druid.time-between-eviction-runs-millis = 60000
+        # 连接保持空闲而不被驱逐的最小时间
+        spring.datasource.druid.min-evictable-idle-time-millis = 300000
+        # 用来检测连接是否有效的sql，要求是一个查询语句
+        spring.datasource.druid.validation-query = SELECT 1 FROM DUAL
+        # 建议配置为true，不影响性能，并且保证安全性。申请连接的时候检测，如果空闲时间大于timeBetweenEvictionRunsMillis，执行validationQuery检测连接是否有效。
+        spring.datasource.druid.test-while-idle = true
+        # 要启用PSCache，必须配置大于0，当大于0时，poolPreparedStatements自动触发修改为true。
+        spring.datasource.druid.max-pool-prepared-statement-per-connection-size = 50
+        # 配置监控统计拦截的filters，去掉后监控界面sql无法统计
+        spring.datasource.druid.filters = stat
+        # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+        spring.datasource.druid.connection-properties = druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+        # 合并多个DruidDataSource的监控数据
+        spring.datasource.druid.use-global-data-source-stat = true
+        # 是否允许执行多条sql
+        # StatViewServlet配置，说明请参考Druid Wiki，配置_StatViewServlet配置
+        spring.datasource.druid.stat-view-servlet.enabled = true
+        spring.datasource.druid.stat-view-servlet.url-pattern = /druid/*
+        spring.datasource.druid.stat-view-servlet.reset-enable = false
+        spring.datasource.druid.stat-view-servlet.login-username = admin
+        spring.datasource.druid.stat-view-servlet.login-password = admin
+        spring.datasource.druid.stat-view-servlet.allow =
+        spring.datasource.druid.filter.wall.config.comment-allow = true
+	4.登录监控平台进行日志监控：可以在配置文件中配置用户名密码
+		地址：http://localhost:8080/druid
+		用户名：admin 
+		密码：admin
+			
+			
+版本5：spring boot的web项目+mybatis+mysql + 阿里Druid连接池 + redis(jedis驱动)项目的搭建
+	1.版本4的全部配置
+	2.启动redis的服务器
+	3.maven增加依赖：驱动有jedis和lettuce
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <version>2.4.1</version>
+            <!-- 排除lettuce包，使用jedis代替-->
+            <exclusions>
+                <exclusion>
+                    <groupId>io.lettuce</groupId>
+                    <artifactId>lettuce-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+		
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+        </dependency>
+	4.application.properties增加配置：
+		# Redis数据库索引（默认为0）
+        spring.redis.database=0
+        spring.redis.host=localhost
+        spring.redis.port=6379
+        spring.redis.password=
+        spring.redis.timeout=300
+        # jedis client 配置
+        spring.redis.jedis.pool.max-active=50
+        spring.redis.jedis.pool.max-wait=3000
+        spring.redis.jedis.pool.max-idle=20
+        spring.redis.jedis.pool.min-idle=5 
+    5.设置配置类：
+		@Bean
+		new JedisPool(jedisPoolConfig, host, port, timeout, password, database);
+	6.设置工具类：封装redis的set,get方法，并关闭jedis
+		@Autowired
+		private JedisPool jedisPool;
+		public String set(String key, String value) {
+			Jedis jedis = null;
+			String result = null;
+			try {
+				jedis = jedisPool.getResource();
+				result = jedis.set(key, value);
+			} catch (Exception e) {
+				e.printStackTrace();
+				return result;
+			} finally {
+				if (jedis != null) {
+					jedis.close();
+				}
+			}
+			return result;
+		}
+	7.最终要的一点：redis服务器需要设置密码：
+		打开redis-cli控制台：
+		执行命令：config set requirepass "123456"   
+				  config get requirepass [确认密码设置完成]	
+				  auth "123456"  [可选]
+	8.分布式的锁的代码编写：
+		jedis.setnx(key,value); //锁key值,不需要关系value的值，
+		key相同则锁失败返回0, key不同则锁成功则返回1
+		if(jedis.setnx(KEY,VALUE)==1){
+                jedis.expire(KEY,EXPIRE);
+                return true;
+        }
+
+
+
+
+
+
+
+
