@@ -100,7 +100,7 @@
 		密码：admin
 			
 			
-版本5：spring boot的web项目+mybatis+mysql + 阿里Druid连接池 + redis(jedis驱动)项目的搭建
+版本5：spring boot的web项目+mybatis+mysql + 阿里Druid连接池 + redis(jedis驱动,有密码的redis)项目的搭建
 	1.版本4的全部配置
 	2.启动redis的服务器
 	3.maven增加依赖：驱动有jedis和lettuce
@@ -169,8 +169,58 @@
         }
 
 
+版本6：spring boot的web项目+mybatis+mysql + 阿里Druid连接池 + redis(jedis驱动,没有密码的redis)项目的搭建
+    1.版本5的全部配置
+    2.注释掉：#spring.redis.password=123456
+    3.jedispoll类密码字段设置为空：return new JedisPool(jedisPoolConfig, host, port, timeout, null, database);
 
 
+版本7：spring boot的web项目+mybatis+mysql + 阿里Druid连接池 + redis(Redission驱动,没有密码的redis)项目的搭建
+    1.版本6的全部配置
+    2.maven增加依赖：<dependency>
+                  <groupId>org.redisson</groupId>
+                  <artifactId>redisson-spring-boot-starter</artifactId>
+                  <version>3.14.1</version>
+                </dependency>
+    3.增加配置类：
+       @Bean
+       public RedissonClient getRedisson() {
+                Config config = new Config();
+                if ("".equals(password)) {
+                    password = null;
+                }
+                //单机模式 依次设置redis地址和密码
+                config.useSingleServer()
+                        .setAddress("redis://" + host + ":" + port)
+                        .setPassword(password)
+                        .setDatabase(database)
+                ;
+                //设置序列化
+                config.setCodec(new StringCodec());
+                return Redisson.create(config);
+       }
+    4.注入客户端，方法中获取锁和释放锁：
+        @Autowired
+        private RedissonClient redissonClient;
+        方法中：
+            RLock lock = redissonClient.getLock("RedissonLock");
+            try {
+                //等待100秒后，再等10秒解锁
+                boolean res = lock.tryLock(100, 10, TimeUnit.SECONDS);
+                if (res) {
+                    System.out.println("执行redisson的锁操作成功");
+                }else{
+                    System.out.println("执行redisson的锁操作失败");
+                    return false;
+                }
+            }catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            } finally{
+                lock.unlock();
+                System.out.println("redisson的解锁成功");
+            }
+            return true;
 
 
 
