@@ -223,5 +223,29 @@
             return true;
 
 
+版本8：spring boot的web项目+mybatis+mysql + 阿里Druid连接池 + redis(Redission驱动,没有密码的redis) + rocketmq(发送消费消息,事务消息) 项目的搭建
+    1.版本7的全部配置(注意rocketmq的端口可能和spring项目的8080端口冲突，修改spring boot端口为server.port=8081)
+    2.使用docker 安装rocketmq的服务器，监控平台，broker。[用自己准备的rocket的docker配置文件]
+        浏览器输入：localhost:8080,打开rocketmq的监控平台
+    3.maven增加依赖：<dependency>
+                        <groupId>org.apache.rocketmq</groupId>
+                        <artifactId>rocketmq-spring-boot-starter</artifactId>
+                        <version>2.1.1</version>
+                    </dependency>
+    4.application.properties增加配置：
+         rocketmq.name-server=127.0.0.1:9876
+         rocketmq.producer.group=xiongjie
+    5.生产者发送消息：注入rocketMQTemplate
+        @Autowired
+        private RocketMQTemplate rocketMQTemplate;
 
-
+        rocketMQTemplate.send("xiongjie-topic",MessageBuilder.withPayload("hello,this is my spring boot rocketmq msg").build());
+    6.消费者监听消息：自动消费
+        @Component
+        @RocketMQMessageListener(topic = "xiongjie-topic", consumerGroup = "xiongjie")
+        public class XjConsumerListener implements RocketMQListener<String> {
+            @Override
+            public void onMessage(String s) {
+                System.out.println("消息体为:"+s);
+            }
+        }

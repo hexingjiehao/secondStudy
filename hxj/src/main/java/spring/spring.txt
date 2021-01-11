@@ -75,3 +75,8 @@ public class CircularDependencyB {
     private CircularDependencyA circA;
 
 }
+
+
+2.rocketmq的spring boot整合参考文档：
+    原始配置：https://blog.csdn.net/zxl646801924/article/details/105659481
+    spring boot整合配置：http://www.choupangxia.com/2020/11/26/spring-boot-rocketmq/
