@@ -273,6 +273,8 @@
       RocketMQLocalTransactionState.ROLLBACK;表示明确知道本地事务失败，不需要进行重试。当执行本地事务execute时抛出异常，人为确定原因的，抛出rollback,
       不知道原因的，抛出unknow, 它会自动取调用check方法，如果一致unknow,则执行16次之后，它会将这个消息删除
       目前位置，所有的事务消息都会进入到这个监听器中，需要人为的根据header中topic封装不同的handler
+      rocketmq-spring-boot-starter 2.1.0 事务消息 注解里面的txProducerGroup 移除解读
+
         @Component
         @RocketMQTransactionListener()
         public class XjTxProducerListener implements RocketMQLocalTransactionListener {
