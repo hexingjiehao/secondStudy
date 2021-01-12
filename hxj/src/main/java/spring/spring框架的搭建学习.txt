@@ -249,3 +249,80 @@
                 System.out.println("消息体为:"+s);
             }
         }
+    7.发送事务消息：
+        TransactionSendResult sendResult = rocketMQTemplate.sendMessageInTransaction("xiongjie-tx-topic",
+                        MessageBuilder.withPayload("this is a tx msg").build(),
+                        "this is local tx need arg"
+        );
+        if(sendResult.getSendStatus().equals(SendStatus.SEND_OK) && sendResult.getLocalTransactionState().equals(LocalTransactionState.COMMIT_MESSAGE)){
+            System.out.println("事务发送成功，并且本地事务执行成功");
+        }else{
+            System.out.println("事务发送失败，或者本地事务执行失败");
+        }
+    8.事务消息消费者：
+        @Component
+        @RocketMQMessageListener(topic = "xiongjie-tx-topic", consumerGroup = "xiongjietx")
+        public class XjTxConsumerListener implements RocketMQListener<String> {
+            @Override
+            public void onMessage(String s) {
+                //注意这里要进行幂等消费
+                System.out.println("事务消息体为:"+s);
+            }
+        }
+    9.事务消息的发送监听者，执行本地事务：这里可能需要封装，不同的消息体，转发到不同的listener处理。RocketMQLocalTransactionState.UNKNOWN;表示后续会重试，调用check方法
+      RocketMQLocalTransactionState.ROLLBACK;表示明确知道本地事务失败，不需要进行重试。当执行本地事务execute时抛出异常，人为确定原因的，抛出rollback,
+      不知道原因的，抛出unknow, 它会自动取调用check方法，如果一致unknow,则执行16次之后，它会将这个消息删除
+        @Component
+        @RocketMQTransactionListener()
+        public class XjTxProducerListener implements RocketMQLocalTransactionListener {
+
+            @Override
+            public RocketMQLocalTransactionState executeLocalTransaction(Message message, Object o) {
+                System.out.println("开始执行本地事务的execute方法");
+                try {
+                    String msgBody = new String((byte[]) message.getPayload(), StandardCharsets.UTF_8);
+                    String localArg = (String) o;
+
+                    System.out.println("事务消息的消息体为："+msgBody+": 本地事务参数："+localArg);
+
+                } catch (Exception e) {
+                    System.out.println("执行本地事务发生异常："+e);
+                    return RocketMQLocalTransactionState.UNKNOWN;
+                }
+                System.out.println("结束执行本地事务的execute方法");
+                return RocketMQLocalTransactionState.COMMIT;
+            }
+
+            @Override
+            public RocketMQLocalTransactionState checkLocalTransaction(Message message) {
+                System.out.println("开始执行本地事务的检查check方法");
+                try {
+                    String msgBody = new String((byte[]) message.getPayload(), StandardCharsets.UTF_8);
+                    System.out.println("事务消息的消息体为："+msgBody);
+
+                } catch (Exception e) {
+                    System.out.println("执行本地事务的check发生异常："+e);
+                    return RocketMQLocalTransactionState.UNKNOWN;
+                }
+                System.out.println("结束执行本地事务的检查check方法");
+                return RocketMQLocalTransactionState.COMMIT;
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+seate解决分布式事务
