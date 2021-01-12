@@ -1,0 +1,1 @@
+版本1. 搭建1个spring boot项目，作为eureka的微服务注册中心
