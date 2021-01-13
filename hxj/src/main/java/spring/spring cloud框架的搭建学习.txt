@@ -1,1 +1,7 @@
 版本1. 搭建1个spring boot项目，作为eureka的微服务注册中心
+
+
+搭建一个api和center的多模板微服务项目
+1.创建maven项目，pom.xml创建<modules></modules>
+2.创建spring boot 的api项目，引入feign,spring-boot-web
+3.创建spring boot 的center项目，引入spring-boot-web,discovery
