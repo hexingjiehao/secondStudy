@@ -313,6 +313,29 @@
         }
 
 
+版本9.使用spring boot admin监控spring boot项目
+    1.版本8的全部配置
+    2.要监控，分为客户端和服务端项目
+    3.在版本8的客户端项目中：
+        3.1 application.properties文件增加配置：【配置服务名，配置server地址，暴露端口，启用日志文件功能，配置日志文件的路径】
+                ### spring boot admin监控客户端的配置
+                spring.application.name=springbootfullversion
+                spring.boot.admin.client.url=http://127.0.0.1:8788
+                management.endpoints.web.exposure.include=*
+                management.endpoint.logfile.enabled=true
+                ### 日志文件
+                logging.file.path=/log
+                logging.file.name=microservice-consumer.log
+        3.2 pom.xml增加依赖：<dependency>
+                                <groupId>de.codecentric</groupId>
+                                <artifactId>spring-boot-admin-starter-client</artifactId>
+                                <version>2.1.6</version>
+                            </dependency>
+    4.创建一个server服务端项目：
+        1.需要增加springboot web依赖
+        2.启动类增加注解：@EnableAdminServer
+        3.application.proerties文件增加配置：server.port=8788
+    5.浏览器输入：localhost:8788, 可以跳转到UI界面进行监控
 
 
 
