@@ -52,3 +52,31 @@
         driver: bridge
 3.浏览器输入：localhost:9010  登录名/密码:admin/admin
 4.创建项目，生成token, 复制生成的mvn命令在自己的项目中执行，然后就能够在浏览器看到这个分析
+
+
+5.持续化集成和扫描的方式：Jenkins + git/svn + SonarQube
+参考文档：https://www.cnblogs.com/ioufev/articles/12708862.html。很重要，一定要看！！！
+1.安装jenkins
+2.在jenkins安装SonarQube Scanner插件
+3.在SonarQube生成一个token
+4.在jenkins上的系统设置中配置sonarqube的服务器地址和token
+5.在jenkins中的全局工具配置中，安装SonarQube Scanner中
+6.在jenkins创建任务，自由风格的软件项目。在源码管理中选择git。配置java项目的git地址和用户名密码，以及master分支
+7.在jenkins的构建环境中勾选：prepare SonarQube Scanner environment。并且在构建中选择构建步骤：Execute SonarQube Scanner
+8.最重要的一点：在构建菜单：配置分析属性：看参看文档
+    sonar.projectKey=...
+    sonar.projectName=...
+    sonar.projectVersion=1.0
+    sonar.language=java
+    sonar.sourceEncoding=UTF-8
+    sonar.source=$WORKSPACE
+    sonar.java.binaries=$WORKSPACE
+
+
+
+
+
+
+
+
+
