@@ -94,25 +94,38 @@
                     }
                 }
             }
-        最小连接负载平衡：
+        最小连接负载平衡：最少连接方式=least_conn
              upstream myapp1 {
                 least_conn;
                 server srv1.example.com;
                 server srv2.example.com;
                 server srv3.example.com;
              }
-        会话持久性平衡(ip-hash策略)：相同客户端访问专属服务器
+        会话持久性平衡(ip-hash策略)：相同客户端访问专属服务器, 依据ip分配方式
             upstream myapp1 {
                 ip_hash;
                 server srv1.example.com;
                 server srv2.example.com;
                 server srv3.example.com;
             }
-        加权负载平衡：
+        加权负载平衡：权重方式=weight
             upstream myapp1 {
                 server srv1.example.com weight=3;
                 server srv2.example.com;
                 server srv3.example.com;
             }
-
-
+        第三方策略：
+            fair负载平衡：按照服务器端的响应时间来分配请求，响应时间短的优先分配。需要安装模块：nginx-upstream-fair
+                upstream myapp1 {
+                    fair;
+                    server srv1.example.com weight=3;
+                    server srv2.example.com;
+                    server srv3.example.com;
+                }
+            url_hash负载平衡：依据URL分配方式。需要安装模块：Nginx_upstream_hash-0.3.tar.gz
+                upstream myapp1 {
+                    hash $request_uri;    #实现每个url定向到同一个后端服务器
+                    server srv1.example.com weight=3;
+                    server srv2.example.com;
+                    server srv3.example.com;
+                }

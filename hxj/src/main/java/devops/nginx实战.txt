@@ -1,0 +1,36 @@
+1.创建spring boot项目app1,创建一个hello的controller, 返回hello, 端口8080
+2.创建spring boot项目app2创建一个hello的controller, 返回hello2, 端口8081
+3.将app1和app2启动:
+    访问浏览器：localhost:8080/hello，返回hello
+    访问浏览器：localhost:8081/hello，返回hello2
+3.下载nginx服务器，在nginx.conf配置
+    http {
+        ... ### 内部已有的配置，不要动
+
+        ###新增配置,按照需求取消注释，则启用对应的策略
+        upstream xiongjiegroup {
+                # 空，表示轮询策略
+                # least_conn; 表示最小负载均衡
+                # ip_hash; 表示相同客户端访问专属服务器
+                # weight=3; 表示权重策略
+
+        		server localhost:8080;
+        		server localhost:8081;
+        	}
+        	server {
+        		listen 81;
+        		location / {
+        			proxy_pass http://xiongjiegroup;
+        		}
+        	}
+    }
+4.启动nginx，windows版本：直接点击nginx.exe
+    nginx -s reload： 重启nginx
+    start nginx: 启动nginx
+    nginx -s stop: 停止nginx
+5.开始实现nginx的负载均衡：
+    在浏览器输入：localhost:81/hello
+    返回值交替出现：hello或者hello2
+
+
+
