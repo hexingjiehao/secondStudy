@@ -33,4 +33,6 @@
     返回值交替出现：hello或者hello2
 
 
+如果使用docker部署的nginx进行负载均衡: 看同目录的nginx.conf和docker-compose.yml
+浏览器还是输入：localhost:81/hello, 依然能够轮询返回hello和hello2
 

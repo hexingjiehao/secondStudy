@@ -129,3 +129,12 @@
                     server srv2.example.com;
                     server srv3.example.com;
                 }
+
+
+进入docker中的命令：
+    docker exec -it <container id> /bin/bash
+
+查看docker容器的IP地址命令：参看文档：https://www.cnblogs.com/halberd-lee/p/12519294.html
+    docker inspect <container id>
+
+
