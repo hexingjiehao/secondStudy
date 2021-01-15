@@ -1,0 +1,4 @@
+1.在windows电脑上打开电脑cmd: 控制台窗口
+2.在控制台窗口输入：scp root@192.168.10.111: /usr/local/nginx/conf/nginx.conf D:/
+3.在控制台输入linux电脑的密码。
+4.然后就能够在windows本地的D盘根目录下找到xiongjie.txt文件了
