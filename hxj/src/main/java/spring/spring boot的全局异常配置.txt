@@ -1,0 +1,71 @@
+1.学习spring boot的全局异常配置解决方案：
+1.概念：相当与客户而言，它操作的页面对应于后端，就是controller类，所以全局异常处理，也就是controller的全局异常处理
+2.解决方案：
+    1.创建一个类型，注入@ControllerAdvice
+    2.在类中创建一个方法：注入@ExceptionHandler({Exception.class}) 和 @ResponseBody
+                        或者只注入@ExceptionHandler({Exception.class})，增加一个error.html页面
+    3.创建一个同意的异常类XXXRuntimeException，封装各种异常枚举值统一返回。
+    4.业务逻辑中出现的【修改数据库失败，状态不正确，数据校验失败，feign调用失败】。都封装到对应的枚举异常到XXXRuntimeException
+
+案例举例：可以不用自定义异常类
+1.创建controller:
+    @RestController
+    public class HelloController {
+        @RequestMapping(value = "hello",method = RequestMethod.GET)
+        public String hello(){
+    //        throw new XJRuntimeException(OneExceptionEnum.XJ_ONE_EXCP);
+    //        throw new XJRuntimeException(TwoExceptionEnum.XJ_TWO_EXCP);
+            throw new XJRuntimeException(CommonExceptionEnum.COMMON_EXCPETION);
+    //        return "hello";
+        }
+    }
+2.创建handler:
+    @ControllerAdvice
+    public class XJExceptionHandler {
+        @ExceptionHandler(value = Exception.class)
+        @ResponseBody
+        public String handlerException(HttpServletRequest request, Exception ex){
+            if(ex instanceof XJRuntimeException){
+                XJRuntimeException xjRuntimeException= (XJRuntimeException) ex;
+                return xjRuntimeException.getDisplayName();
+            }else{
+                return CommonExceptionEnum.COMMON_EXCPETION.getDisplayName();
+            }
+        }
+    }
+3.对于异常的的创建，使用枚举来赋值，没用每次都set
+    public enum CommonExceptionEnum implements IExceptionEnum {
+        COMMON_EXCPETION("0001","默认异常信息","默认异常信息"),
+        ;
+
+        private String code;
+        private String name;
+        private String displayName;
+
+        CommonExceptionEnum(String code, String name, String displayName) {
+            this.code = code;
+            this.name = name;
+            this.displayName = displayName;
+        }
+        public void setCode(String code) {
+            this.code = code;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
+        public void setDisplayName(String displayName) {
+            this.displayName = displayName;
+        }
+        @Override
+        public String getCode() {
+            return code;
+        }
+        @Override
+        public String getName() {
+            return name;
+        }
+        @Override
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
