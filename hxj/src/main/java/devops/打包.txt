@@ -1,30 +1,33 @@
 1.学习如何使用idea+maven打jar包
+    參考文檔：https://blog.csdn.net/branwel/article/details/79918018
     前提条件：需要将用到的jar包依赖包含进去，同时指定需要执行的main方法。
     操作步骤：
         1.在pom.xml中添加打包配置
             第一种：来生成两种jar包，有依赖和无依赖的。
-                <plugin>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <mainClass>com.cos.Application</mainClass>
-                            </manifest>
-                        </archive>
-                        <descriptorRefs>
-                            <descriptorRef>jar-with-dependencies</descriptorRef>
-                        </descriptorRefs>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>make-assemble</id>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>single</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
+                <build>
+                        <plugins>
+                            <plugin>
+                                <groupId>org.apache.maven.plugins</groupId>
+                                <artifactId>maven-shade-plugin</artifactId>
+                                <version>3.0.0</version>
+                                <executions>
+                                    <execution>
+                                        <phase>package</phase>
+                                        <goals>
+                                            <goal>shade</goal>
+                                        </goals>
+                                        <configuration>
+                                            <transformers>
+                                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                                    <mainClass>com.xj.JavaToExe</mainClass>   <!--带有包路径的MainClass -->
+                                                </transformer>
+                                            </transformers>
+                                        </configuration>
+                                    </execution>
+                                </executions>
+                            </plugin>
+                        </plugins>
+                    </build>
 
             第二种：将整个项目打包成zip文件，将各种文件全部存放到zip文件中。
                    详情见：https://blog.csdn.net/branwel/article/details/79918018
