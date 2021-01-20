@@ -1,0 +1,32 @@
+1.同一个类中，非事务方法A调用事务方法B,事务不生效
+Public Test{
+
+    public void a(){
+        b();
+    };
+
+    @Transactional(rollbackFor = Exception.class)
+    public void b(){
+        ...
+        //这个方法抛异常,事务不生效，数据库不回滚
+    };
+}
+问题原因: 底层的Spring AOP机制，代理对象拥有关联事务切面
+    如果注解生效，则是代理类调用匹配的切面，而不是原始类调用
+解决办法：
+    1.同一个类中，需要事务方法调用事务方法
+    2.同一个类中，非事务方法调用时：AopContext拿到当前对象的代理对象
+    //以上面的a(),b()方法出的解决办法
+    public void a(){
+        ((TransactionService) AopContext.currentProxy()).b();
+    }
+
+
+2.非public方法加注解@@Transactional不会生效
+问题原因：源码中有注释，非public方法直接返回null
+
+
+3.事务方法调用非事务方法，没有加注解的事务方法也会有事务
+问题原因：spring本身没有事务，只有数据库才有事务，spring控制事务是通过Connection来实现的
+    如果两个方法调用时的Connection是一致的，则是同一个事务。
+    如果不是，则没加注解的事务就没有事务回滚
