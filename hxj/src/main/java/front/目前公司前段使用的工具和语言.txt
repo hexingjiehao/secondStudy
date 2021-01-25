@@ -1,3 +1,6 @@
 2020年7月9日
 使用工具：vscode
 使用语言：vue, reactjs
+
+
+和前端最好的交流：给定一个完整的接口文档：yapi或者swagger

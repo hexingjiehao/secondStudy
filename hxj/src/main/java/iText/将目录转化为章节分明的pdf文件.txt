@@ -1,0 +1,10 @@
+需求：在手机上查看自己整理的学习资料。也就是study-knowledgeBase。将这个学习项目转化为一个层次分明的pdf文件
+技术方案：javacore + 文件操作 + itext
+步骤：
+    1.搭建项目java main项目：引入itext包
+    2.创建main方法：
+    3.读取study-knowledgeBase项目的root文件夹
+    4.将这个项目中的所有目录和txt,java.yml等文件读取出来
+    5.项目的目录结构打印出来，或者逐行打印。每行2个空格，逐层翻倍
+    6.将整合后的字符串渲染到pdf文件中
+
