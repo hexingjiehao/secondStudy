@@ -1,0 +1,5 @@
+IntelliJ IDEA查找Java项目中，没有被使用或者没有被调用的无效方法，附具体操作截
+参考文档：https://blog.csdn.net/jlq_diligence/article/details/107198644
+1.打开功能：Analyze-->Inspect Code--> Whole project【这个项目或者当个java文件范围】。
+2.在结果中点击即可找到
+    找到提示名：Unused declaration
