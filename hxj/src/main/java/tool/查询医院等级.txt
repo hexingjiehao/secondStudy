@@ -1,0 +1,7 @@
+1.查询医院等级的接口
+答：100医药网：
+https://www.100yiyao.com/hospital/s.php?keyword=&province=%E4%B8%8A%E6%B5%B7&type=&level=%E4%B8%89%E7%94%B2&p=2
+
+比较正规的查询途径：
+卫健网官网地址：http://zgcx.nhc.gov.cn:9090/unit/index
+不过，网页不稳定，查询报错
