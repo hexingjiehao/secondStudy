@@ -1,8 +1,8 @@
 1.centos启动盘的安装
     1.参考文档：https://www.cnblogs.com/wutao666/p/10700158.html
-    2.软件准备：1、8G以上U盘
-               2、UltraISO虚拟光驱（试用版即可）最新版 下载地址：https://cn.ultraiso.net/xiazai.html  点击下载试用
-               3、CentOS7镜像：http://isoredirect.centos.org/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-1810.iso
+    2.软件准备：2.1 8G以上U盘
+               2.2 UltraISO虚拟光驱（试用版即可）最新版 下载地址：https://cn.ultraiso.net/xiazai.html  点击下载试用
+               2.3 CentOS7镜像【找阿里云的镜像下载】：http://isoredirect.centos.org/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-1810.iso
     3.执行启动盘步骤：
         3.1 打开UltraISO的窗口后依次点击左上角的"文件"-"打开"
         3.2 浏览到存放镜像文件的目录，选中该目标文件，点击"打开"按钮
@@ -24,3 +24,46 @@
                     改为  vmlinuz initrd=initrd.img inst.stage2=hd:/dev/sda4 quiet   ps：sda4就是你看到的启动盘名称
             4.5.5 之后等待安装到图形界面
 
+
+
+2.使用VMware虚拟机安装centos系统
+    1.参考文档：https://www.cnblogs.com/wutao666/p/9479429.html
+    2.准备软件：2.1 CentOS7镜像【找阿里云的镜像下载】：http://isoredirect.centos.org/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-1810.iso
+               2.2 Vmware Workstation软件【需要自己找破解】: https://www.vmware.com/products/workstation-pro/workstation-pro-evaluation.html
+    3.打开VMware主页点击创建虚拟机
+    4.新建虚拟机向导：
+        4.1 选择典型(推荐)，点击下一步
+        4.2 选择稍后安装操作系统，点击下一步
+        4.3 选择Linux CentOs 64位版本，点击下一步
+        4.4 命名虚拟机名称，放置虚拟机的位置D：/,点击下一步
+        4.5 配置处理器的数量，核心数量1个，点击下一步
+        4.6 分配虚拟机的内存1G,点击下一步
+        4.7 使用网络地址转换(NAT)，点击下一步
+        4.8 选择I/O控制器：LSI Logic(L) 推荐，点击下一步
+        4.9 选择磁盘类型：SCSI(推荐)，点击下一步
+        4.10 选择磁盘：创建新虚拟磁盘，点击下一步
+        4.11 指定磁盘容量大小：20G, 选择将虚拟磁盘拆分成多个文件，点击下一步
+        4.12 指定磁盘文件：xxx.vmdk，点击下一步
+        4.13 点击完成
+    5.添加镜像位置：
+        5.1 点击CD/DVD（IDE）,再次点击。选择使用ISO映像文件，浏览centos文件的位置，点击确定
+        5.2 启动虚拟机
+        5.3 设置网卡为eth开头，centos7默认安装网卡名称并非以eth开头
+            按tab键输入 net.ifnames=0 biosdevname=0 之后回车
+        5.4 选择键盘（默认就好，点击Continue进行下一步）
+        5.5 设置时区和时间同步（设置好之后按Done完成操作）
+        5.6 添加软件（设置好之后按Done完成操作）
+        5.7 磁盘分区：选择右边的的小圆圈手动分区（如图所示），之后按Done键进入手动分区。
+                设置boot分区大小为1024
+                设置swap分区大小为2048
+                剩余空间给根分区
+                创建磁盘分区后按Done保存并退出当前界面
+                格式化磁盘
+                设置root密码
+                重启虚拟机
+                验证登录及查看网卡名称
+        5.8 额外注意事项：如果启动虚拟机报错：vmware虚拟机不满足在启用Hyper-V的情况下运行
+            解决办法：1.右键菜单-->设置-->搜索程序和功能-->选择【启用或关闭windows功能】-->取消勾选【Hyper-V】
+                     2.打开powershell，也就是命令行cmd。禁用Hyper-V
+                            输入bcdedit /set hypervisorlaunchtype off
+                     3.然后重启电脑即可
