@@ -23,7 +23,7 @@
             4.5.4 将vmlinuz initrd=initrd.img inst.stage2=hd:LABEL=CentOS\x207\x20x86_64 rd.live.check quiet
                     改为  vmlinuz initrd=initrd.img inst.stage2=hd:/dev/sda4 quiet   ps：sda4就是你看到的启动盘名称
             4.5.5 之后等待安装到图形界面
-
+            4.5.6 一定要给硬盘删除一部分分区，否则安装的时候可用空间只有4.3MB
 
 
 2.使用VMware虚拟机安装centos系统
