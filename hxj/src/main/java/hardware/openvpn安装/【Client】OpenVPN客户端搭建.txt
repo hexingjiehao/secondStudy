@@ -1,0 +1,24 @@
+1.OpenVPN客户端搭建学习：
+    1.下载并安装openvpn客户端：openvpn-install-2.4.7-I607-Win10.exe。【同目录下安装包可用】
+    2.如果windows系统如果报错tap-windows缺失，安装tap-windows-9.21.2.exe。【同目录下安装包可用】
+    3.导入相关的key,也就是配置文件目录：比如xiongjie目录
+        xiongjie:
+            -- xiongjie.ovpn
+            -- ca.crt
+            -- xiongjie.crt
+            -- xiongjie.key
+            --ta.key
+    4.将配置目录xiongjie放置到目录：C:\*\openvpn\config
+    5.启动OpenVPN客户端：选择xiongjie-->连接。输入用户名密码:xiongjie/123456,也就是OpenVPN服务器配置时的用户名密码
+
+    6.连接问题处理：
+        1.同时连接多个VPN【需要安装tap-windows-9.21.2.exe】
+            1.进入安装目录：C:\Program Files\TAP-Windows\bin
+            2.点击addtap.bat, 增加虚拟适配器。想增加几个，就点击几次。
+            3.进入设备管理器-->网络适配器-->找到TAP-Windows Adapter。则说明虚拟适配器添加成功
+            4.重新打开OpenVPN，这下就可以连接多个VPN了
+        2.vpn重连弹框解决方案：网络抖动情况下，vpn可能会出现重连，从而弹框要求确认账号密码
+            1.编辑对应的.ovpn配置文件：将原来的auth-user-pass 改为  auth-user-pass pass.txt
+            2.在同级目录下创建pass.txt文件，输入内容：第一行用户名xiongjie，第二行密码123456
+            3.重启OpenVPN即可
+
