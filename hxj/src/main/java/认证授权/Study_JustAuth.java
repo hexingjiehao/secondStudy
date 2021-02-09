@@ -10,7 +10,6 @@ import me.zhyd.oauth.request.AuthRequest;
  * @program: hxj
  * @packageName: 认证授权
  * @className Study_JustAuth
- * @description: TODO
  * @author: xj
  * @create: 2020-08-25 16:51:16
  **/

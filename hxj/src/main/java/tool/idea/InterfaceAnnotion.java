@@ -5,7 +5,6 @@ package tool.idea;
  * @program: hxj
  * @packageName: tool.idea
  * @className InterfaceAnnotion
- * @description: TODO
  * @author: xj
  * @create: 2020-08-15 15:07:11
  **/

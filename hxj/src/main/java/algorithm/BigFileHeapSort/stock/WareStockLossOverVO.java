@@ -5,7 +5,6 @@ package algorithm.BigFileHeapSort.stock;
  * @program: hxj
  * @packageName: algorithm.BigFileHeapSort
  * @className WareStockLossOverVO
- * @description: TODO
  * @author: xj
  * @create: 2020-12-01 01:12:44
  **/

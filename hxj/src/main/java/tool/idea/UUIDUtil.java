@@ -7,7 +7,6 @@ import java.util.UUID;
  * @program: hxj
  * @packageName: tool.idea
  * @className UUIDUtil
- * @description: TODO
  * @author: xj
  * @create: 2020-12-07 21:05:32
  **/

@@ -23,7 +23,6 @@
              * @program: ${PROJECT_NAME}
              * @packageName: ${PACKAGE_NAME}
              * @className ${NAME}
-             * @description: TODO
              * @author: xj
              * @create: ${YEAR}-${MONTH}-${DAY} ${HOUR}:${MINUTE}:${SECOND}
              **/
@@ -36,8 +35,6 @@
         修改Description的值：新增方法时的注释
         修改模板内容：
             /**
-             * @Description TODO
-             * @menu TODO
              * @status done
              * @methodName $methodName$
              * @param $param$

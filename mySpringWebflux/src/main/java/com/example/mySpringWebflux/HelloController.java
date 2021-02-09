@@ -9,7 +9,6 @@ import reactor.core.publisher.Mono;
  * @program: mySpringWebflux
  * @packageName: com.example.mySpringWebflux
  * @className HelloController
- * @description: TODO
  * @author: xj
  * @create: 2021-01-16 14:11:28
  **/

@@ -7,7 +7,6 @@ import java.util.Date;
  * @program: hxj
  * @packageName: algorithm.BigFileHeapSort.stock
  * @className EntrepotMergeFreeExpectedQtyLog
- * @description: TODO
  * @author: xj
  * @create: 2020-12-01 01:38:19
  **/

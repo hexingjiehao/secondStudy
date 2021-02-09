@@ -7,7 +7,6 @@ import java.util.List;
  * @program: hxj
  * @packageName: algorithm.BigFileHeapSort
  * @className WareHouseAndStoreVO
- * @description: TODO
  * @author: xj
  * @create: 2020-12-01 01:10:14
  **/
