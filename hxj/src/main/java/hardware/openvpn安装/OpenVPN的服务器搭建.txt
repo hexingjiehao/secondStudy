@@ -1,0 +1,116 @@
+1.OpenVPN的服务器端搭建学习：
+    0.本质：类似于搭建了一个需要密码的可访问服务器。
+    0.5 核心：对虚拟网卡的使用是OpenVPN实现其SSL VPN功能的关键
+    1.参考文档{优先级从上到下}：
+        http://c.hydee.cn/pages/viewpage.action?pageId=59441156
+        https://www.fandenggui.com/post/centos7-install-openvpn.html
+    2.需求场景：在家里一台centos服务器，随身携带的一台笔记本电脑。
+               想要随时随地的在外网访问家里的centos服务器
+    3.Centos部署OpenVPN服务器：
+        3.1 软件准备：Centos 7.x
+                     easy-rsa 3.0.6
+                     OpenVPN 2.4.6
+        3.2 安装软件：启用epel源，使用yum安装。
+                1.更新安装源：   yum install -y epel-release
+                                yum update -y
+                2.安装ssl协议：  yum install -y openssl lzo pam openssl-devel lzo-devel pam-devel
+                3.安装easy-rsa:  yum install -y easy-rsa
+                4.安装openvpn：  yum install -y openvpn
+
+                问：使用路由还是桥接？
+                答：建议使用路由，除非你有一些需要桥接的特定场景，例如:
+                        1.VPN需要能够处理非ip协议，如IPX
+                        2.通过VPN运行应用程序，该VPN依赖于网络广播(如局域网游戏)
+                        3.希望允许跨VPN浏览Windows文件共享，而无需设置Samba或WINS服务器
+
+                问：确定私有子网?
+                答： Server 与 Client 的VPN通道子网，不要与已有环境的网络冲突即可。
+                     默认：10.8.0.0/16
+        3.3 配置证书密钥【分为easy-rsa 3.x版本和easy-rsa 2.x版本】
+                3.x版本：使用easy-rsa来配置生成证书秘钥。从yum安装的easy rsa 复制一份工具出来
+                            cp -rf /usr/share/easy-rsa/3.0.6 /etc/openvpn/server/easy-rsa
+                            cd /etc/openvpn/server/easy-rsa
+                            ./easyrsa init-pki
+                            ./easyrsa build-ca nopass    #不行就执行./easyrsa build-ca
+                            ./easyrsa build-server-full server nopass
+                            ./easyrsa build-client-full client1 nopass
+                            ./easyrsa build-client-full client2 nopass
+                            ./easyrsa gen-dh
+                            openvpn --genkey --secret ta.key
+                2.x版本【下载地址：https://github.com/OpenVPN/easy-rsa-old/releases】：
+                          . ./vars
+                          ./clean-all
+                          ./build-ca
+                          ./build-key-server server
+                          ./build-key client1
+                          ./build-key client2
+                          ./build-dh
+                          openvpn --genkey --secret ta.key
+        3.4 配置Server端：
+                1.创建日志目录：mkdir -p /var/log/openvpn/
+                2.创建用户管理目录：mkdir -p /etc/openvpn/server/user
+                3.配置权限：chown openvpn:openvpn /var/log/openvpn
+                4.创建配置文件：/etc/openvpn/server/server.conf。内容取值同目录的【OpenVPN服务器配置文件.conf】
+                5.做配置文件的软连接：将配置文件导入.server.conf配置文件中。因为当前版本的openvpn systemd 启动文件中读取的是.service.conf配置。
+                    cd /etc/openvpn/server/
+                    ln -sf server.conf .service.conf
+        3.5 创建用户密码文件并授权和操作：{用户名 密码使用空格分开}
+                tee /etc/openvpn/server/user/psw-file << EOF
+                待输入的用户名 待输入的密码  #比如： xiongjie 123456
+                EOF
+                chmod 600 /etc/openvpn/server/user/psw-file
+                chown openvpn:openvpn /etc/openvpn/server/user/psw-file
+        3.6 创建密码检查脚本并授权和操作：
+                vim  /etc/openvpn/server/user/checkpsw.sh
+                    ......文件内容取值同目录的【OpenVPN服务器密码检查脚本.sh】
+                chown openvpn:openvpn /etc/openvpn/server/user/checkpsw.sh
+                chmod +x /etc/openvpn/server/user/checkpsw.sh
+        3.7 防火墙配置：【如果要启用防火墙，openvpn需要防火墙做转发】【开发环境可选操作，生产环境是必选操作】
+                firewall-cmd --permanent --add-masquerade
+                firewall-cmd --permanent --add-service=openvpn
+                //# 或者添加自定义端口
+                firewall-cmd --permanent  --add-port=1194/tcp
+                firewall-cmd --permanent --direct --passthrough ipv4 -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+                firewall-cmd --reload
+        3.8 更改服务名并启动服务：【逐行执行】
+                # 查看service名
+                rpm -ql openvpn |grep service
+                /usr/lib/systemd/system/openvpn-client@.service
+                /usr/lib/systemd/system/openvpn-server@.service
+                /usr/lib/systemd/system/openvpn@.service
+
+                # 禁用自带的服务
+                systemctl disable openvpn-server@.service.service
+                systemctl disable openvpn@.service.service
+
+                # 创建新的服务文件
+                vim /usr/lib/systemd/system/openvpn.service
+
+                # 启动openvpn并查看状态
+                systemctl daemon-reload
+                systemctl enable openvpn
+                systemctl start openvpn
+                systemctl status openvpn
+        3.9 配置客户端：
+                1.从server上将生成的ca.crt、client1.crt、client1.key、ta.key文件下载到客户端。位置如下：
+                    /etc/openvpn/server/easy-rsa/pki/ca.crt
+                    /etc/openvpn/server/easy-rsa/*/client1.crt  【不太确定位置】
+                    /etc/openvpn/server/easy-rsa/*/client1.key  【不太确定位置】
+                    /etc/openvpn/server/easy-rsa/ta.key
+                2.客户端配置内容:C:\Program Files\OpenVPN\config\client.ovpn
+                    文件内容取值同目录的【OpenVPN客户端配置.ovpn】
+                    这里可能需要OpenVPN服务器的外网域名，这个蛋疼！！！
+
+
+
+
+
+
+
+
+
+
+
+
+
+

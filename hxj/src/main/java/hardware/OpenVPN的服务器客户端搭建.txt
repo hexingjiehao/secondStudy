@@ -1,6 +1,0 @@
-1.OpenVPN的搭建学习：
-    1.参考文档：https://baijiahao.baidu.com/s?id=1657546417355919140&wfr=spider&for=pc
-    2.需求场景：在家里一台centos服务器，随身携带的一台笔记本电脑。
-               想要随时随地的在外网访问家里的centos服务器
-    3.具体的操作步骤：
-        ......

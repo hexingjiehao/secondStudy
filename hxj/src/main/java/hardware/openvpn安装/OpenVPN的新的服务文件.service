@@ -1,0 +1,16 @@
+[Unit]
+Description=openvpn service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=root
+Group=root
+ExecStart=/usr/sbin/openvpn --daemon --config /etc/openvpn/server/server.conf
+ExecStop=/bin/kill -9 $MAINPID
+Restart=on-failure
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
