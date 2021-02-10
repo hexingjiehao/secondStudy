@@ -46,11 +46,22 @@
                           ./build-key client2
                           ./build-dh
                           openvpn --genkey --secret ta.key
+
+                注意证书的位置：
+                    openvpn server端：
+                        server/pki/ca.crt <制作server证书的文件夹>
+                        server/pki/private/server.key <制作server证书的文件夹>
+                        server/pki/issued/server.crt <制作server证书的文件夹>
+                        server/pki/dh.pem
+                    openvpn client端：
+                        client/pki/ca.crt <制作server证书的文件夹>
+                        client/pki/issued/client.crt <制作server证书的文件夹>
+                        client/pki/private/client.key <制作client证书的文件夹>
         3.4 配置Server端：
                 1.创建日志目录：mkdir -p /var/log/openvpn/
                 2.创建用户管理目录：mkdir -p /etc/openvpn/server/user
                 3.配置权限：chown openvpn:openvpn /var/log/openvpn
-                4.创建配置文件：/etc/openvpn/server/server.conf。内容取值同目录的【OpenVPN服务器配置文件.conf】
+                4.创建配置文件：vim /etc/openvpn/server/server.conf。内容取值同目录的【OpenVPN服务器配置文件.conf】
                 5.做配置文件的软连接：将配置文件导入.server.conf配置文件中。因为当前版本的openvpn systemd 启动文件中读取的是.service.conf配置。
                     cd /etc/openvpn/server/
                     ln -sf server.conf .service.conf
@@ -65,6 +76,12 @@
                     ......文件内容取值同目录的【OpenVPN服务器密码检查脚本.sh】
                 chown openvpn:openvpn /etc/openvpn/server/user/checkpsw.sh
                 chmod +x /etc/openvpn/server/user/checkpsw.sh
+
+                注意【！！！】
+                    目前server.conf的配置中使用checkpsw.sh进行密码检查的脚本无法执行，所以暂时废弃，使用服务器自带脚本
+                    用服务器的用户名密码登录是OK的
+                    查看无法连接的log：var/log/openvpn/server.log
+
         3.7 防火墙配置：【如果要启用防火墙，openvpn需要防火墙做转发】【开发环境可选操作，生产环境是必选操作】
                 firewall-cmd --permanent --add-masquerade
                 firewall-cmd --permanent --add-service=openvpn
@@ -75,15 +92,15 @@
         3.8 更改服务名并启动服务：【逐行执行】
                 # 查看service名
                 rpm -ql openvpn |grep service
-                /usr/lib/systemd/system/openvpn-client@.service
-                /usr/lib/systemd/system/openvpn-server@.service
-                /usr/lib/systemd/system/openvpn@.service
+                    /usr/lib/systemd/system/openvpn-client@.service
+                    /usr/lib/systemd/system/openvpn-server@.service
+                    /usr/lib/systemd/system/openvpn@.service
 
                 # 禁用自带的服务
                 systemctl disable openvpn-server@.service.service
                 systemctl disable openvpn@.service.service
 
-                # 创建新的服务文件
+                # 创建新的服务文件【内容取值同目录下的OpenVPN新的服务文件.service】
                 vim /usr/lib/systemd/system/openvpn.service
 
                 # 启动openvpn并查看状态
@@ -94,8 +111,8 @@
         3.9 配置客户端：
                 1.从server上将生成的ca.crt、client1.crt、client1.key、ta.key文件下载到客户端。位置如下：
                     /etc/openvpn/server/easy-rsa/pki/ca.crt
-                    /etc/openvpn/server/easy-rsa/*/client1.crt  【不太确定位置】
-                    /etc/openvpn/server/easy-rsa/*/client1.key  【不太确定位置】
+                    /etc/openvpn/server/easy-rsa/issued/client1.crt  【不太确定位置】
+                    /etc/openvpn/server/easy-rsa/private/client1.key  【不太确定位置】
                     /etc/openvpn/server/easy-rsa/ta.key
                 2.客户端配置内容:C:\Program Files\OpenVPN\config\client.ovpn
                     文件内容取值同目录的【OpenVPN客户端配置.ovpn】

@@ -2,14 +2,14 @@
     1.下载并安装openvpn客户端：openvpn-install-2.4.7-I607-Win10.exe。【同目录下安装包可用】
     2.如果windows系统如果报错tap-windows缺失，安装tap-windows-9.21.2.exe。【同目录下安装包可用】
     3.导入相关的key,也就是配置文件目录：比如xiongjie目录
-        xiongjie:
-            -- xiongjie.ovpn
+        client1:
+            -- client1.ovpn
             -- ca.crt
-            -- xiongjie.crt
-            -- xiongjie.key
-            --ta.key
-    4.将配置目录xiongjie放置到目录：C:\*\openvpn\config
-    5.启动OpenVPN客户端：选择xiongjie-->连接。输入用户名密码:xiongjie/123456,也就是OpenVPN服务器配置时的用户名密码
+            -- client1.crt
+            -- client1.key
+            -- ta.key
+    4.将配置目录client1放置到目录：C:\*\openvpn\config
+    5.启动OpenVPN客户端：选择client1-->连接。输入用户名密码:xiongjie/123456,也就是OpenVPN服务器配置时的用户名密码
 
     6.连接问题处理：
         1.同时连接多个VPN【需要安装tap-windows-9.21.2.exe】
