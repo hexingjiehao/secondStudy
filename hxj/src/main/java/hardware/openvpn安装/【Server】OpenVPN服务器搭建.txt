@@ -123,7 +123,7 @@
                     centos查看外网ip: 参考文档：https://www.cnblogs.com/yeogee/p/8444160.html
                         curl ifconfig.me  =101.87.141.179
                         这个方法还是不行。因为不是自己的外网，所以是失败的。只能在即去申请一台云服务器才行
-
+                        直接在百度搜索：本机IP地址即可
 
 
 
