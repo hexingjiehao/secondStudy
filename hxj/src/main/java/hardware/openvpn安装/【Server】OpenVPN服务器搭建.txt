@@ -116,7 +116,15 @@
                     /etc/openvpn/server/easy-rsa/ta.key
                 2.客户端配置内容:C:\Program Files\OpenVPN\config\client.ovpn
                     文件内容取值同目录的【OpenVPN客户端配置.ovpn】
-                    这里可能需要OpenVPN服务器的外网域名，这个蛋疼！！！
+
+                【非常重要！！！】
+                    客户端需要的是服务器端的外网IP才可以。如果两台电脑都在一个局域网内部，则可以使用内网ip
+                    centos查看内网ip: ip addr  =192.168.0.105
+                    centos查看外网ip: 参考文档：https://www.cnblogs.com/yeogee/p/8444160.html
+                        curl ifconfig.me  =101.87.141.179
+                        这个方法还是不行。因为不是自己的外网，所以是失败的。只能在即去申请一台云服务器才行
+
+
 
 
 
