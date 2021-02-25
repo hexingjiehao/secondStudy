@@ -1,0 +1,3 @@
+问题：解决最新版Postman黑屏的解决方案？
+答：最新版Postman使用独立显卡渲染界面，对于核显计算机无法渲染
+    解决办法：增加环境变量POSTMAN_DISABLE_GPU = true，然后重启电脑
