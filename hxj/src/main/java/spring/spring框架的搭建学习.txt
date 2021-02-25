@@ -336,18 +336,3 @@
         2.启动类增加注解：@EnableAdminServer
         3.application.proerties文件增加配置：server.port=8788
     5.浏览器输入：localhost:8788, 可以跳转到UI界面进行监控
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-seate解决分布式事务
