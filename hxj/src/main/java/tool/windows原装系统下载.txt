@@ -3,4 +3,10 @@
 1.百度搜索MSDN
 2.点击MSDN,我告诉你-做一个安静的工具站的链接
 3.进入网站选择操作系统即可。
+
+使用迅雷下载：
 推荐选择：联想合作的windows 10 家庭中文版
+
+
+2.联想的Windows 10家庭版如何转换成Windows 10家庭中文版？同时下载原装windows10
+答:参考文档：https://iknow.lenovo.com.cn/detail/dc_186855.html
